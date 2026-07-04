@@ -1,14 +1,14 @@
 // GuitarFlow Service Worker — caches all app files for full offline use.
-// On first visit the CDN scripts (React, Babel) are cached here,
+// On first visit the CDN scripts (React) are cached here,
 // so every subsequent visit — even with no internet — works perfectly.
 
-const CACHE = "guitarflow-v1";
+const CACHE = "guitarflow-v2";
 const PRECACHE = [
   "./index.html",
   "./manifest.json",
   "./icon.svg",
-  "https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js",
-  "https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"
+  "https://unpkg.com/react@18/umd/react.production.min.js",
+  "https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
 ];
 
 // Install: cache everything upfront
@@ -27,8 +27,26 @@ self.addEventListener("activate", e => {
   );
 });
 
-// Fetch: cache-first for everything
+// Fetch: network-first for the app shell (HTML) so deployed updates are picked
+// up immediately instead of being masked forever by a stale cached copy;
+// cache-first for everything else (CDN libs, icons) since those are static
+// and benefit from instant, offline-capable loading.
 self.addEventListener("fetch", e => {
+  const isAppShell = e.request.mode === "navigate" || e.request.destination === "document";
+
+  if (isAppShell) {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        if (res && res.status === 200) {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return res;
+      }).catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;

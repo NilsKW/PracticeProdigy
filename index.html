@@ -53,7 +53,7 @@
     });
     var watchdog = setTimeout(function() {
       if (document.getElementById('boot'))
-        bootErr('Timed out', 'Could not load React from cdn.jsdelivr.net after 15s. Check your internet connection.');
+        bootErr('Timed out', 'Could not load React from unpkg.com after 15s. Check your internet connection.');
     }, 15000);
   </script>
 
@@ -4052,16 +4052,16 @@ function App() {
 
     // Chain: load React → load ReactDOM → startApp
     loadScript(
-      'https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js',
+      'https://unpkg.com/react@18/umd/react.production.min.js',
       function() {
         document.getElementById('boot-sub').textContent = 'Fetching ReactDOM…';
         loadScript(
-          'https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js',
+          'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
           function() { startApp(); },
-          function() { bootErr('Network error', 'Could not load ReactDOM from cdn.jsdelivr.net'); }
+          function() { bootErr('Network error', 'Could not load ReactDOM from unpkg.com'); }
         );
       },
-      function() { bootErr('Network error', 'Could not load React from cdn.jsdelivr.net'); }
+      function() { bootErr('Network error', 'Could not load React from unpkg.com'); }
     );
   </script>
 
