@@ -53,6 +53,8 @@ const STRINGS = {
     categoryNamePlaceholder: "Category name", bpmHint: "(BPM, 0 = off)", beatsPerBarHint: "(beats per bar)",
     displayLabel: "Display size", displayDesc: "Adjust the size of text and buttons throughout the app.",
     sizeSmall: "Small", sizeMedium: "Medium", sizeLarge: "Large",
+    subExercisesLabel: "Sub-exercises", subExercisePlaceholder: "e.g. Ascending in 3rds",
+    addSubExercise: "+ Add sub-exercise", subExercisesTitle: "Sub-exercises",
   },
   fr: {
     appSub: "Planificateur de séances",
@@ -104,6 +106,8 @@ const STRINGS = {
     categoryNamePlaceholder: "Nom de la catégorie", bpmHint: "(BPM, 0 = désactivé)", beatsPerBarHint: "(temps par mesure)",
     displayLabel: "Taille d'affichage", displayDesc: "Ajuste la taille du texte et des boutons dans toute l'application.",
     sizeSmall: "Petit", sizeMedium: "Moyen", sizeLarge: "Grand",
+    subExercisesLabel: "Sous-exercices", subExercisePlaceholder: "ex. Montée en tierces",
+    addSubExercise: "+ Ajouter un sous-exercice", subExercisesTitle: "Sous-exercices",
   },
 };
 
@@ -411,13 +415,37 @@ const DEFAULT_CATEGORIES = [
   { id: "cat-ear",      name: "Ear Training",  color: "#FB923C" },
 ];
 
+// ─── SUB-EXERCISES ────────────────────────────────────────────────────────────
+// Any exercise can be broken down into checkable sub-exercises (see ExerciseEditor
+// and ActiveSessionScreen). Scale exercises ship with a standard practice
+// checklist: ascending/descending through each interval up to a 9th, plus
+// note-groupings from 3 to 7 notes.
+const INTERVAL_NAMES = {
+  en: { 2: "2nds", 3: "3rds", 4: "4ths", 5: "5ths", 6: "6ths", 7: "7ths", 8: "octaves", 9: "9ths" },
+  fr: { 2: "secondes", 3: "tierces", 4: "quartes", 5: "quintes", 6: "sixtes", 7: "septièmes", 8: "octaves", 9: "neuvièmes" },
+};
+const SUBEXERCISE_I18N = {};
+[2, 3, 4, 5, 6, 7, 8, 9].forEach(n => {
+  SUBEXERCISE_I18N[`sub-${n}-up`]   = { en: `Ascending in ${INTERVAL_NAMES.en[n]}`,  fr: `Montée en ${INTERVAL_NAMES.fr[n]}` };
+  SUBEXERCISE_I18N[`sub-${n}-down`] = { en: `Descending in ${INTERVAL_NAMES.en[n]}`, fr: `Descente en ${INTERVAL_NAMES.fr[n]}` };
+});
+[3, 4, 5, 6, 7].forEach(n => {
+  SUBEXERCISE_I18N[`sub-grp${n}-up`]   = { en: `Group of ${n} ascending`,  fr: `Groupe de ${n} montant` };
+  SUBEXERCISE_I18N[`sub-grp${n}-down`] = { en: `Group of ${n} descending`, fr: `Groupe de ${n} descendant` };
+});
+// Stored labels are always the English default text (matching how exercise
+// name/description defaults work) — subExerciseLabel() below translates them.
+function makeScaleSubExercises() {
+  return Object.keys(SUBEXERCISE_I18N).map(id => ({ id, label: SUBEXERCISE_I18N[id].en }));
+}
+
 const DEFAULT_EXERCISES = [
   { id: "warm1", categoryId: "cat-warmup", name: "Finger Stretches",        defaultMin: 3,  icon: "✋", description: "Gently stretch each finger to prevent injuries." },
   { id: "warm2", categoryId: "cat-warmup", name: "Chromatic Crawl",          defaultMin: 5,  icon: "🐛", description: "Play 1-2-3-4 across all strings, ascending and descending." },
   { id: "warm3", categoryId: "cat-warmup", name: "Spider Exercise",           defaultMin: 5,  icon: "🕷️", description: "Cross-string pattern to build independence." },
-  { id: "scale1", categoryId: "cat-scales", name: "Pentatonic (A minor)",    defaultMin: 10, icon: "🎵", description: "Run the Am pentatonic in all 5 positions." },
-  { id: "scale2", categoryId: "cat-scales", name: "Major Scale Modes",       defaultMin: 10, icon: "🎶", description: "Practice Ionian, Dorian, Phrygian across the neck." },
-  { id: "scale3", categoryId: "cat-scales", name: "Blues Scale",             defaultMin: 8,  icon: "🎸", description: "Add the b5 note to your pentatonic for bluesy feel." },
+  { id: "scale1", categoryId: "cat-scales", name: "Pentatonic (A minor)",    defaultMin: 10, icon: "🎵", description: "Run the Am pentatonic in all 5 positions.", subExercises: makeScaleSubExercises() },
+  { id: "scale2", categoryId: "cat-scales", name: "Major Scale Modes",       defaultMin: 10, icon: "🎶", description: "Practice Ionian, Dorian, Phrygian across the neck.", subExercises: makeScaleSubExercises() },
+  { id: "scale3", categoryId: "cat-scales", name: "Blues Scale",             defaultMin: 8,  icon: "🎸", description: "Add the b5 note to your pentatonic for bluesy feel.", subExercises: makeScaleSubExercises() },
   { id: "chord1", categoryId: "cat-chords", name: "Barre Chord Transitions", defaultMin: 10, icon: "🤘", description: "Switch between F, B, and Bm shapes fluidly." },
   { id: "chord2", categoryId: "cat-chords", name: "Open Chord Shapes",       defaultMin: 7,  icon: "🔵", description: "Clean up G, C, D, Em, Am transitions." },
   { id: "chord3", categoryId: "cat-chords", name: "Jazz Voicings",           defaultMin: 12, icon: "🎷", description: "Learn ii-V-I progressions with 7th chord voicings." },
@@ -508,6 +536,12 @@ function categoryName(cat, lang) {
   if (i18n && cat.name === i18n.en) return i18n[lang] ?? cat.name;
   return cat.name;
 }
+function subExerciseLabel(sub, lang) {
+  if (!sub) return "";
+  const i18n = SUBEXERCISE_I18N[sub.id];
+  if (i18n && sub.label === i18n.en) return i18n[lang] ?? sub.label;
+  return sub.label;
+}
 
 const ICONS =["🎸","🎵","🎶","🎤","🎷","🎺","🥁","🎹","⚡","🔥","🌟","💥","🤘","✋","🕷️","🐛","🔨","〰️","🤚","🔵","📝","▶️","👂","🏆","🎯","⚙️","🧠","💡","🎯","🎼"];
 
@@ -533,12 +567,11 @@ function extractYouTubeId(url) {
 
 // ─── STYLES ──────────────────────────────────────────────────────────────────
 
-const C = { bg: "#0F0F0F", surface: "#151515", border: "#1E1E1E", amber: "#C8873A", amberDim: "#6B3A0A", cream: "#F5EDD6", muted: "#4A4A5A", faint: "#1A1A1A" };
+const C = { bg: "#0F0F0F", surface: "#151515", border: "#1E1E1E", amber: "#C8873A", amberDim: "#6B3A0A", cream: "#F5EDD6", muted: "#4A4A5A", navInactive: "#8D8D9C", faint: "#1A1A1A" };
 
 // Display size setting: a single CSS `zoom` factor scales the whole app
 // (text, icons, spacing) uniformly without touching every font-size value.
-// Kept modest so it doesn't overflow narrow phone screens.
-const DISPLAY_ZOOM = { small: 0.9, medium: 1, large: 1.12 };
+const DISPLAY_ZOOM = { small: 0.95, medium: 1.15, large: 1.35 };
 
 const base = {
   app: { background: C.bg, minHeight: "100vh", maxWidth: 430, margin: "0 auto", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.cream, position: "relative", overflowX: "hidden" },
@@ -548,7 +581,7 @@ const base = {
   headerSub: { fontSize: 10, color: "#6B5A3A", letterSpacing: "0.12em", textTransform: "uppercase", margin: 0 },
   iconBtn: (col) => ({ background: "none", border: "none", color: col || C.muted, fontSize: 18, cursor: "pointer", padding: "4px 6px", borderRadius: 6, display: "flex", alignItems: "center" }),
   navBar: { display: "flex", background: "#0A0A0A", borderBottom: `1px solid ${C.border}` },
-  navBtn: (a) => ({ flex: 1, padding: "11px 6px", background: "none", border: "none", borderBottom: a ? `2px solid ${C.amber}` : "2px solid transparent", color: a ? C.amber : C.muted, fontSize: 10, fontWeight: a ? 700 : 500, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer" }),
+  navBtn: (a) => ({ flex: 1, padding: "11px 6px", background: "none", border: "none", borderBottom: a ? `2px solid ${C.amber}` : "2px solid transparent", color: a ? C.amber : C.navInactive, fontSize: 10, fontWeight: a ? 700 : 500, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer" }),
   scrollArea: (pb) => ({ padding: `8px 16px ${pb||100}px`, display: "flex", flexDirection: "column", gap: 8, overflowY: "auto", maxHeight: "calc(100vh - 175px)" }),
   catChip: (a, col) => ({ padding: "5px 13px", borderRadius: 20, border: `1px solid ${a ? col : "#2A2A2A"}`, background: a ? col+"22" : "transparent", color: a ? col : "#888", fontSize: 12, fontWeight: a ? 600 : 400, cursor: "pointer", whiteSpace: "nowrap" }),
   exCard: (col) => ({ background: C.surface, border: `1px solid ${C.border}`, borderLeft: `3px solid ${col}`, borderRadius: 10, padding: "11px 13px", display: "flex", alignItems: "center", gap: 11, cursor: "pointer", userSelect: "none" }),
@@ -823,7 +856,7 @@ function PresetsScreen({ presets, setPresets, tasks, setTasks, onLoadGoToSession
   };
 
   const loadPreset = (preset) => {
-    setTasks(preset.tasks.map(t => ({ ...t, id: uid() })));
+    setTasks(preset.tasks.map(t => ({ ...t, id: uid(), subDone: [] })));
     onLoadGoToSession();
   };
 
@@ -1047,7 +1080,7 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
 // ─── ACTIVE SESSION ───────────────────────────────────────────────────────────
 
 function ActiveSessionScreen({
-  tasks, onFinish, onBackToMenu, audioCtx, masterGainRef, onCommitStats, isVisible,
+  tasks, setTasks, onFinish, onBackToMenu, audioCtx, masterGainRef, onCommitStats, isVisible,
   // lifted state
   current, setCurrent, secondsLeft, setSecondsLeft,
   running, setRunning, hasStarted, setHasStarted,
@@ -1223,6 +1256,15 @@ function ActiveSessionScreen({
     setSecondsLeft(tasks[prevIndex].minutes * 60);
   };
 
+  // Toggle a sub-exercise's checked state for the current task only.
+  const toggleSub = (subId) => {
+    setTasks(prev => prev.map((t, i) => {
+      if (i !== current) return t;
+      const subDone = t.subDone || [];
+      return { ...t, subDone: subDone.includes(subId) ? subDone.filter(id => id !== subId) : [...subDone, subId] };
+    }));
+  };
+
   // Urgency pulse when ≤10s left
   const urgent = secondsLeft <= 10 && secondsLeft > 0 && running;
 
@@ -1310,6 +1352,32 @@ function ActiveSessionScreen({
           </div>
         </div>
 
+        {/* Sub-exercises — a checkable breakdown of the current exercise, e.g.
+            scale interval/grouping drills. Checked state lives on the task
+            itself, so it's kept if you skip away and come back. */}
+        {currentTask?.subExercises?.length > 0 && (
+          <div style={base.card}>
+            <div style={{ padding: "10px 14px", borderBottom: `1px solid ${C.faint}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: C.muted }}>{T("subExercisesTitle")}</span>
+              <span style={{ fontSize: 11, color: C.amber, fontWeight: 700 }}>{(currentTask.subDone || []).length}/{currentTask.subExercises.length} {T("done")}</span>
+            </div>
+            {currentTask.subExercises.map(sub => {
+              const checked = (currentTask.subDone || []).includes(sub.id);
+              return (
+                <div key={sub.id} onClick={() => toggleSub(sub.id)}
+                  style={{ padding: "9px 14px", display: "flex", alignItems: "center", gap: 10, borderBottom: `1px solid #111`, cursor: "pointer" }}>
+                  <div style={{ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${checked ? "#34D399" : "#3A3A3A"}`, background: checked ? "#34D399" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 12, color: "#0A0A0A", fontWeight: 900 }}>
+                    {checked ? "✓" : ""}
+                  </div>
+                  <span style={{ flex: 1, fontSize: 13, color: checked ? "#3A5A40" : C.cream, textDecoration: checked ? "line-through" : "none" }}>
+                    {subExerciseLabel(sub, lang)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {/* YouTube reference video */}
         <YouTubeCard videoId={extractYouTubeId(currentTask?.youtubeUrl)} />
 
@@ -1363,18 +1431,19 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack }) {
   const isNew = editEx === "new";
   const [form, setForm] = useState(
     isNew
-      ? { name: "", description: "", defaultMin: 10, icon: "🎸", categoryId: categories[0]?.id || "", youtubeUrl: "", bpm: 0, beatsPerBar: 4 }
-      : { ...editEx, youtubeUrl: editEx.youtubeUrl || "", bpm: editEx.bpm || 0, beatsPerBar: editEx.beatsPerBar || 4 }
+      ? { name: "", description: "", defaultMin: 10, icon: "🎸", categoryId: categories[0]?.id || "", youtubeUrl: "", bpm: 0, beatsPerBar: 4, subExercises: [] }
+      : { ...editEx, youtubeUrl: editEx.youtubeUrl || "", bpm: editEx.bpm || 0, beatsPerBar: editEx.beatsPerBar || 4, subExercises: editEx.subExercises || [] }
   );
   const [iconPicker, setIconPicker] = useState(false);
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const save = () => {
     if (!form.name.trim()) return;
+    const cleaned = { ...form, defaultMin: Number(form.defaultMin), subExercises: (form.subExercises || []).filter(s => s.label.trim()) };
     if (isNew) {
-      setExercises(prev => [...prev, { ...form, id: uid(), defaultMin: Number(form.defaultMin) }]);
+      setExercises(prev => [...prev, { ...cleaned, id: uid() }]);
     } else {
-      setExercises(prev => prev.map(e => e.id === form.id ? { ...form, defaultMin: Number(form.defaultMin) } : e));
+      setExercises(prev => prev.map(e => e.id === form.id ? cleaned : e));
     }
     onBack();
   };
@@ -1472,6 +1541,30 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack }) {
               <button key={c.id} style={base.catChip(form.categoryId === c.id, c.color)} onClick={() => setF("categoryId", c.id)}>{categoryName(c, lang)}</button>
             ))}
           </div>
+        </div>
+        <div>
+          <label style={base.label}>{T("subExercisesLabel")}</label>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {(form.subExercises || []).map((sub, idx) => (
+              <div key={sub.id} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <input
+                  style={{ ...base.input, flex: 1 }}
+                  value={sub.label}
+                  onChange={e => setF("subExercises", form.subExercises.map((s, i) => i === idx ? { ...s, label: e.target.value } : s))}
+                  placeholder={T("subExercisePlaceholder")}
+                  autoComplete="off" autoCorrect="off" spellCheck={false}
+                />
+                <button
+                  onClick={() => setF("subExercises", form.subExercises.filter((_, i) => i !== idx))}
+                  style={{ width: 30, height: 30, borderRadius: 7, background: "none", border: "1px solid #2A2A2A", color: C.muted, fontSize: 14, cursor: "pointer", flexShrink: 0 }}
+                >×</button>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() => setF("subExercises", [...(form.subExercises || []), { id: uid(), label: "" }])}
+            style={{ ...base.pillBtn(false), marginTop: 8, textAlign: "center", fontSize: 12 }}
+          >{T("addSubExercise")}</button>
         </div>
         <button style={base.pillBtn(true)} onClick={save}>{isNew ? T("addExercise") : T("saveChanges")}</button>
         {!isNew && (
@@ -1747,7 +1840,7 @@ export default function App() {
 
   const addExercise = (ex) => {
     ensureAudio();
-    setTasks(prev => [...prev, { id: uid(), exerciseId: ex.id, name: ex.name, icon: ex.icon, minutes: ex.defaultMin, categoryId: ex.categoryId, youtubeUrl: ex.youtubeUrl || "", bpm: ex.bpm || 0, beatsPerBar: ex.beatsPerBar || 4 }]);
+    setTasks(prev => [...prev, { id: uid(), exerciseId: ex.id, name: ex.name, icon: ex.icon, minutes: ex.defaultMin, categoryId: ex.categoryId, youtubeUrl: ex.youtubeUrl || "", bpm: ex.bpm || 0, beatsPerBar: ex.beatsPerBar || 4, subExercises: ex.subExercises || [], subDone: [] }]);
   };
 
   const startSession = () => {
@@ -1848,7 +1941,7 @@ export default function App() {
                 display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
               }}
             >
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={tab === "library" ? C.amber : C.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={tab === "library" ? C.amber : C.navInactive} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
                 <polyline points="9 22 9 12 15 12 15 22"/>
               </svg>
@@ -1866,7 +1959,7 @@ export default function App() {
                 position: "relative"
               }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={tab === "stats" ? "#4FC3F7" : "#4A4A5A"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={tab === "stats" ? "#4FC3F7" : C.navInactive} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
               </svg>
               {statsCount > 0 && (
@@ -1880,7 +1973,7 @@ export default function App() {
               onClick={() => setTab(t => t === "settings" ? "library" : "settings")}
               style={{ width: 36, height: 36, borderRadius: 8, background: tab === "settings" ? "#C8873A22" : "none", border: tab === "settings" ? `1px solid ${C.amber}` : "1px solid #2A2A2A", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, flexShrink: 0 }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={tab === "settings" ? C.amber : C.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={tab === "settings" ? C.amber : C.navInactive} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3"/>
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
               </svg>
@@ -1925,7 +2018,7 @@ export default function App() {
       {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} />}
       {tab === "stats"    && <StatsScreen stats={stats} exercises={exercises} onClear={() => setStats({})} />}
       {tab === "active"   && <ActiveSessionScreen
-        tasks={tasks} onFinish={endSession} onBackToMenu={backToMenu}
+        tasks={tasks} setTasks={setTasks} onFinish={endSession} onBackToMenu={backToMenu}
         audioCtx={audioCtx} masterGainRef={masterGainRef} onCommitStats={commitStats}
         isVisible={tab === "active"}
         current={sessionCurrent} setCurrent={setSessionCurrent}

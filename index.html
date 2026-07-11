@@ -198,7 +198,11 @@ const STRINGS = {
     displayDesc: "Adjust the size of text and buttons throughout the app.",
     sizeSmall: "Small",
     sizeMedium: "Medium",
-    sizeLarge: "Large"
+    sizeLarge: "Large",
+    subExercisesLabel: "Sub-exercises",
+    subExercisePlaceholder: "e.g. Ascending in 3rds",
+    addSubExercise: "+ Add sub-exercise",
+    subExercisesTitle: "Sub-exercises"
   },
   fr: {
     appSub: "Planificateur de séances",
@@ -322,7 +326,11 @@ const STRINGS = {
     displayDesc: "Ajuste la taille du texte et des boutons dans toute l'application.",
     sizeSmall: "Petit",
     sizeMedium: "Moyen",
-    sizeLarge: "Grand"
+    sizeLarge: "Grand",
+    subExercisesLabel: "Sous-exercices",
+    subExercisePlaceholder: "ex. Montée en tierces",
+    addSubExercise: "+ Ajouter un sous-exercice",
+    subExercisesTitle: "Sous-exercices"
   }
 };
 
@@ -789,6 +797,63 @@ const DEFAULT_CATEGORIES = [{
   name: "Ear Training",
   color: "#FB923C"
 }];
+
+// ─── SUB-EXERCISES ────────────────────────────────────────────────────────────
+// Any exercise can be broken down into checkable sub-exercises (see ExerciseEditor
+// and ActiveSessionScreen). Scale exercises ship with a standard practice
+// checklist: ascending/descending through each interval up to a 9th, plus
+// note-groupings from 3 to 7 notes.
+const INTERVAL_NAMES = {
+  en: {
+    2: "2nds",
+    3: "3rds",
+    4: "4ths",
+    5: "5ths",
+    6: "6ths",
+    7: "7ths",
+    8: "octaves",
+    9: "9ths"
+  },
+  fr: {
+    2: "secondes",
+    3: "tierces",
+    4: "quartes",
+    5: "quintes",
+    6: "sixtes",
+    7: "septièmes",
+    8: "octaves",
+    9: "neuvièmes"
+  }
+};
+const SUBEXERCISE_I18N = {};
+[2, 3, 4, 5, 6, 7, 8, 9].forEach(n => {
+  SUBEXERCISE_I18N[`sub-${n}-up`] = {
+    en: `Ascending in ${INTERVAL_NAMES.en[n]}`,
+    fr: `Montée en ${INTERVAL_NAMES.fr[n]}`
+  };
+  SUBEXERCISE_I18N[`sub-${n}-down`] = {
+    en: `Descending in ${INTERVAL_NAMES.en[n]}`,
+    fr: `Descente en ${INTERVAL_NAMES.fr[n]}`
+  };
+});
+[3, 4, 5, 6, 7].forEach(n => {
+  SUBEXERCISE_I18N[`sub-grp${n}-up`] = {
+    en: `Group of ${n} ascending`,
+    fr: `Groupe de ${n} montant`
+  };
+  SUBEXERCISE_I18N[`sub-grp${n}-down`] = {
+    en: `Group of ${n} descending`,
+    fr: `Groupe de ${n} descendant`
+  };
+});
+// Stored labels are always the English default text (matching how exercise
+// name/description defaults work) — subExerciseLabel() below translates them.
+function makeScaleSubExercises() {
+  return Object.keys(SUBEXERCISE_I18N).map(id => ({
+    id,
+    label: SUBEXERCISE_I18N[id].en
+  }));
+}
 const DEFAULT_EXERCISES = [{
   id: "warm1",
   categoryId: "cat-warmup",
@@ -816,21 +881,24 @@ const DEFAULT_EXERCISES = [{
   name: "Pentatonic (A minor)",
   defaultMin: 10,
   icon: "🎵",
-  description: "Run the Am pentatonic in all 5 positions."
+  description: "Run the Am pentatonic in all 5 positions.",
+  subExercises: makeScaleSubExercises()
 }, {
   id: "scale2",
   categoryId: "cat-scales",
   name: "Major Scale Modes",
   defaultMin: 10,
   icon: "🎶",
-  description: "Practice Ionian, Dorian, Phrygian across the neck."
+  description: "Practice Ionian, Dorian, Phrygian across the neck.",
+  subExercises: makeScaleSubExercises()
 }, {
   id: "scale3",
   categoryId: "cat-scales",
   name: "Blues Scale",
   defaultMin: 8,
   icon: "🎸",
-  description: "Add the b5 note to your pentatonic for bluesy feel."
+  description: "Add the b5 note to your pentatonic for bluesy feel.",
+  subExercises: makeScaleSubExercises()
 }, {
   id: "chord1",
   categoryId: "cat-chords",
@@ -1157,6 +1225,12 @@ function categoryName(cat, lang) {
   if (i18n && cat.name === i18n.en) return i18n[lang] ?? cat.name;
   return cat.name;
 }
+function subExerciseLabel(sub, lang) {
+  if (!sub) return "";
+  const i18n = SUBEXERCISE_I18N[sub.id];
+  if (i18n && sub.label === i18n.en) return i18n[lang] ?? sub.label;
+  return sub.label;
+}
 const ICONS = ["🎸", "🎵", "🎶", "🎤", "🎷", "🎺", "🥁", "🎹", "⚡", "🔥", "🌟", "💥", "🤘", "✋", "🕷️", "🐛", "🔨", "〰️", "🤚", "🔵", "📝", "▶️", "👂", "🏆", "🎯", "⚙️", "🧠", "💡", "🎯", "🎼"];
 function formatTime(s) {
   const m = Math.floor(s / 60);
@@ -1192,16 +1266,16 @@ const C = {
   amberDim: "#6B3A0A",
   cream: "#F5EDD6",
   muted: "#4A4A5A",
+  navInactive: "#8D8D9C",
   faint: "#1A1A1A"
 };
 
 // Display size setting: a single CSS `zoom` factor scales the whole app
 // (text, icons, spacing) uniformly without touching every font-size value.
-// Kept modest so it doesn't overflow narrow phone screens.
 const DISPLAY_ZOOM = {
-  small: 0.9,
-  medium: 1,
-  large: 1.12
+  small: 0.95,
+  medium: 1.15,
+  large: 1.35
 };
 const base = {
   app: {
@@ -1264,7 +1338,7 @@ const base = {
     background: "none",
     border: "none",
     borderBottom: a ? `2px solid ${C.amber}` : "2px solid transparent",
-    color: a ? C.amber : C.muted,
+    color: a ? C.amber : C.navInactive,
     fontSize: 10,
     fontWeight: a ? 700 : 500,
     letterSpacing: "0.1em",
@@ -1957,7 +2031,8 @@ function PresetsScreen({
   const loadPreset = preset => {
     setTasks(preset.tasks.map(t => ({
       ...t,
-      id: uid()
+      id: uid(),
+      subDone: []
     })));
     onLoadGoToSession();
   };
@@ -2486,6 +2561,7 @@ function SessionScreen({
 
 function ActiveSessionScreen({
   tasks,
+  setTasks,
   onFinish,
   onBackToMenu,
   audioCtx,
@@ -2683,6 +2759,18 @@ function ActiveSessionScreen({
     elapsedRef.current = 0;
     setCurrent(prevIndex);
     setSecondsLeft(tasks[prevIndex].minutes * 60);
+  };
+
+  // Toggle a sub-exercise's checked state for the current task only.
+  const toggleSub = subId => {
+    setTasks(prev => prev.map((t, i) => {
+      if (i !== current) return t;
+      const subDone = t.subDone || [];
+      return {
+        ...t,
+        subDone: subDone.includes(subId) ? subDone.filter(id => id !== subId) : [...subDone, subId]
+      };
+    }));
   };
 
   // Urgency pulse when ≤10s left
@@ -2923,7 +3011,66 @@ function ActiveSessionScreen({
       cursor: "pointer",
       padding: 0
     }
-  }, n)))))), /*#__PURE__*/React.createElement(YouTubeCard, {
+  }, n)))))), currentTask?.subExercises?.length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: base.card
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "10px 14px",
+      borderBottom: `1px solid ${C.faint}`,
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 10,
+      letterSpacing: "0.15em",
+      textTransform: "uppercase",
+      color: C.muted
+    }
+  }, T("subExercisesTitle")), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: C.amber,
+      fontWeight: 700
+    }
+  }, (currentTask.subDone || []).length, "/", currentTask.subExercises.length, " ", T("done"))), currentTask.subExercises.map(sub => {
+    const checked = (currentTask.subDone || []).includes(sub.id);
+    return /*#__PURE__*/React.createElement("div", {
+      key: sub.id,
+      onClick: () => toggleSub(sub.id),
+      style: {
+        padding: "9px 14px",
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        borderBottom: `1px solid #111`,
+        cursor: "pointer"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: 18,
+        height: 18,
+        borderRadius: 5,
+        border: `1.5px solid ${checked ? "#34D399" : "#3A3A3A"}`,
+        background: checked ? "#34D399" : "transparent",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        fontSize: 12,
+        color: "#0A0A0A",
+        fontWeight: 900
+      }
+    }, checked ? "✓" : ""), /*#__PURE__*/React.createElement("span", {
+      style: {
+        flex: 1,
+        fontSize: 13,
+        color: checked ? "#3A5A40" : C.cream,
+        textDecoration: checked ? "line-through" : "none"
+      }
+    }, subExerciseLabel(sub, lang)));
+  })), /*#__PURE__*/React.createElement(YouTubeCard, {
     videoId: extractYouTubeId(currentTask?.youtubeUrl)
   }), /*#__PURE__*/React.createElement("div", {
     style: base.card
@@ -3069,12 +3216,14 @@ function ExerciseEditor({
     categoryId: categories[0]?.id || "",
     youtubeUrl: "",
     bpm: 0,
-    beatsPerBar: 4
+    beatsPerBar: 4,
+    subExercises: []
   } : {
     ...editEx,
     youtubeUrl: editEx.youtubeUrl || "",
     bpm: editEx.bpm || 0,
-    beatsPerBar: editEx.beatsPerBar || 4
+    beatsPerBar: editEx.beatsPerBar || 4,
+    subExercises: editEx.subExercises || []
   });
   const [iconPicker, setIconPicker] = useState(false);
   const setF = (k, v) => setForm(f => ({
@@ -3083,17 +3232,18 @@ function ExerciseEditor({
   }));
   const save = () => {
     if (!form.name.trim()) return;
+    const cleaned = {
+      ...form,
+      defaultMin: Number(form.defaultMin),
+      subExercises: (form.subExercises || []).filter(s => s.label.trim())
+    };
     if (isNew) {
       setExercises(prev => [...prev, {
-        ...form,
-        id: uid(),
-        defaultMin: Number(form.defaultMin)
+        ...cleaned,
+        id: uid()
       }]);
     } else {
-      setExercises(prev => prev.map(e => e.id === form.id ? {
-        ...form,
-        defaultMin: Number(form.defaultMin)
-      } : e));
+      setExercises(prev => prev.map(e => e.id === form.id ? cleaned : e));
     }
     onBack();
   };
@@ -3361,7 +3511,60 @@ function ExerciseEditor({
     key: c.id,
     style: base.catChip(form.categoryId === c.id, c.color),
     onClick: () => setF("categoryId", c.id)
-  }, categoryName(c, lang))))), /*#__PURE__*/React.createElement("button", {
+  }, categoryName(c, lang))))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: base.label
+  }, T("subExercisesLabel")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 6
+    }
+  }, (form.subExercises || []).map((sub, idx) => /*#__PURE__*/React.createElement("div", {
+    key: sub.id,
+    style: {
+      display: "flex",
+      gap: 6,
+      alignItems: "center"
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    style: {
+      ...base.input,
+      flex: 1
+    },
+    value: sub.label,
+    onChange: e => setF("subExercises", form.subExercises.map((s, i) => i === idx ? {
+      ...s,
+      label: e.target.value
+    } : s)),
+    placeholder: T("subExercisePlaceholder"),
+    autoComplete: "off",
+    autoCorrect: "off",
+    spellCheck: false
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setF("subExercises", form.subExercises.filter((_, i) => i !== idx)),
+    style: {
+      width: 30,
+      height: 30,
+      borderRadius: 7,
+      background: "none",
+      border: "1px solid #2A2A2A",
+      color: C.muted,
+      fontSize: 14,
+      cursor: "pointer",
+      flexShrink: 0
+    }
+  }, "×")))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setF("subExercises", [...(form.subExercises || []), {
+      id: uid(),
+      label: ""
+    }]),
+    style: {
+      ...base.pillBtn(false),
+      marginTop: 8,
+      textAlign: "center",
+      fontSize: 12
+    }
+  }, T("addSubExercise"))), /*#__PURE__*/React.createElement("button", {
     style: base.pillBtn(true),
     onClick: save
   }, isNew ? T("addExercise") : T("saveChanges")), !isNew && /*#__PURE__*/React.createElement("button", {
@@ -3908,7 +4111,9 @@ function App() {
       categoryId: ex.categoryId,
       youtubeUrl: ex.youtubeUrl || "",
       bpm: ex.bpm || 0,
-      beatsPerBar: ex.beatsPerBar || 4
+      beatsPerBar: ex.beatsPerBar || 4,
+      subExercises: ex.subExercises || [],
+      subDone: []
     }]);
   };
   const startSession = () => {
@@ -4032,7 +4237,7 @@ function App() {
     height: "17",
     viewBox: "0 0 24 24",
     fill: "none",
-    stroke: tab === "library" ? C.amber : C.muted,
+    stroke: tab === "library" ? C.amber : C.navInactive,
     strokeWidth: "2",
     strokeLinecap: "round",
     strokeLinejoin: "round"
@@ -4062,7 +4267,7 @@ function App() {
     height: "18",
     viewBox: "0 0 24 24",
     fill: "none",
-    stroke: tab === "stats" ? "#4FC3F7" : "#4A4A5A",
+    stroke: tab === "stats" ? "#4FC3F7" : C.navInactive,
     strokeWidth: "2",
     strokeLinecap: "round",
     strokeLinejoin: "round"
@@ -4113,7 +4318,7 @@ function App() {
     height: "18",
     viewBox: "0 0 24 24",
     fill: "none",
-    stroke: tab === "settings" ? C.amber : C.muted,
+    stroke: tab === "settings" ? C.amber : C.navInactive,
     strokeWidth: "2",
     strokeLinecap: "round",
     strokeLinejoin: "round"
@@ -4222,6 +4427,7 @@ function App() {
     onClear: () => setStats({})
   }), tab === "active" && /*#__PURE__*/React.createElement(ActiveSessionScreen, {
     tasks: tasks,
+    setTasks: setTasks,
     onFinish: endSession,
     onBackToMenu: backToMenu,
     audioCtx: audioCtx,
