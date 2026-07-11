@@ -31,7 +31,7 @@ const STRINGS = {
     statsMostPractised: "Most Practised", statsReset: "Reset Statistics",
     statsConfirmTitle: "Reset all statistics?", statsConfirmMsg: "This will permanently delete all your practice history. This cannot be undone.",
     statsConfirmYes: "Yes, reset", statsEmpty: "No stats yet.", statsEmptySub: "Complete at least one exercise to start tracking.",
-    settingsExercises: "exercises", settingsCategories: "categories", settingsSound: "sound", settingsLanguage: "language",
+    settingsExercises: "exercises", settingsCategories: "categories", settingsSound: "sound", settingsLanguage: "language", settingsDisplay: "display",
     newExercise: "+ New Exercise", editExercise: "Edit Exercise", newExerciseTitle: "New Exercise",
     iconLabel: "Icon", nameLabel: "Name", descLabel: "Description", youtubeLabel: "YouTube Reference Video (optional)",
     youtubePlaceholder: "https://youtube.com/watch?v=...", youtubeError: "⚠ URL not recognised — try a standard youtube.com or youtu.be link",
@@ -51,6 +51,8 @@ const STRINGS = {
     presetPlaceholder: "e.g. Morning Warm-Up",
     exerciseNamePlaceholder: "Exercise name", exerciseDescPlaceholder: "What does this exercise focus on?",
     categoryNamePlaceholder: "Category name", bpmHint: "(BPM, 0 = off)", beatsPerBarHint: "(beats per bar)",
+    displayLabel: "Display size", displayDesc: "Adjust the size of text and buttons throughout the app.",
+    sizeSmall: "Small", sizeMedium: "Medium", sizeLarge: "Large",
   },
   fr: {
     appSub: "Planificateur de séances",
@@ -80,7 +82,7 @@ const STRINGS = {
     statsMostPractised: "Les plus pratiqués", statsReset: "Réinitialiser les statistiques",
     statsConfirmTitle: "Réinitialiser les statistiques ?", statsConfirmMsg: "Ceci supprimera définitivement tout votre historique de pratique. Cette action est irréversible.",
     statsConfirmYes: "Oui, réinitialiser", statsEmpty: "Pas encore de statistiques.", statsEmptySub: "Terminez au moins un exercice pour commencer le suivi.",
-    settingsExercises: "exercices", settingsCategories: "catégories", settingsSound: "son", settingsLanguage: "langue",
+    settingsExercises: "exercices", settingsCategories: "catégories", settingsSound: "son", settingsLanguage: "langue", settingsDisplay: "affichage",
     newExercise: "+ Nouvel exercice", editExercise: "Modifier l'exercice", newExerciseTitle: "Nouvel exercice",
     iconLabel: "Icône", nameLabel: "Nom", descLabel: "Description", youtubeLabel: "Vidéo YouTube de référence (optionnel)",
     youtubePlaceholder: "https://youtube.com/watch?v=...", youtubeError: "⚠ URL non reconnue — essayez un lien youtube.com ou youtu.be standard",
@@ -100,6 +102,8 @@ const STRINGS = {
     presetPlaceholder: "ex. Échauffement du matin",
     exerciseNamePlaceholder: "Nom de l'exercice", exerciseDescPlaceholder: "Sur quoi porte cet exercice ?",
     categoryNamePlaceholder: "Nom de la catégorie", bpmHint: "(BPM, 0 = désactivé)", beatsPerBarHint: "(temps par mesure)",
+    displayLabel: "Taille d'affichage", displayDesc: "Ajuste la taille du texte et des boutons dans toute l'application.",
+    sizeSmall: "Petit", sizeMedium: "Moyen", sizeLarge: "Grand",
   },
 };
 
@@ -531,8 +535,13 @@ function extractYouTubeId(url) {
 
 const C = { bg: "#0F0F0F", surface: "#151515", border: "#1E1E1E", amber: "#C8873A", amberDim: "#6B3A0A", cream: "#F5EDD6", muted: "#4A4A5A", faint: "#1A1A1A" };
 
+// Display size setting: a single CSS `zoom` factor scales the whole app
+// (text, icons, spacing) uniformly without touching every font-size value.
+// Kept modest so it doesn't overflow narrow phone screens.
+const DISPLAY_ZOOM = { small: 0.9, medium: 1, large: 1.12 };
+
 const base = {
-  app: { background: C.bg, minHeight: "100vh", maxWidth: 430, margin: "0 auto", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.cream, position: "relative" },
+  app: { background: C.bg, minHeight: "100vh", maxWidth: 430, margin: "0 auto", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.cream, position: "relative", overflowX: "hidden" },
   header: { background: "linear-gradient(180deg,#1A1208 0%,#0F0F0F 100%)", padding: "16px 20px 12px", borderBottom: "1px solid #2A2008", display: "flex", alignItems: "center", justifyContent: "space-between" },
   headerLeft: { display: "flex", flexDirection: "column", gap: 2 },
   headerTitle: { fontSize: 17, fontWeight: 700, color: C.amber, letterSpacing: "0.04em", textTransform: "uppercase", margin: 0 },
@@ -841,6 +850,7 @@ function PresetsScreen({ presets, setPresets, tasks, setTasks, onLoadGoToSession
             style={{ ...base.input, marginBottom: 10 }} autoFocus
             value={saveName} onChange={e => setSaveName(e.target.value)}
             placeholder={T("presetPlaceholder")}
+            autoComplete="off" autoCorrect="off" spellCheck={false}
             onKeyDown={e => { if (e.key === "Enter") savePreset(); if (e.key === "Escape") setSaveOpen(false); }}
           />
           <div style={{ display: "flex", gap: 8 }}>
@@ -1000,6 +1010,7 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
           <label style={base.label}>{T("savePresetTitle")}</label>
           <input style={base.input} autoFocus value={saveName} onChange={e => setSaveName(e.target.value)}
             placeholder={T("presetPlaceholder")}
+            autoComplete="off" autoCorrect="off" spellCheck={false}
             onKeyDown={e => { if (e.key === "Enter") savePreset(); if (e.key === "Escape") setSaveOpen(false); }} />
           <div style={{ display: "flex", gap: 8 }}>
             <button style={{ ...base.pillBtn(false), flex: 1, textAlign: "center" }} onClick={() => setSaveOpen(false)}>{T("cancelBtn")}</button>
@@ -1392,7 +1403,7 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack }) {
         </div>
         <div>
           <label style={base.label}>{T("nameLabel")}</label>
-          <input style={base.input} value={form.name} onChange={e => setF("name", e.target.value)} placeholder={T("exerciseNamePlaceholder")} />
+          <input style={base.input} value={form.name} onChange={e => setF("name", e.target.value)} placeholder={T("exerciseNamePlaceholder")} autoComplete="off" autoCorrect="off" spellCheck={false} />
         </div>
         <div>
           <label style={base.label}>{T("descLabel")}</label>
@@ -1504,7 +1515,7 @@ function CategoryEditor({ editCat, setExercises, setCategories, onBack }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div>
           <label style={base.label}>{T("nameLabel")}</label>
-          <input style={base.input} value={form.name} onChange={e => setF("name", e.target.value)} placeholder={T("categoryNamePlaceholder")} />
+          <input style={base.input} value={form.name} onChange={e => setF("name", e.target.value)} placeholder={T("categoryNamePlaceholder")} autoComplete="off" autoCorrect="off" spellCheck={false} />
         </div>
         <div>
           <label style={base.label}>{T("colorLabel")}</label>
@@ -1529,7 +1540,7 @@ function CategoryEditor({ editCat, setExercises, setCategories, onBack }) {
   );
 }
 
-function SettingsScreen({ exercises, setExercises, categories, setCategories, volume, onVolumeChange, lang, onLangChange }) {
+function SettingsScreen({ exercises, setExercises, categories, setCategories, volume, onVolumeChange, lang, onLangChange, displaySize, onDisplaySizeChange }) {
   const T = useT();
   const [section, setSection] = useState("exercises");
   const [editEx, setEditEx]   = useState(null);  // null | "new" | exercise object
@@ -1543,7 +1554,7 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
     <div style={base.scrollArea(24)}>
       {/* Sub-tabs */}
       <div style={{ display: "flex", gap: 0, background: "#0A0A0A", borderRadius: 10, padding: 3, marginBottom: 8 }}>
-        {[["exercises", T("settingsExercises")], ["categories", T("settingsCategories")], ["sound", T("settingsSound")], ["language", T("settingsLanguage")]].map(([id, label]) => (
+        {[["exercises", T("settingsExercises")], ["categories", T("settingsCategories")], ["sound", T("settingsSound")], ["language", T("settingsLanguage")], ["display", T("settingsDisplay")]].map(([id, label]) => (
           <button key={id} style={{ flex: 1, padding: "7px 2px", borderRadius: 8, border: "none", background: section === id ? "#1E1E1E" : "none", color: section === id ? C.amber : C.muted, fontSize: 10, fontWeight: section === id ? 700 : 500, cursor: "pointer", letterSpacing: "0.03em" }} onClick={() => setSection(id)}>
             {label}
           </button>
@@ -1626,6 +1637,29 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
         </div>
       )}
 
+      {section === "display" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={base.card}>
+            <div style={{ padding: "14px 16px" }}>
+              <div style={{ marginBottom: 8 }}>
+                <label style={{ ...base.label, margin: 0 }}>{T("displayLabel")}</label>
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>{T("displayDesc")}</div>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                {[["small", T("sizeSmall")], ["medium", T("sizeMedium")], ["large", T("sizeLarge")]].map(([size, label]) => (
+                  <button key={size} onClick={() => onDisplaySizeChange(size)}
+                    style={{ flex: 1, padding: "10px 8px", borderRadius: 9, border: `1px solid ${displaySize === size ? C.amber : "#2A2A2A"}`,
+                      background: displaySize === size ? "#C8873A22" : "#1A1A1A",
+                      color: displaySize === size ? C.amber : C.muted, fontSize: 13, fontWeight: displaySize === size ? 700 : 400, cursor: "pointer" }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {section === "categories" && (
         <>
           <button style={{ ...base.pillBtn(false), width: "100%", textAlign: "center", color: C.amber, border: `1px solid ${C.amber}44`, marginBottom: 10, padding: "11px" }} onClick={() => setEditCat("new")}>
@@ -1658,6 +1692,7 @@ export default function App() {
   const [stats, setStats, statsLoaded]      = usePersisted("stats", {});
   const [presets, setPresets, presetsLoaded] = usePersisted("presets", []);
   const [lang, setLang, langLoaded]          = usePersisted("lang", "fr");
+  const [displaySize, setDisplaySize, displaySizeLoaded] = usePersisted("displaySize", "medium");
   const setCategories = setCats;
   const audioCtx      = useRef(null);
   const masterGainRef = useRef(null);
@@ -1768,8 +1803,27 @@ export default function App() {
 
   return (
     <LangContext.Provider value={lang}>
-    <div style={base.app} onClick={ensureAudio}>
-      <style>{`* { box-sizing: border-box; } ::-webkit-scrollbar { display: none; } input, textarea { color-scheme: dark; } @keyframes activePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }`}</style>
+    <div style={{ ...base.app, zoom: DISPLAY_ZOOM[displaySize] || 1 }} onClick={ensureAudio}>
+      <style>{`
+        * { box-sizing: border-box; }
+        ::-webkit-scrollbar { display: none; }
+        input, textarea {
+          color-scheme: dark;
+          color: ${C.cream};
+          -webkit-text-fill-color: ${C.cream};
+          caret-color: ${C.cream};
+        }
+        input::placeholder, textarea::placeholder { -webkit-text-fill-color: ${C.muted}; color: ${C.muted}; opacity: 1; }
+        input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus,
+        textarea:-webkit-autofill, textarea:-webkit-autofill:hover, textarea:-webkit-autofill:focus {
+          -webkit-text-fill-color: ${C.cream} !important;
+          -webkit-box-shadow: 0 0 0px 1000px ${C.surface} inset !important;
+          box-shadow: 0 0 0px 1000px ${C.surface} inset !important;
+          caret-color: ${C.cream} !important;
+          transition: background-color 9999s ease-in-out 0s;
+        }
+        @keyframes activePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+      `}</style>
 
       {/* Header */}
       <div style={base.header}>
@@ -1868,7 +1922,7 @@ export default function App() {
       {tab === "library"  && <LibraryScreen exercises={exercises} categories={categories} tasks={tasks} onAdd={addExercise} stats={stats} />}
       {tab === "presets"  && <PresetsScreen presets={presets} setPresets={setPresets} tasks={tasks} setTasks={setTasks} onLoadGoToSession={() => setTab("session")} />}
       {tab === "session"  && <SessionScreen tasks={tasks} setTasks={setTasks} onStart={startSession} sessionInProgress={sessionInProgress} onReturnToSession={returnToSession} presets={presets} setPresets={setPresets} />}
-      {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} />}
+      {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} />}
       {tab === "stats"    && <StatsScreen stats={stats} exercises={exercises} onClear={() => setStats({})} />}
       {tab === "active"   && <ActiveSessionScreen
         tasks={tasks} onFinish={endSession} onBackToMenu={backToMenu}

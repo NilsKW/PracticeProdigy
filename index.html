@@ -151,6 +151,7 @@ const STRINGS = {
     settingsCategories: "categories",
     settingsSound: "sound",
     settingsLanguage: "language",
+    settingsDisplay: "display",
     newExercise: "+ New Exercise",
     editExercise: "Edit Exercise",
     newExerciseTitle: "New Exercise",
@@ -192,7 +193,12 @@ const STRINGS = {
     exerciseDescPlaceholder: "What does this exercise focus on?",
     categoryNamePlaceholder: "Category name",
     bpmHint: "(BPM, 0 = off)",
-    beatsPerBarHint: "(beats per bar)"
+    beatsPerBarHint: "(beats per bar)",
+    displayLabel: "Display size",
+    displayDesc: "Adjust the size of text and buttons throughout the app.",
+    sizeSmall: "Small",
+    sizeMedium: "Medium",
+    sizeLarge: "Large"
   },
   fr: {
     appSub: "Planificateur de séances",
@@ -269,6 +275,7 @@ const STRINGS = {
     settingsCategories: "catégories",
     settingsSound: "son",
     settingsLanguage: "langue",
+    settingsDisplay: "affichage",
     newExercise: "+ Nouvel exercice",
     editExercise: "Modifier l'exercice",
     newExerciseTitle: "Nouvel exercice",
@@ -310,7 +317,12 @@ const STRINGS = {
     exerciseDescPlaceholder: "Sur quoi porte cet exercice ?",
     categoryNamePlaceholder: "Nom de la catégorie",
     bpmHint: "(BPM, 0 = désactivé)",
-    beatsPerBarHint: "(temps par mesure)"
+    beatsPerBarHint: "(temps par mesure)",
+    displayLabel: "Taille d'affichage",
+    displayDesc: "Ajuste la taille du texte et des boutons dans toute l'application.",
+    sizeSmall: "Petit",
+    sizeMedium: "Moyen",
+    sizeLarge: "Grand"
   }
 };
 
@@ -1182,6 +1194,15 @@ const C = {
   muted: "#4A4A5A",
   faint: "#1A1A1A"
 };
+
+// Display size setting: a single CSS `zoom` factor scales the whole app
+// (text, icons, spacing) uniformly without touching every font-size value.
+// Kept modest so it doesn't overflow narrow phone screens.
+const DISPLAY_ZOOM = {
+  small: 0.9,
+  medium: 1,
+  large: 1.12
+};
 const base = {
   app: {
     background: C.bg,
@@ -1190,7 +1211,8 @@ const base = {
     margin: "0 auto",
     fontFamily: "'Segoe UI', system-ui, sans-serif",
     color: C.cream,
-    position: "relative"
+    position: "relative",
+    overflowX: "hidden"
   },
   header: {
     background: "linear-gradient(180deg,#1A1208 0%,#0F0F0F 100%)",
@@ -1975,6 +1997,9 @@ function PresetsScreen({
     value: saveName,
     onChange: e => setSaveName(e.target.value),
     placeholder: T("presetPlaceholder"),
+    autoComplete: "off",
+    autoCorrect: "off",
+    spellCheck: false,
     onKeyDown: e => {
       if (e.key === "Enter") savePreset();
       if (e.key === "Escape") setSaveOpen(false);
@@ -2365,6 +2390,9 @@ function SessionScreen({
     value: saveName,
     onChange: e => setSaveName(e.target.value),
     placeholder: T("presetPlaceholder"),
+    autoComplete: "off",
+    autoCorrect: "off",
+    spellCheck: false,
     onKeyDown: e => {
       if (e.key === "Enter") savePreset();
       if (e.key === "Escape") setSaveOpen(false);
@@ -3140,7 +3168,10 @@ function ExerciseEditor({
     style: base.input,
     value: form.name,
     onChange: e => setF("name", e.target.value),
-    placeholder: T("exerciseNamePlaceholder")
+    placeholder: T("exerciseNamePlaceholder"),
+    autoComplete: "off",
+    autoCorrect: "off",
+    spellCheck: false
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     style: base.label
   }, T("descLabel")), /*#__PURE__*/React.createElement("textarea", {
@@ -3410,7 +3441,10 @@ function CategoryEditor({
     style: base.input,
     value: form.name,
     onChange: e => setF("name", e.target.value),
-    placeholder: T("categoryNamePlaceholder")
+    placeholder: T("categoryNamePlaceholder"),
+    autoComplete: "off",
+    autoCorrect: "off",
+    spellCheck: false
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     style: base.label
   }, T("colorLabel")), /*#__PURE__*/React.createElement("div", {
@@ -3474,7 +3508,9 @@ function SettingsScreen({
   volume,
   onVolumeChange,
   lang,
-  onLangChange
+  onLangChange,
+  displaySize,
+  onDisplaySizeChange
 }) {
   const T = useT();
   const [section, setSection] = useState("exercises");
@@ -3506,7 +3542,7 @@ function SettingsScreen({
       padding: 3,
       marginBottom: 8
     }
-  }, [["exercises", T("settingsExercises")], ["categories", T("settingsCategories")], ["sound", T("settingsSound")], ["language", T("settingsLanguage")]].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+  }, [["exercises", T("settingsExercises")], ["categories", T("settingsCategories")], ["sound", T("settingsSound")], ["language", T("settingsLanguage")], ["display", T("settingsDisplay")]].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
     key: id,
     style: {
       flex: 1,
@@ -3697,6 +3733,53 @@ function SettingsScreen({
       fontWeight: lang === code ? 700 : 400,
       cursor: "pointer"
     }
+  }, label)))))), section === "display" && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: base.card
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "14px 16px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginBottom: 8
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      ...base.label,
+      margin: 0
+    }
+  }, T("displayLabel")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: C.muted,
+      marginTop: 4
+    }
+  }, T("displayDesc"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      marginTop: 12
+    }
+  }, [["small", T("sizeSmall")], ["medium", T("sizeMedium")], ["large", T("sizeLarge")]].map(([size, label]) => /*#__PURE__*/React.createElement("button", {
+    key: size,
+    onClick: () => onDisplaySizeChange(size),
+    style: {
+      flex: 1,
+      padding: "10px 8px",
+      borderRadius: 9,
+      border: `1px solid ${displaySize === size ? C.amber : "#2A2A2A"}`,
+      background: displaySize === size ? "#C8873A22" : "#1A1A1A",
+      color: displaySize === size ? C.amber : C.muted,
+      fontSize: 13,
+      fontWeight: displaySize === size ? 700 : 400,
+      cursor: "pointer"
+    }
   }, label)))))), section === "categories" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
     style: {
       ...base.pillBtn(false),
@@ -3757,6 +3840,7 @@ function App() {
   const [stats, setStats, statsLoaded] = usePersisted("stats", {});
   const [presets, setPresets, presetsLoaded] = usePersisted("presets", []);
   const [lang, setLang, langLoaded] = usePersisted("lang", "fr");
+  const [displaySize, setDisplaySize, displaySizeLoaded] = usePersisted("displaySize", "medium");
   const setCategories = setCats;
   const audioCtx = useRef(null);
   const masterGainRef = useRef(null);
@@ -3882,9 +3966,31 @@ function App() {
   return /*#__PURE__*/React.createElement(LangContext.Provider, {
     value: lang
   }, /*#__PURE__*/React.createElement("div", {
-    style: base.app,
+    style: {
+      ...base.app,
+      zoom: DISPLAY_ZOOM[displaySize] || 1
+    },
     onClick: ensureAudio
-  }, /*#__PURE__*/React.createElement("style", null, `* { box-sizing: border-box; } ::-webkit-scrollbar { display: none; } input, textarea { color-scheme: dark; } @keyframes activePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }`), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("style", null, `
+        * { box-sizing: border-box; }
+        ::-webkit-scrollbar { display: none; }
+        input, textarea {
+          color-scheme: dark;
+          color: ${C.cream};
+          -webkit-text-fill-color: ${C.cream};
+          caret-color: ${C.cream};
+        }
+        input::placeholder, textarea::placeholder { -webkit-text-fill-color: ${C.muted}; color: ${C.muted}; opacity: 1; }
+        input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus,
+        textarea:-webkit-autofill, textarea:-webkit-autofill:hover, textarea:-webkit-autofill:focus {
+          -webkit-text-fill-color: ${C.cream} !important;
+          -webkit-box-shadow: 0 0 0px 1000px ${C.surface} inset !important;
+          box-shadow: 0 0 0px 1000px ${C.surface} inset !important;
+          caret-color: ${C.cream} !important;
+          transition: background-color 9999s ease-in-out 0s;
+        }
+        @keyframes activePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+      `), /*#__PURE__*/React.createElement("div", {
     style: base.header
   }, /*#__PURE__*/React.createElement("div", {
     style: base.headerLeft
@@ -4107,7 +4213,9 @@ function App() {
     volume: volume,
     onVolumeChange: setVolume,
     lang: lang,
-    onLangChange: setLang
+    onLangChange: setLang,
+    displaySize: displaySize,
+    onDisplaySizeChange: setDisplaySize
   }), tab === "stats" && /*#__PURE__*/React.createElement(StatsScreen, {
     stats: stats,
     exercises: exercises,
