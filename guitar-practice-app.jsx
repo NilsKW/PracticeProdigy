@@ -55,6 +55,7 @@ const STRINGS = {
     sizeSmall: "Small", sizeMedium: "Medium", sizeLarge: "Large",
     subExercisesLabel: "Sub-exercises", subExercisePlaceholder: "e.g. Ascending in 3rds",
     addSubExercise: "+ Add sub-exercise", subExercisesTitle: "Sub-exercises",
+    resetProgress: "↺ Reset", resetProgressConfirm: "Reset?",
   },
   fr: {
     appSub: "Planificateur de séances",
@@ -108,6 +109,7 @@ const STRINGS = {
     sizeSmall: "Petit", sizeMedium: "Moyen", sizeLarge: "Grand",
     subExercisesLabel: "Sous-exercices", subExercisePlaceholder: "ex. Montée en tierces",
     addSubExercise: "+ Ajouter un sous-exercice", subExercisesTitle: "Sous-exercices",
+    resetProgress: "↺ Réinitialiser", resetProgressConfirm: "Confirmer ?",
   },
 };
 
@@ -673,7 +675,7 @@ function Fireworks({ active }) {
 
 // ─── LIBRARY SCREEN ───────────────────────────────────────────────────────────
 
-function LibraryScreen({ exercises, categories, tasks, onAdd, stats }) {
+function LibraryScreen({ exercises, categories, tasks, onAdd, stats, subProgress }) {
   const T = useT();
   const lang = useLang();
   const [catId, setCatId] = useState("all");
@@ -804,6 +806,11 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, stats }) {
                     <div style={{ fontSize: 13, fontWeight: 600, color: C.cream }}>{exerciseName(ex, lang)}</div>
                     {ex.description && <div style={{ fontSize: 11, color: C.muted, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{exerciseDesc(ex, lang)}</div>}
                   </div>
+                  {ex.subExercises?.length > 0 && (
+                    <span style={{ fontSize: 10, color: "#34D399", background: "#34D39922", border: "1px solid #34D39944", borderRadius: 5, padding: "2px 6px", flexShrink: 0, marginRight: 4, fontWeight: 700 }}>
+                      {(subProgress[ex.id] || []).length}/{ex.subExercises.length}
+                    </span>
+                  )}
                   <span style={{ fontSize: 11, color: C.muted, flexShrink: 0, marginRight: 4 }}>{ex.defaultMin}m</span>
                   {ex.youtubeUrl && extractYouTubeId(ex.youtubeUrl) && (
                     <span style={{ fontSize: 10, background: "#FF000033", border: "1px solid #FF000066", color: "#FF6666", borderRadius: 4, padding: "2px 5px", flexShrink: 0, marginRight: 4, fontWeight: 700 }}>▶</span>
@@ -825,6 +832,11 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, stats }) {
                   <div style={{ fontSize: 13, fontWeight: 600, color: C.cream }}>{exerciseName(ex, lang)}</div>
                   {ex.description && <div style={{ fontSize: 11, color: C.muted, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{exerciseDesc(ex, lang)}</div>}
                 </div>
+                {ex.subExercises?.length > 0 && (
+                  <span style={{ fontSize: 10, color: "#34D399", background: "#34D39922", border: "1px solid #34D39944", borderRadius: 5, padding: "2px 6px", flexShrink: 0, marginRight: 4, fontWeight: 700 }}>
+                    {(subProgress[ex.id] || []).length}/{ex.subExercises.length}
+                  </span>
+                )}
                 <span style={{ fontSize: 11, color: C.muted, flexShrink: 0, marginRight: 4 }}>{ex.defaultMin}m</span>
                 {ex.youtubeUrl && extractYouTubeId(ex.youtubeUrl) && (
                   <span style={{ fontSize: 10, background: "#FF000033", border: "1px solid #FF000066", color: "#FF6666", borderRadius: 4, padding: "2px 5px", flexShrink: 0, marginRight: 4, fontWeight: 700 }}>▶</span>
@@ -856,7 +868,7 @@ function PresetsScreen({ presets, setPresets, tasks, setTasks, onLoadGoToSession
   };
 
   const loadPreset = (preset) => {
-    setTasks(preset.tasks.map(t => ({ ...t, id: uid(), subDone: [] })));
+    setTasks(preset.tasks.map(t => ({ ...t, id: uid() })));
     onLoadGoToSession();
   };
 
@@ -1081,6 +1093,7 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
 
 function ActiveSessionScreen({
   tasks, setTasks, onFinish, onBackToMenu, audioCtx, masterGainRef, onCommitStats, isVisible,
+  subProgress, setSubProgress,
   // lifted state
   current, setCurrent, secondsLeft, setSecondsLeft,
   running, setRunning, hasStarted, setHasStarted,
@@ -1256,13 +1269,25 @@ function ActiveSessionScreen({
     setSecondsLeft(tasks[prevIndex].minutes * 60);
   };
 
-  // Toggle a sub-exercise's checked state for the current task only.
+  // Sub-exercise progress is persisted per exercise id (not per task), so the
+  // same recurring exercise keeps one running checklist across sessions.
+  const [confirmResetSub, setConfirmResetSub] = useState(false);
+  useEffect(() => { setConfirmResetSub(false); }, [current]);
+
   const toggleSub = (subId) => {
-    setTasks(prev => prev.map((t, i) => {
-      if (i !== current) return t;
-      const subDone = t.subDone || [];
-      return { ...t, subDone: subDone.includes(subId) ? subDone.filter(id => id !== subId) : [...subDone, subId] };
-    }));
+    const exId = currentTask?.exerciseId;
+    if (!exId) return;
+    setSubProgress(prev => {
+      const list = prev[exId] || [];
+      const next = list.includes(subId) ? list.filter(id => id !== subId) : [...list, subId];
+      return { ...prev, [exId]: next };
+    });
+  };
+  const resetSubProgress = () => {
+    const exId = currentTask?.exerciseId;
+    if (!exId) return;
+    setSubProgress(prev => ({ ...prev, [exId]: [] }));
+    setConfirmResetSub(false);
   };
 
   // Urgency pulse when ≤10s left
@@ -1353,30 +1378,48 @@ function ActiveSessionScreen({
         </div>
 
         {/* Sub-exercises — a checkable breakdown of the current exercise, e.g.
-            scale interval/grouping drills. Checked state lives on the task
-            itself, so it's kept if you skip away and come back. */}
-        {currentTask?.subExercises?.length > 0 && (
-          <div style={base.card}>
-            <div style={{ padding: "10px 14px", borderBottom: `1px solid ${C.faint}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: C.muted }}>{T("subExercisesTitle")}</span>
-              <span style={{ fontSize: 11, color: C.amber, fontWeight: 700 }}>{(currentTask.subDone || []).length}/{currentTask.subExercises.length} {T("done")}</span>
-            </div>
-            {currentTask.subExercises.map(sub => {
-              const checked = (currentTask.subDone || []).includes(sub.id);
-              return (
-                <div key={sub.id} onClick={() => toggleSub(sub.id)}
-                  style={{ padding: "9px 14px", display: "flex", alignItems: "center", gap: 10, borderBottom: `1px solid #111`, cursor: "pointer" }}>
-                  <div style={{ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${checked ? "#34D399" : "#3A3A3A"}`, background: checked ? "#34D399" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 12, color: "#0A0A0A", fontWeight: 900 }}>
-                    {checked ? "✓" : ""}
-                  </div>
-                  <span style={{ flex: 1, fontSize: 13, color: checked ? "#3A5A40" : C.cream, textDecoration: checked ? "line-through" : "none" }}>
-                    {subExerciseLabel(sub, lang)}
-                  </span>
+            scale interval/grouping drills. Progress is saved per exercise
+            (not per session), so the same recurring exercise keeps one
+            running checklist across days/app restarts — handy when you
+            reuse it for different content (e.g. a new key each day) but
+            want to track overall coverage of the pattern itself. */}
+        {currentTask?.subExercises?.length > 0 && (() => {
+          const doneIds = subProgress[currentTask.exerciseId] || [];
+          return (
+            <div style={base.card}>
+              <div style={{ padding: "10px 14px", borderBottom: `1px solid ${C.faint}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: C.muted }}>{T("subExercisesTitle")}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 11, color: C.amber, fontWeight: 700 }}>{doneIds.length}/{currentTask.subExercises.length} {T("done")}</span>
+                  {!confirmResetSub ? (
+                    doneIds.length > 0 && (
+                      <button onClick={() => setConfirmResetSub(true)} style={{ background: "none", border: "none", color: C.muted, fontSize: 11, cursor: "pointer", padding: 0 }}>{T("resetProgress")}</button>
+                    )
+                  ) : (
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => setConfirmResetSub(false)} style={{ background: "none", border: "1px solid #333", borderRadius: 6, color: "#888", fontSize: 10, cursor: "pointer", padding: "3px 7px" }}>{T("cancelBtn")}</button>
+                      <button onClick={resetSubProgress} style={{ background: "#5A0A0A", border: "1px solid #8A1A1A", borderRadius: 6, color: "#F87171", fontSize: 10, fontWeight: 700, cursor: "pointer", padding: "3px 7px" }}>{T("resetProgressConfirm")}</button>
+                    </div>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        )}
+              </div>
+              {currentTask.subExercises.map(sub => {
+                const checked = doneIds.includes(sub.id);
+                return (
+                  <div key={sub.id} onClick={() => toggleSub(sub.id)}
+                    style={{ padding: "9px 14px", display: "flex", alignItems: "center", gap: 10, borderBottom: `1px solid #111`, cursor: "pointer" }}>
+                    <div style={{ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${checked ? "#34D399" : "#3A3A3A"}`, background: checked ? "#34D399" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 12, color: "#0A0A0A", fontWeight: 900 }}>
+                      {checked ? "✓" : ""}
+                    </div>
+                    <span style={{ flex: 1, fontSize: 13, color: checked ? "#3A5A40" : C.cream, textDecoration: checked ? "line-through" : "none" }}>
+                      {subExerciseLabel(sub, lang)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
 
         {/* YouTube reference video */}
         <YouTubeCard videoId={extractYouTubeId(currentTask?.youtubeUrl)} />
@@ -1797,6 +1840,11 @@ export default function App() {
   const [presets, setPresets, presetsLoaded] = usePersisted("presets", []);
   const [lang, setLang, langLoaded]          = usePersisted("lang", "fr");
   const [displaySize, setDisplaySize, displaySizeLoaded] = usePersisted("displaySize", "medium");
+  // Sub-exercise checklist progress, keyed by exercise id: { [exerciseId]: [subExerciseId, ...] }.
+  // Persisted at the exercise level (not per session task) so the same
+  // recurring exercise (e.g. daily scale practice in a different key each
+  // day) keeps one running coverage checklist instead of resetting every session.
+  const [subProgress, setSubProgress, subProgressLoaded] = usePersisted("subProgress", {});
   const setCategories = setCats;
   const audioCtx      = useRef(null);
   const masterGainRef = useRef(null);
@@ -1851,7 +1899,7 @@ export default function App() {
 
   const addExercise = (ex) => {
     ensureAudio();
-    setTasks(prev => [...prev, { id: uid(), exerciseId: ex.id, name: ex.name, icon: ex.icon, minutes: ex.defaultMin, categoryId: ex.categoryId, youtubeUrl: ex.youtubeUrl || "", bpm: ex.bpm || 0, beatsPerBar: ex.beatsPerBar || 4, subExercises: ex.subExercises || [], subDone: [] }]);
+    setTasks(prev => [...prev, { id: uid(), exerciseId: ex.id, name: ex.name, icon: ex.icon, minutes: ex.defaultMin, categoryId: ex.categoryId, youtubeUrl: ex.youtubeUrl || "", bpm: ex.bpm || 0, beatsPerBar: ex.beatsPerBar || 4, subExercises: ex.subExercises || [] }]);
   };
 
   const startSession = () => {
@@ -2028,7 +2076,7 @@ export default function App() {
       </div>
 
       {/* Screens */}
-      {tab === "library"  && <LibraryScreen exercises={exercises} categories={categories} tasks={tasks} onAdd={addExercise} stats={stats} />}
+      {tab === "library"  && <LibraryScreen exercises={exercises} categories={categories} tasks={tasks} onAdd={addExercise} stats={stats} subProgress={subProgress} />}
       {tab === "presets"  && <PresetsScreen presets={presets} setPresets={setPresets} tasks={tasks} setTasks={setTasks} onLoadGoToSession={() => setTab("session")} />}
       {tab === "session"  && <SessionScreen tasks={tasks} setTasks={setTasks} onStart={startSession} sessionInProgress={sessionInProgress} onReturnToSession={returnToSession} presets={presets} setPresets={setPresets} />}
       {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} />}
@@ -2037,6 +2085,7 @@ export default function App() {
         tasks={tasks} setTasks={setTasks} onFinish={endSession} onBackToMenu={backToMenu}
         audioCtx={audioCtx} masterGainRef={masterGainRef} onCommitStats={commitStats}
         isVisible={tab === "active"}
+        subProgress={subProgress} setSubProgress={setSubProgress}
         current={sessionCurrent} setCurrent={setSessionCurrent}
         secondsLeft={sessionSecondsLeft} setSecondsLeft={setSessionSecondsLeft}
         running={sessionRunning} setRunning={setSessionRunning}
