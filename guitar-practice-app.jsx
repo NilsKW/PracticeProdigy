@@ -204,7 +204,7 @@ function StatsScreen({ stats, exercises, onClear }) {
   const totalSessions   = Math.max(...entries.map(e => e.sessions));
 
   return (
-    <div style={{ padding: "12px 16px 40px", display: "flex", flexDirection: "column", gap: 12, overflowY: "auto", maxHeight: "calc(100vh - 110px)" }}>
+    <div style={{ padding: "12px 16px 40px", display: "flex", flexDirection: "column", gap: 12, overflowY: "auto", maxHeight: "calc(100dvh - 110px)" }}>
       {/* Summary row */}
       <div style={{ display: "flex", gap: 8 }}>
         {[
@@ -574,7 +574,7 @@ const C = { bg: "#0F0F0F", surface: "#151515", border: "#1E1E1E", amber: "#C8873
 const DISPLAY_ZOOM = { small: 0.95, medium: 1.15, large: 1.35 };
 
 const base = {
-  app: { background: C.bg, minHeight: "100vh", maxWidth: 430, margin: "0 auto", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.cream, position: "relative", overflowX: "hidden" },
+  app: { background: C.bg, minHeight: "100dvh", maxWidth: 430, margin: "0 auto", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.cream, position: "relative" },
   header: { background: "linear-gradient(180deg,#1A1208 0%,#0F0F0F 100%)", padding: "16px 20px 12px", borderBottom: "1px solid #2A2008", display: "flex", alignItems: "center", justifyContent: "space-between" },
   headerLeft: { display: "flex", flexDirection: "column", gap: 2 },
   headerTitle: { fontSize: 17, fontWeight: 700, color: C.amber, letterSpacing: "0.04em", textTransform: "uppercase", margin: 0 },
@@ -582,7 +582,7 @@ const base = {
   iconBtn: (col) => ({ background: "none", border: "none", color: col || C.muted, fontSize: 18, cursor: "pointer", padding: "4px 6px", borderRadius: 6, display: "flex", alignItems: "center" }),
   navBar: { display: "flex", background: "#0A0A0A", borderBottom: `1px solid ${C.border}` },
   navBtn: (a) => ({ flex: 1, padding: "11px 6px", background: "none", border: "none", borderBottom: a ? `2px solid ${C.amber}` : "2px solid transparent", color: a ? C.amber : C.navInactive, fontSize: 10, fontWeight: a ? 700 : 500, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer" }),
-  scrollArea: (pb) => ({ padding: `8px 16px ${pb||100}px`, display: "flex", flexDirection: "column", gap: 8, overflowY: "auto", maxHeight: "calc(100vh - 175px)" }),
+  scrollArea: (pb) => ({ padding: `8px 16px ${pb||100}px`, display: "flex", flexDirection: "column", gap: 8, overflowY: "auto", maxHeight: "calc(100dvh - 175px)" }),
   catChip: (a, col) => ({ padding: "5px 13px", borderRadius: 20, border: `1px solid ${a ? col : "#2A2A2A"}`, background: a ? col+"22" : "transparent", color: a ? col : "#888", fontSize: 12, fontWeight: a ? 600 : 400, cursor: "pointer", whiteSpace: "nowrap" }),
   exCard: (col) => ({ background: C.surface, border: `1px solid ${C.border}`, borderLeft: `3px solid ${col}`, borderRadius: 10, padding: "11px 13px", display: "flex", alignItems: "center", gap: 11, cursor: "pointer", userSelect: "none" }),
   pillBtn: (primary) => ({ padding: primary ? "13px" : "10px 16px", borderRadius: 10, border: primary ? "none" : `1px solid #2A2A2A`, background: primary ? `linear-gradient(135deg,${C.amber},#A86020)` : C.surface, color: primary ? "#0F0F0F" : "#888", fontSize: primary ? 14 : 12, fontWeight: primary ? 800 : 500, cursor: "pointer", letterSpacing: "0.06em", width: primary ? "100%" : "auto" }),
@@ -1293,7 +1293,7 @@ function ActiveSessionScreen({
         @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
       `}</style>
       <FlashOverlay show={flash} color="#4FC3F7" />
-      <div style={{ padding: "14px 16px 100px", display: "flex", flexDirection: "column", gap: 14, overflowY: "auto", maxHeight: "calc(100vh - 110px)" }}>
+      <div style={{ padding: "14px 16px 100px", display: "flex", flexDirection: "column", gap: 14, overflowY: "auto", maxHeight: "calc(100dvh - 110px)" }}>
         {/* Timer card */}
         <div style={{ background: "#151208", border: "1px solid #2A1E08", borderRadius: 16, padding: "22px 18px", textAlign: "center" }}>
           <div style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: "#6B5A3A", marginBottom: 3 }}>
@@ -1639,6 +1639,17 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
   const [editEx, setEditEx]   = useState(null);  // null | "new" | exercise object
   const [editCat, setEditCat] = useState(null);  // null | "new" | category object
 
+  // The exercise/category editor has no visible tab bar to go back with, so
+  // it's exactly the kind of screen where a phone's back button/gesture would
+  // otherwise leave the app entirely. Trap it here to just close the editor.
+  useEffect(() => {
+    if (!editEx && !editCat) return;
+    history.pushState({ guitarflowEditorOpen: true }, "");
+    const onPopState = () => { setEditEx(null); setEditCat(null); };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [editEx, editCat]);
+
   if (editEx)  return <ExerciseEditor  editEx={editEx}   categories={categories} setExercises={setExercises} onBack={() => setEditEx(null)} />;
   if (editCat) return <CategoryEditor  editCat={editCat} setExercises={setExercises} setCategories={setCategories} onBack={() => setEditCat(null)} />;
 
@@ -1918,6 +1929,10 @@ export default function App() {
         @keyframes activePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
       `}</style>
 
+      {/* Header + Nav + paused banner are grouped and pinned to the top via
+          sticky positioning, so they stay on screen while the content below
+          scrolls — instead of scrolling away with the page on some phones. */}
+      <div style={{ position: "sticky", top: 0, zIndex: 20, background: C.bg }}>
       {/* Header */}
       <div style={base.header}>
         <div style={base.headerLeft}>
@@ -2010,6 +2025,7 @@ export default function App() {
           </button>
         </div>
       )}
+      </div>
 
       {/* Screens */}
       {tab === "library"  && <LibraryScreen exercises={exercises} categories={categories} tasks={tasks} onAdd={addExercise} stats={stats} />}

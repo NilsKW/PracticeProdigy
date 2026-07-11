@@ -444,7 +444,7 @@ function StatsScreen({
       flexDirection: "column",
       gap: 12,
       overflowY: "auto",
-      maxHeight: "calc(100vh - 110px)"
+      maxHeight: "calc(100dvh - 110px)"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1280,13 +1280,12 @@ const DISPLAY_ZOOM = {
 const base = {
   app: {
     background: C.bg,
-    minHeight: "100vh",
+    minHeight: "100dvh",
     maxWidth: 430,
     margin: "0 auto",
     fontFamily: "'Segoe UI', system-ui, sans-serif",
     color: C.cream,
-    position: "relative",
-    overflowX: "hidden"
+    position: "relative"
   },
   header: {
     background: "linear-gradient(180deg,#1A1208 0%,#0F0F0F 100%)",
@@ -1351,7 +1350,7 @@ const base = {
     flexDirection: "column",
     gap: 8,
     overflowY: "auto",
-    maxHeight: "calc(100vh - 175px)"
+    maxHeight: "calc(100dvh - 175px)"
   }),
   catChip: (a, col) => ({
     padding: "5px 13px",
@@ -2833,7 +2832,7 @@ function ActiveSessionScreen({
       flexDirection: "column",
       gap: 14,
       overflowY: "auto",
-      maxHeight: "calc(100vh - 110px)"
+      maxHeight: "calc(100dvh - 110px)"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -3720,6 +3719,21 @@ function SettingsScreen({
   const [editEx, setEditEx] = useState(null); // null | "new" | exercise object
   const [editCat, setEditCat] = useState(null); // null | "new" | category object
 
+  // The exercise/category editor has no visible tab bar to go back with, so
+  // it's exactly the kind of screen where a phone's back button/gesture would
+  // otherwise leave the app entirely. Trap it here to just close the editor.
+  useEffect(() => {
+    if (!editEx && !editCat) return;
+    history.pushState({
+      guitarflowEditorOpen: true
+    }, "");
+    const onPopState = () => {
+      setEditEx(null);
+      setEditCat(null);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [editEx, editCat]);
   if (editEx) return /*#__PURE__*/React.createElement(ExerciseEditor, {
     editEx: editEx,
     categories: categories,
@@ -4196,6 +4210,13 @@ function App() {
         }
         @keyframes activePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
       `), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "sticky",
+      top: 0,
+      zIndex: 20,
+      background: C.bg
+    }
+  }, /*#__PURE__*/React.createElement("div", {
     style: base.header
   }, /*#__PURE__*/React.createElement("div", {
     style: base.headerLeft
@@ -4390,7 +4411,7 @@ function App() {
       cursor: "pointer",
       fontWeight: 700
     }
-  }, T("resumeBtn"))), tab === "library" && /*#__PURE__*/React.createElement(LibraryScreen, {
+  }, T("resumeBtn")))), tab === "library" && /*#__PURE__*/React.createElement(LibraryScreen, {
     exercises: exercises,
     categories: categories,
     tasks: tasks,
