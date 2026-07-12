@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 const STRINGS = {
   en: {
     navLibrary: "Library", navPresets: "Presets", navSession: "Session", navActive: "▶ Active",
-    headerEnd: "↩ End", headerLibrary: "Library", headerStats: "Statistics", headerSettings: "Settings",
+    headerEnd: "↩ End", headerLibrary: "Library", headerStats: "Statistics", headerSettings: "Settings", headerBadges: "Badges",
     sessionPaused: "Session paused", resumeBtn: "Resume ▶",
     needsPractice: "Needs Practice", leastWorkedOn: "· least worked on",
     neverPractised: "never practised", mPractised: "m practised", hPractised: "h", mPractisedUnit: "m practised",
@@ -30,7 +30,7 @@ const STRINGS = {
     statsMostPractised: "Most Practised", statsReset: "Reset Statistics",
     statsConfirmTitle: "Reset all statistics?", statsConfirmMsg: "This will permanently delete all your practice history. This cannot be undone.",
     statsConfirmYes: "Yes, reset", statsEmpty: "No stats yet.", statsEmptySub: "Complete at least one exercise to start tracking.",
-    settingsExercises: "exercises", settingsCategories: "categories", settingsSound: "sound", settingsLanguage: "language", settingsDisplay: "display",
+    settingsExercises: "exercises", settingsCategories: "categories", settingsSound: "sound", settingsLanguage: "language", settingsDisplay: "display", settingsBadges: "badges",
     newExercise: "+ New Exercise", editExercise: "Edit Exercise", newExerciseTitle: "New Exercise",
     iconLabel: "Icon", nameLabel: "Name", descLabel: "Description", youtubeLabel: "YouTube Reference Video (optional)",
     youtubePlaceholder: "https://youtube.com/watch?v=...", youtubeError: "⚠ URL not recognised — try a standard youtube.com or youtu.be link",
@@ -55,10 +55,14 @@ const STRINGS = {
     subExercisesLabel: "Sub-exercises", subExercisePlaceholder: "e.g. Ascending in 3rds",
     addSubExercise: "+ Add sub-exercise", subExercisesTitle: "Sub-exercises",
     resetProgress: "↺ Reset", resetProgressConfirm: "Reset?",
+    badgesIntro: "Unlock badges by reaching practice milestones. This page will grow as new goals are added.",
+    daysLabel: "days", badgeUnlockedTitle: "Badge unlocked!",
+    resetBadgesLabel: "Reset badges", resetBadgesDesc: "Clear every badge you've earned so far. This can't be undone.",
+    resetBadgesConfirmTitle: "Reset all badges?", resetBadgesConfirmMsg: "This will permanently clear all your earned badges. This cannot be undone.",
   },
   fr: {
     navLibrary: "Bibliothèque", navPresets: "Modèles", navSession: "Séance", navActive: "▶ En cours",
-    headerEnd: "↩ Fin", headerLibrary: "Bibliothèque", headerStats: "Statistiques", headerSettings: "Réglages",
+    headerEnd: "↩ Fin", headerLibrary: "Bibliothèque", headerStats: "Statistiques", headerSettings: "Réglages", headerBadges: "Badges",
     sessionPaused: "Séance en pause", resumeBtn: "Reprendre ▶",
     needsPractice: "À travailler", leastWorkedOn: "· les moins pratiqués",
     neverPractised: "jamais pratiqué", mPractised: "min pratiqué", hPractised: "h", mPractisedUnit: "min pratiqué",
@@ -83,7 +87,7 @@ const STRINGS = {
     statsMostPractised: "Les plus pratiqués", statsReset: "Réinitialiser les statistiques",
     statsConfirmTitle: "Réinitialiser les statistiques ?", statsConfirmMsg: "Ceci supprimera définitivement tout votre historique de pratique. Cette action est irréversible.",
     statsConfirmYes: "Oui, réinitialiser", statsEmpty: "Pas encore de statistiques.", statsEmptySub: "Terminez au moins un exercice pour commencer le suivi.",
-    settingsExercises: "exercices", settingsCategories: "catégories", settingsSound: "son", settingsLanguage: "langue", settingsDisplay: "affichage",
+    settingsExercises: "exercices", settingsCategories: "catégories", settingsSound: "son", settingsLanguage: "langue", settingsDisplay: "affichage", settingsBadges: "badges",
     newExercise: "+ Nouvel exercice", editExercise: "Modifier l'exercice", newExerciseTitle: "Nouvel exercice",
     iconLabel: "Icône", nameLabel: "Nom", descLabel: "Description", youtubeLabel: "Vidéo YouTube de référence (optionnel)",
     youtubePlaceholder: "https://youtube.com/watch?v=...", youtubeError: "⚠ URL non reconnue — essayez un lien youtube.com ou youtu.be standard",
@@ -108,6 +112,10 @@ const STRINGS = {
     subExercisesLabel: "Sous-exercices", subExercisePlaceholder: "ex. Montée en tierces",
     addSubExercise: "+ Ajouter un sous-exercice", subExercisesTitle: "Sous-exercices",
     resetProgress: "↺ Réinitialiser", resetProgressConfirm: "Confirmer ?",
+    badgesIntro: "Débloquez des badges en atteignant des objectifs de pratique. Cette page grandira au fil des prochaines mises à jour.",
+    daysLabel: "jours", badgeUnlockedTitle: "Badge débloqué !",
+    resetBadgesLabel: "Réinitialiser les badges", resetBadgesDesc: "Efface tous les badges obtenus jusqu'ici. Action irréversible.",
+    resetBadgesConfirmTitle: "Réinitialiser tous les badges ?", resetBadgesConfirmMsg: "Ceci supprimera définitivement tous vos badges obtenus. Cette action est irréversible.",
   },
 };
 
@@ -266,6 +274,50 @@ function StatsScreen({ stats, exercises, onClear }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── BADGES SCREEN ────────────────────────────────────────────────────────────
+function BadgesScreen({ badges, stats, subProgress, exercises, practiceDays }) {
+  const T = useT();
+  const lang = useLang();
+  const ctx = { stats, subProgress, exercises, practiceDays };
+
+  function fmtHours(sec) {
+    const h = sec / 3600;
+    return h >= 1 ? `${Math.floor(h * 10) / 10}h` : `${Math.round(sec / 60)}m`;
+  }
+
+  return (
+    <div style={base.scrollArea(24)}>
+      <div style={{ textAlign: "center", padding: "4px 8px 12px" }}>
+        <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.6 }}>{T("badgesIntro")}</div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        {BADGE_IDS.map(id => {
+          const unlocked = !!badges[id];
+          const cond = BADGE_CONDITIONS[id];
+          const prog = !unlocked && cond && cond.progress ? cond.progress(ctx) : null;
+          return (
+            <div key={id} style={{ background: C.surface, border: `1px solid ${unlocked ? C.amber + "55" : C.border}`, borderRadius: 12, padding: "16px 12px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 8 }}>
+              <RosetteBadge unlocked={unlocked} size={64} icon={badgeIcon(id)} />
+              <div style={{ fontSize: 12, fontWeight: 700, color: unlocked ? C.cream : C.muted }}>{badgeName(id, lang)}</div>
+              <div style={{ fontSize: 10, color: C.muted, lineHeight: 1.4 }}>{badgeDesc(id, lang)}</div>
+              {prog && (
+                <div style={{ width: "100%", marginTop: 2 }}>
+                  <div style={{ height: 4, background: C.faint, borderRadius: 2, overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${Math.min(100, Math.round((prog.current / prog.target) * 100))}%`, background: C.amber, borderRadius: 2 }} />
+                  </div>
+                  <div style={{ fontSize: 9, color: C.muted, marginTop: 3, fontFamily: "monospace" }}>
+                    {prog.unit === "days" ? `${prog.current}/${prog.target} ${T("daysLabel")}` : `${fmtHours(prog.current)} / ${fmtHours(prog.target)}`}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -459,6 +511,72 @@ function subExerciseLabel(sub, lang) {
 
 const ICONS =["🎸","🎵","🎶","🎤","🎷","🎺","🥁","🎹","⚡","🔥","🌟","💥","🤘","✋","🕷️","🐛","🔨","〰️","🤚","🔵","📝","▶️","👂","🏆","🎯","⚙️","🧠","💡","🎯","🎼"];
 
+// ─── BADGES ───────────────────────────────────────────────────────────────────
+// Badge text/icons come from Rewards/badges-data.js (loaded via a <script> tag
+// before this app code runs), so they can be hand-edited like exercises-data.js.
+// The unlock CONDITIONS below are app logic and live here — each is a function
+// of { stats, subProgress, exercises, practiceDays } returning true once earned.
+const BADGE_DEFS = window.BADGES_DATA || [];
+const BADGE_IDS = BADGE_DEFS.map(b => b.id);
+
+function badgeName(id, lang) {
+  const def = BADGE_DEFS.find(b => b.id === id);
+  if (!def) return id;
+  return def[`name_${lang}`] || def.name;
+}
+function badgeDesc(id, lang) {
+  const def = BADGE_DEFS.find(b => b.id === id);
+  if (!def) return "";
+  return def[`description_${lang}`] || def.description;
+}
+function badgeIcon(id) {
+  const def = BADGE_DEFS.find(b => b.id === id);
+  return (def && def.icon) || "🎸";
+}
+
+function totalPracticeSec(stats) {
+  return Object.values(stats).reduce((s, e) => s + (e.totalSec || 0), 0);
+}
+// Longest run of consecutive calendar days (YYYY-MM-DD strings) present in `days`.
+function longestDayStreak(days) {
+  const sorted = Array.from(new Set(days)).sort();
+  if (sorted.length === 0) return 0;
+  let best = 1, run = 1;
+  for (let i = 1; i < sorted.length; i++) {
+    const prevMs = new Date(sorted[i - 1] + "T00:00:00").getTime();
+    const curMs  = new Date(sorted[i] + "T00:00:00").getTime();
+    const diffDays = Math.round((curMs - prevMs) / 86400000);
+    run = diffDays === 1 ? run + 1 : 1;
+    best = Math.max(best, run);
+  }
+  return best;
+}
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+const HOUR = 3600;
+// Each condition: (ctx: { stats, subProgress, exercises, practiceDays }) => boolean.
+// `progress` (optional) returns { current, target } for a simple numeric display
+// in the Badges screen while the badge is still locked.
+const BADGE_CONDITIONS = {
+  "play-1h":  { goal: 1 * HOUR,  check: ctx => totalPracticeSec(ctx.stats) >= 1 * HOUR,
+                progress: ctx => ({ current: totalPracticeSec(ctx.stats), target: 1 * HOUR }) },
+  "play-6h":  { goal: 6 * HOUR,  check: ctx => totalPracticeSec(ctx.stats) >= 6 * HOUR,
+                progress: ctx => ({ current: totalPracticeSec(ctx.stats), target: 6 * HOUR }) },
+  "play-15h": { goal: 15 * HOUR, check: ctx => totalPracticeSec(ctx.stats) >= 15 * HOUR,
+                progress: ctx => ({ current: totalPracticeSec(ctx.stats), target: 15 * HOUR }) },
+  "streak-3": { check: ctx => longestDayStreak(ctx.practiceDays) >= 3,
+                progress: ctx => ({ current: Math.min(longestDayStreak(ctx.practiceDays), 3), target: 3, unit: "days" }) },
+  "spider-2h": { goal: 2 * HOUR, check: ctx => (ctx.stats["warm3"]?.totalSec || 0) >= 2 * HOUR,
+                 progress: ctx => ({ current: ctx.stats["warm3"]?.totalSec || 0, target: 2 * HOUR }) },
+  "scale-complete": {
+    check: ctx => ctx.exercises.some(ex => ex.categoryId === "cat-scales" && (ex.subExercises || []).length > 0
+      && (ctx.subProgress[ex.id] || []).length >= ex.subExercises.length),
+  },
+};
+
 function formatTime(s) { const m = Math.floor(s/60); return `${String(m).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`; }
 function formatTotalMin(s) { const h = Math.floor(s/3600); const m = Math.floor((s%3600)/60); return h > 0 ? `${h}h ${m}m` : `${m} min`; }
 function uid() { return `id-${Date.now()}-${Math.random().toString(36).slice(2,7)}`; }
@@ -579,6 +697,71 @@ function Fireworks({ active }) {
       `}</style>
       {sparks.current.map(s => <Spark key={s.id} {...s} />)}
     </div>
+  );
+}
+
+// ─── BADGES ───────────────────────────────────────────────────────────────────
+// A small guitar-rosette graphic used for every badge — all 6 share this same
+// shape, differing only by locked/unlocked styling and center icon.
+function RosetteBadge({ unlocked, size = 64, icon }) {
+  const petals = 16;
+  const cx = size / 2, cy = size / 2;
+  const outerR = size / 2 - 3;
+  const innerR = size * 0.3;
+  const ringColor = unlocked ? C.amber : "#3A3A3A";
+  const tickColor = unlocked ? C.cream : "#2E2E2E";
+  const centerFill = unlocked ? "#1A1208" : "#161616";
+  return (
+    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle cx={cx} cy={cy} r={outerR} fill="none" stroke={ringColor} strokeWidth={Math.max(2, size * 0.03)} />
+        {Array.from({ length: petals }).map((_, i) => {
+          const angle = (i / petals) * Math.PI * 2;
+          const x1 = cx + Math.cos(angle) * (outerR - size * 0.09);
+          const y1 = cy + Math.sin(angle) * (outerR - size * 0.09);
+          const x2 = cx + Math.cos(angle) * (outerR - size * 0.02);
+          const y2 = cy + Math.sin(angle) * (outerR - size * 0.02);
+          return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={tickColor} strokeWidth={Math.max(1.5, size * 0.035)} strokeLinecap="round" />;
+        })}
+        <circle cx={cx} cy={cy} r={innerR} fill={centerFill} stroke={ringColor} strokeWidth={Math.max(1, size * 0.02)} />
+      </svg>
+      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.32, filter: unlocked ? "none" : "grayscale(1) opacity(0.5)" }}>
+        {unlocked ? icon : "🔒"}
+      </div>
+    </div>
+  );
+}
+
+// Full-screen celebration shown when a badge is newly unlocked: a brightening
+// flash + confetti (reusing Fireworks) + a card naming the badge. Auto-dismisses,
+// or tap anywhere to dismiss immediately.
+function BadgeCelebration({ badgeId, lang, onDone }) {
+  const T = useT();
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const t1 = setTimeout(() => setVisible(true), 20);
+    const t2 = setTimeout(() => setVisible(false), 2600);
+    const t3 = setTimeout(() => onDone(), 3200);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [badgeId]);
+
+  return (
+    <>
+      <Fireworks active={true} />
+      <div style={{ position: "fixed", inset: 0, zIndex: 290, background: "#F5EDD6", opacity: visible ? 0.35 : 0, transition: "opacity 0.4s ease-out", pointerEvents: "none" }} />
+      <div style={{ position: "fixed", inset: 0, zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={onDone}>
+        <div style={{ background: "#151208", border: `1px solid ${C.amber}55`, borderRadius: 18, padding: "28px 24px", textAlign: "center", maxWidth: 320, boxShadow: "0 10px 50px #000b",
+          opacity: visible ? 1 : 0, transform: visible ? "scale(1) translateY(0)" : "scale(0.85) translateY(10px)", transition: "opacity 0.35s ease-out, transform 0.35s ease-out" }}>
+          <div style={{ fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: C.amber, fontWeight: 800, marginBottom: 14 }}>{T("badgeUnlockedTitle")}</div>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
+            <RosetteBadge unlocked size={84} icon={badgeIcon(badgeId)} />
+          </div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: C.cream, marginBottom: 6 }}>{badgeName(badgeId, lang)}</div>
+          <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.5 }}>{badgeDesc(badgeId, lang)}</div>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -1618,11 +1801,12 @@ function CategoryEditor({ editCat, setExercises, setCategories, onBack }) {
   );
 }
 
-function SettingsScreen({ exercises, setExercises, categories, setCategories, volume, onVolumeChange, lang, onLangChange, displaySize, onDisplaySizeChange }) {
+function SettingsScreen({ exercises, setExercises, categories, setCategories, volume, onVolumeChange, lang, onLangChange, displaySize, onDisplaySizeChange, onResetBadges }) {
   const T = useT();
   const [section, setSection] = useState("exercises");
   const [editEx, setEditEx]   = useState(null);  // null | "new" | exercise object
   const [editCat, setEditCat] = useState(null);  // null | "new" | category object
+  const [confirmResetBadges, setConfirmResetBadges] = useState(false);
 
   // The exercise/category editor has no visible tab bar to go back with, so
   // it's exactly the kind of screen where a phone's back button/gesture would
@@ -1643,7 +1827,7 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
     <div style={base.scrollArea(24)}>
       {/* Sub-tabs */}
       <div style={{ display: "flex", gap: 0, background: "#0A0A0A", borderRadius: 10, padding: 3, marginBottom: 8 }}>
-        {[["exercises", T("settingsExercises")], ["categories", T("settingsCategories")], ["sound", T("settingsSound")], ["language", T("settingsLanguage")], ["display", T("settingsDisplay")]].map(([id, label]) => (
+        {[["exercises", T("settingsExercises")], ["categories", T("settingsCategories")], ["sound", T("settingsSound")], ["language", T("settingsLanguage")], ["display", T("settingsDisplay")], ["badges", T("settingsBadges")]].map(([id, label]) => (
           <button key={id} style={{ flex: 1, padding: "7px 2px", borderRadius: 8, border: "none", background: section === id ? "#1E1E1E" : "none", color: section === id ? C.amber : C.muted, fontSize: 10, fontWeight: section === id ? 700 : 500, cursor: "pointer", letterSpacing: "0.03em" }} onClick={() => setSection(id)}>
             {label}
           </button>
@@ -1749,6 +1933,32 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
         </div>
       )}
 
+      {section === "badges" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={base.card}>
+            <div style={{ padding: "14px 16px" }}>
+              <label style={{ ...base.label, margin: 0 }}>{T("resetBadgesLabel")}</label>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 4, marginBottom: 12 }}>{T("resetBadgesDesc")}</div>
+              {!confirmResetBadges ? (
+                <button
+                  onClick={() => setConfirmResetBadges(true)}
+                  style={{ width: "100%", background: "none", border: "1px solid #3A1A1A", borderRadius: 8, padding: "9px", color: "#F87171", fontSize: 12, cursor: "pointer", textAlign: "center" }}
+                >{T("resetBadgesLabel")}</button>
+              ) : (
+                <div style={{ background: "#1A0A0A", border: "1px solid #5A1A1A", borderRadius: 10, padding: "14px 16px" }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#F87171", marginBottom: 4 }}>{T("resetBadgesConfirmTitle")}</div>
+                  <div style={{ fontSize: 11, color: "#6A4A4A", marginBottom: 12 }}>{T("resetBadgesConfirmMsg")}</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => setConfirmResetBadges(false)} style={{ flex: 1, background: "#222", border: "1px solid #333", borderRadius: 8, padding: "9px", color: "#888", fontSize: 12, cursor: "pointer" }}>{T("cancelBtn")}</button>
+                    <button onClick={() => { onResetBadges(); setConfirmResetBadges(false); }} style={{ flex: 1, background: "#5A0A0A", border: "1px solid #8A1A1A", borderRadius: 8, padding: "9px", color: "#F87171", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{T("statsConfirmYes")}</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {section === "categories" && (
         <>
           <button style={{ ...base.pillBtn(false), width: "100%", textAlign: "center", color: C.amber, border: `1px solid ${C.amber}44`, marginBottom: 10, padding: "11px" }} onClick={() => setEditCat("new")}>
@@ -1787,6 +1997,16 @@ export default function App() {
   // recurring exercise (e.g. daily scale practice in a different key each
   // day) keeps one running coverage checklist instead of resetting every session.
   const [subProgress, setSubProgress, subProgressLoaded] = usePersisted("subProgress", {});
+  // Badges unlocked so far: { [badgeId]: true }. Once set, a badge is never
+  // cleared automatically — only the explicit "reset badges" action in
+  // Settings removes entries, matching "stays unlocked until reinstalled".
+  const [badges, setBadges, badgesLoaded] = usePersisted("badges", {});
+  // Calendar days (YYYY-MM-DD, deduped) on which at least one exercise was
+  // practiced, used for the "3-day streak" badge.
+  const [practiceDays, setPracticeDays] = usePersisted("practiceDays", []);
+  // Queue of badge ids waiting to show their unlock celebration, so unlocking
+  // several at once still shows them one at a time instead of overlapping.
+  const [badgeCelebrationQueue, setBadgeCelebrationQueue] = useState([]);
   const setCategories = setCats;
   const audioCtx      = useRef(null);
   const masterGainRef = useRef(null);
@@ -1817,7 +2037,30 @@ export default function App() {
         }
       };
     });
-  }, [setStats]);
+    const today = todayStr();
+    setPracticeDays(prev => (prev.includes(today) ? prev : [...prev, today]));
+  }, [setStats, setPracticeDays]);
+
+  // Check every badge's unlock condition whenever the stats it depends on
+  // change. Newly-met goals are persisted immediately and queued for a
+  // celebration; already-unlocked badges are never re-evaluated (a badge
+  // stays earned even if, say, stats are later reset).
+  useEffect(() => {
+    const ctx = { stats, subProgress, exercises, practiceDays };
+    const toUnlock = BADGE_IDS.filter(id => {
+      const cond = BADGE_CONDITIONS[id];
+      return cond && !badges[id] && cond.check(ctx);
+    });
+    if (toUnlock.length > 0) {
+      setBadges(prev => {
+        const next = { ...prev };
+        toUnlock.forEach(id => { next[id] = true; });
+        return next;
+      });
+      setBadgeCelebrationQueue(prev => [...prev, ...toUnlock]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stats, subProgress, practiceDays, exercises]);
 
   // Lazy-init audio context on first user interaction
   const ensureAudio = () => {
@@ -1893,6 +2136,7 @@ export default function App() {
     { id: "session",  label: tasks.length > 0 ? `${T("navSession")} (${tasks.length})` : T("navSession") },
   ];
   const statsCount = Object.values(stats).filter(s => s.totalSec > 0).length;
+  const unlockedBadgeCount = Object.keys(badges).length;
   const sessionInProgress = sessionActive && !sessionDone;
 
   return (
@@ -1974,6 +2218,27 @@ export default function App() {
           )}
           {(
             <button
+              title={T("headerBadges")}
+              onClick={() => setTab(t => t === "badges" ? "library" : "badges")}
+              style={{
+                width: 36, height: 36, borderRadius: 8, padding: 0, cursor: "pointer",
+                border: tab === "badges" ? "1px solid #34D399" : "1px solid #2A2A2A",
+                background: tab === "badges" ? "#34D39922" : "none",
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                position: "relative"
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={tab === "badges" ? "#34D399" : C.navInactive} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="8" r="6"/>
+                <path d="M8.5 13.5 7 22l5-3 5 3-1.5-8.5"/>
+              </svg>
+              {unlockedBadgeCount > 0 && (
+                <div style={{ position: "absolute", top: -3, right: -3, width: 10, height: 10, borderRadius: "50%", background: "#34D399", border: "2px solid #0F0F0F" }} />
+              )}
+            </button>
+          )}
+          {(
+            <button
               title={T("headerSettings")}
               onClick={() => setTab(t => t === "settings" ? "library" : "settings")}
               style={{ width: 36, height: 36, borderRadius: 8, background: tab === "settings" ? "#C8873A22" : "none", border: tab === "settings" ? `1px solid ${C.amber}` : "1px solid #2A2A2A", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, flexShrink: 0 }}
@@ -1988,7 +2253,7 @@ export default function App() {
       </div>
 
       {/* Nav */}
-      {tab !== "settings" && tab !== "stats" && (
+      {tab !== "settings" && tab !== "stats" && tab !== "badges" && (
         <div style={base.navBar}>
           {NAV_TABS.map(t => (
             <button key={t.id} style={base.navBtn(tab === t.id)} onClick={() => setTab(t.id)}>{t.label}</button>
@@ -2021,8 +2286,9 @@ export default function App() {
       {tab === "library"  && <LibraryScreen exercises={exercises} categories={categories} tasks={tasks} onAdd={addExercise} stats={stats} subProgress={subProgress} />}
       {tab === "presets"  && <PresetsScreen presets={presets} setPresets={setPresets} tasks={tasks} setTasks={setTasks} onLoadGoToSession={() => setTab("session")} />}
       {tab === "session"  && <SessionScreen tasks={tasks} setTasks={setTasks} onStart={startSession} sessionInProgress={sessionInProgress} onReturnToSession={returnToSession} presets={presets} setPresets={setPresets} />}
-      {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} />}
+      {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} />}
       {tab === "stats"    && <StatsScreen stats={stats} exercises={exercises} onClear={() => setStats({})} />}
+      {tab === "badges"   && <BadgesScreen badges={badges} stats={stats} subProgress={subProgress} exercises={exercises} practiceDays={practiceDays} />}
       {tab === "active"   && <ActiveSessionScreen
         tasks={tasks} setTasks={setTasks} onFinish={endSession} onBackToMenu={backToMenu}
         audioCtx={audioCtx} masterGainRef={masterGainRef} onCommitStats={commitStats}
@@ -2035,6 +2301,14 @@ export default function App() {
         done={sessionDone} setDone={setSessionDone}
         elapsedRef={sessionElapsedRef} committedRef={sessionCommittedRef}
       />}
+      {badgeCelebrationQueue.length > 0 && (
+        <BadgeCelebration
+          key={badgeCelebrationQueue[0]}
+          badgeId={badgeCelebrationQueue[0]}
+          lang={lang}
+          onDone={() => setBadgeCelebrationQueue(q => q.slice(1))}
+        />
+      )}
     </div>
     </LangContext.Provider>
   );

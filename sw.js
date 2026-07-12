@@ -2,7 +2,7 @@
 // On first visit the CDN scripts (React) are cached here,
 // so every subsequent visit — even with no internet — works perfectly.
 
-const CACHE = "guitarflow-v4";
+const CACHE = "guitarflow-v5";
 const PRECACHE = [
   "./index.html",
   "./manifest.json",
@@ -11,6 +11,7 @@ const PRECACHE = [
   "./icon-192.png",
   "./icon-512.png",
   "./exercises-data.js",
+  "./Rewards/badges-data.js",
   "https://unpkg.com/react@18/umd/react.production.min.js",
   "https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
 ];
@@ -38,7 +39,7 @@ self.addEventListener("activate", e => {
 // offline-capable loading.
 self.addEventListener("fetch", e => {
   const isAppShell = e.request.mode === "navigate" || e.request.destination === "document"
-    || e.request.url.endsWith("/exercises-data.js");
+    || e.request.url.endsWith("/exercises-data.js") || e.request.url.endsWith("/Rewards/badges-data.js");
 
   if (isAppShell) {
     e.respondWith(
