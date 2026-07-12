@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#0F0F0F" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="GuitarFlow" />
-  <title>GuitarFlow</title>
+  <meta name="apple-mobile-web-app-title" content="Practice Prodigy" />
+  <title>Practice Prodigy</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icon-180.png" />
   <style>
@@ -31,7 +31,7 @@
   <!-- Boot screen: visible until React mounts. Prevents silent black screen. -->
   <div id="boot" style="position:fixed;inset:0;background:#0F0F0F;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:system-ui,sans-serif;color:#C8873A;padding:24px;text-align:center;z-index:9999">
     <div style="width:36px;height:36px;border:3px solid #2A2008;border-top-color:#C8873A;border-radius:50%;animation:spin 0.9s linear infinite;margin-bottom:16px"></div>
-    <div id="boot-msg" style="font-size:14px;font-weight:600">Loading GuitarFlow…</div>
+    <div id="boot-msg" style="font-size:14px;font-weight:600">Loading Practice Prodigy…</div>
     <div id="boot-sub" style="font-size:11px;color:#6B5A3A;margin-top:6px">Fetching React</div>
     <pre id="boot-err" style="display:none;margin-top:16px;background:#1A0808;border:1px solid #5A1A1A;border-radius:8px;padding:12px;color:#F87171;font-size:11px;text-align:left;max-width:360px;white-space:pre-wrap;word-break:break-word;max-height:50vh;overflow-y:auto"></pre>
   </div>
@@ -3821,7 +3821,7 @@ function SettingsScreen({
   useEffect(() => {
     if (!editEx && !editCat) return;
     history.pushState({
-      guitarflowEditorOpen: true
+      practiceProdigyEditorOpen: true
     }, "");
     const onPopState = () => {
       setEditEx(null);
@@ -4458,8 +4458,8 @@ function App() {
       gap: 12
     }
   }, /*#__PURE__*/React.createElement("img", {
-    src: "icon.svg",
-    alt: "GuitarFlow",
+    src: "icon-192.png",
+    alt: "Practice Prodigy",
     style: {
       width: 38,
       height: 38,

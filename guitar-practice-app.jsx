@@ -1813,7 +1813,7 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
   // otherwise leave the app entirely. Trap it here to just close the editor.
   useEffect(() => {
     if (!editEx && !editCat) return;
-    history.pushState({ guitarflowEditorOpen: true }, "");
+    history.pushState({ practiceProdigyEditorOpen: true }, "");
     const onPopState = () => { setEditEx(null); setEditCat(null); };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
@@ -2170,7 +2170,7 @@ export default function App() {
       {/* Header */}
       <div style={base.header}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <img src="icon.svg" alt="GuitarFlow" style={{ width: 38, height: 38, borderRadius: 9, display: "block", flexShrink: 0 }} />
+          <img src="icon-192.png" alt="Practice Prodigy" style={{ width: 38, height: 38, borderRadius: 9, display: "block", flexShrink: 0 }} />
           <div style={{ width: 1, height: 26, background: "#2A2008", flexShrink: 0 }} />
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

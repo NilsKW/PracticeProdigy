@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// GuitarFlow — exercise library data
+// Practice Prodigy — exercise library data
 // ─────────────────────────────────────────────────────────────────────────────
 // Edit this file to change the built-in categories/exercises, or add new ones.
 // It's plain JavaScript — no build step needed. Save the file, then reload the

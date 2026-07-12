@@ -1,6 +1,6 @@
 {
-  "name": "GuitarFlow",
-  "short_name": "GuitarFlow",
+  "name": "Practice Prodigy",
+  "short_name": "Practice Prodigy",
   "description": "Electric guitar practice session organiser with pomodoro timer",
   "start_url": "./index.html",
   "display": "standalone",
@@ -8,12 +8,6 @@
   "background_color": "#0F0F0F",
   "theme_color": "#0F0F0F",
   "icons": [
-    {
-      "src": "icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
     {
       "src": "icon-192.png",
       "sizes": "192x192",

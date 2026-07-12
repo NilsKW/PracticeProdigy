@@ -1,12 +1,11 @@
-// GuitarFlow Service Worker — caches all app files for full offline use.
+// Practice Prodigy Service Worker — caches all app files for full offline use.
 // On first visit the CDN scripts (React) are cached here,
 // so every subsequent visit — even with no internet — works perfectly.
 
-const CACHE = "guitarflow-v5";
+const CACHE = "practiceprodigy-v1";
 const PRECACHE = [
   "./index.html",
   "./manifest.json",
-  "./icon.svg",
   "./icon-180.png",
   "./icon-192.png",
   "./icon-512.png",

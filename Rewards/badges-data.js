@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// GuitarFlow — badge text & icons
+// Practice Prodigy — badge text & icons
 // ─────────────────────────────────────────────────────────────────────────────
 // Edit this file to change a badge's name/description (English + French, same
 // "_fr" convention as exercises-data.js), or its icon (shown in the center of

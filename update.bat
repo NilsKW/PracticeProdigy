@@ -3,7 +3,7 @@ setlocal
 cd /d "%~dp0"
 
 echo ================================
-echo   Mise a jour GuitarFlow -^> GitHub
+echo   Mise a jour Practice Prodigy -^> GitHub
 echo ================================
 echo.
 
