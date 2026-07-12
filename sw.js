@@ -2,11 +2,14 @@
 // On first visit the CDN scripts (React) are cached here,
 // so every subsequent visit — even with no internet — works perfectly.
 
-const CACHE = "guitarflow-v3";
+const CACHE = "guitarflow-v4";
 const PRECACHE = [
   "./index.html",
   "./manifest.json",
   "./icon.svg",
+  "./icon-180.png",
+  "./icon-192.png",
+  "./icon-512.png",
   "./exercises-data.js",
   "https://unpkg.com/react@18/umd/react.production.min.js",
   "https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
