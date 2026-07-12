@@ -77,7 +77,6 @@
 
 const STRINGS = {
   en: {
-    appSub: "Practice Session Planner",
     navLibrary: "Library",
     navPresets: "Presets",
     navSession: "Session",
@@ -207,7 +206,6 @@ const STRINGS = {
     resetProgressConfirm: "Reset?"
   },
   fr: {
-    appSub: "Planificateur de séances",
     navLibrary: "Bibliothèque",
     navPresets: "Modèles",
     navSession: "Séance",
@@ -1137,26 +1135,6 @@ const base = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between"
-  },
-  headerLeft: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 2
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: 700,
-    color: C.amber,
-    letterSpacing: "0.04em",
-    textTransform: "uppercase",
-    margin: 0
-  },
-  headerSub: {
-    fontSize: 10,
-    color: "#6B5A3A",
-    letterSpacing: "0.12em",
-    textTransform: "uppercase",
-    margin: 0
   },
   iconBtn: col => ({
     background: "none",
@@ -4207,12 +4185,29 @@ function App() {
   }, /*#__PURE__*/React.createElement("div", {
     style: base.header
   }, /*#__PURE__*/React.createElement("div", {
-    style: base.headerLeft
-  }, /*#__PURE__*/React.createElement("p", {
-    style: base.headerTitle
-  }, "🎸 GuitarFlow"), /*#__PURE__*/React.createElement("p", {
-    style: base.headerSub
-  }, T("appSub"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 12
+    }
+  }, /*#__PURE__*/React.createElement("img", {
+    src: "icon.svg",
+    alt: "GuitarFlow",
+    style: {
+      width: 38,
+      height: 38,
+      borderRadius: 9,
+      display: "block",
+      flexShrink: 0
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 1,
+      height: 26,
+      background: "#2A2008",
+      flexShrink: 0
+    }
+  })), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       alignItems: "center",

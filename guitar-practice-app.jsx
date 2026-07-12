@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 const STRINGS = {
   en: {
-    appSub: "Practice Session Planner",
     navLibrary: "Library", navPresets: "Presets", navSession: "Session", navActive: "▶ Active",
     headerEnd: "↩ End", headerLibrary: "Library", headerStats: "Statistics", headerSettings: "Settings",
     sessionPaused: "Session paused", resumeBtn: "Resume ▶",
@@ -58,7 +57,6 @@ const STRINGS = {
     resetProgress: "↺ Reset", resetProgressConfirm: "Reset?",
   },
   fr: {
-    appSub: "Planificateur de séances",
     navLibrary: "Bibliothèque", navPresets: "Modèles", navSession: "Séance", navActive: "▶ En cours",
     headerEnd: "↩ Fin", headerLibrary: "Bibliothèque", headerStats: "Statistiques", headerSettings: "Réglages",
     sessionPaused: "Séance en pause", resumeBtn: "Reprendre ▶",
@@ -549,9 +547,6 @@ const DISPLAY_ZOOM = { small: 0.95, medium: 1.15, large: 1.35 };
 const base = {
   app: { background: C.bg, minHeight: "100dvh", maxWidth: 430, margin: "0 auto", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.cream, position: "relative" },
   header: { background: "linear-gradient(180deg,#1A1208 0%,#0F0F0F 100%)", padding: "16px 20px 12px", borderBottom: "1px solid #2A2008", display: "flex", alignItems: "center", justifyContent: "space-between" },
-  headerLeft: { display: "flex", flexDirection: "column", gap: 2 },
-  headerTitle: { fontSize: 17, fontWeight: 700, color: C.amber, letterSpacing: "0.04em", textTransform: "uppercase", margin: 0 },
-  headerSub: { fontSize: 10, color: "#6B5A3A", letterSpacing: "0.12em", textTransform: "uppercase", margin: 0 },
   iconBtn: (col) => ({ background: "none", border: "none", color: col || C.muted, fontSize: 18, cursor: "pointer", padding: "4px 6px", borderRadius: 6, display: "flex", alignItems: "center" }),
   navBar: { display: "flex", background: "#0A0A0A", borderBottom: `1px solid ${C.border}` },
   navBtn: (a) => ({ flex: 1, padding: "11px 6px", background: "none", border: "none", borderBottom: a ? `2px solid ${C.amber}` : "2px solid transparent", color: a ? C.amber : C.navInactive, fontSize: 10, fontWeight: a ? 700 : 500, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer" }),
@@ -1987,9 +1982,9 @@ export default function App() {
       <div style={{ position: "sticky", top: 0, zIndex: 20, background: C.bg }}>
       {/* Header */}
       <div style={base.header}>
-        <div style={base.headerLeft}>
-          <p style={base.headerTitle}>🎸 GuitarFlow</p>
-          <p style={base.headerSub}>{T("appSub")}</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <img src="icon.svg" alt="GuitarFlow" style={{ width: 38, height: 38, borderRadius: 9, display: "block", flexShrink: 0 }} />
+          <div style={{ width: 1, height: 26, background: "#2A2008", flexShrink: 0 }} />
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {tab === "active" && sessionActive && (
