@@ -81,6 +81,12 @@ const STRINGS = {
     navPresets: "Presets",
     navSession: "Session",
     navActive: "▶ Active",
+    navProgress: "Progress",
+    navSettings: "Settings",
+    progressTabLevel: "Level",
+    progressTabStats: "Stats",
+    progressTabBadges: "Badges",
+    myPresetsTitle: "My presets",
     headerEnd: "↩ End",
     headerLibrary: "Library",
     headerStats: "Statistics",
@@ -226,6 +232,12 @@ const STRINGS = {
     navPresets: "Modèles",
     navSession: "Séance",
     navActive: "▶ En cours",
+    navProgress: "Progression",
+    navSettings: "Réglages",
+    progressTabLevel: "Niveau",
+    progressTabStats: "Stats",
+    progressTabBadges: "Badges",
+    myPresetsTitle: "Mes modèles",
     headerEnd: "↩ Fin",
     headerLibrary: "Bibliothèque",
     headerStats: "Statistiques",
@@ -456,7 +468,7 @@ function StatsScreen({
     style: {
       textAlign: "center",
       padding: "60px 24px",
-      color: "#3A3A3A"
+      color: "#8D8D9C"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -476,9 +488,7 @@ function StatsScreen({
       padding: "12px 16px 40px",
       display: "flex",
       flexDirection: "column",
-      gap: 12,
-      overflowY: "auto",
-      maxHeight: "calc(100dvh - 110px)"
+      gap: 12
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -516,7 +526,7 @@ function StatsScreen({
       fontSize: 9,
       letterSpacing: "0.1em",
       textTransform: "uppercase",
-      color: "#4A4A5A",
+      color: "#8D8D9C",
       marginTop: 3
     }
   }, s.label)))), /*#__PURE__*/React.createElement("div", {
@@ -536,7 +546,7 @@ function StatsScreen({
       fontSize: 10,
       letterSpacing: "0.15em",
       textTransform: "uppercase",
-      color: "#4A4A5A"
+      color: "#8D8D9C"
     }
   }, T("statsMostPractised"))), entries.map((e, i) => /*#__PURE__*/React.createElement("div", {
     key: e.exerciseId || i,
@@ -591,7 +601,7 @@ function StatsScreen({
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 10,
-      color: "#4A4A5A",
+      color: "#8D8D9C",
       marginTop: 4
     }
   }, T("sessionsCount", e.sessions))))), !confirmClear ? /*#__PURE__*/React.createElement("button", {
@@ -623,7 +633,7 @@ function StatsScreen({
   }, T("statsConfirmTitle")), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
-      color: "#6A4A4A",
+      color: "#B08A8A",
       marginBottom: 12
     }
   }, T("statsConfirmMsg")), /*#__PURE__*/React.createElement("div", {
@@ -639,7 +649,7 @@ function StatsScreen({
       border: "1px solid #333",
       borderRadius: 8,
       padding: "9px",
-      color: "#888",
+      color: "#AEB0C0",
       fontSize: 12,
       cursor: "pointer"
     }
@@ -683,7 +693,7 @@ function BadgesScreen({
     return h >= 1 ? `${Math.floor(h * 10) / 10}h` : `${Math.round(sec / 60)}m`;
   }
   return /*#__PURE__*/React.createElement("div", {
-    style: base.scrollArea(24)
+    style: base.staticArea(24)
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: "center",
@@ -1088,7 +1098,7 @@ const C = {
   amber: "#C8873A",
   amberDim: "#6B3A0A",
   cream: "#F5EDD6",
-  muted: "#4A4A5A",
+  muted: "#8D8D9C",
   navInactive: "#8D8D9C",
   faint: "#1A1A1A"
 };
@@ -1101,22 +1111,29 @@ const DISPLAY_ZOOM = {
   large: 1.35
 };
 const base = {
+  // The whole app is a fixed-height flex column: header (flexShrink:0) +
+  // content (flex:1, its own overflow) + bottom nav (flexShrink:0). This
+  // replaces the old calc(100dvh - Npx) magic numbers, which broke under the
+  // "large" display-size CSS zoom because a fixed pixel offset doesn't scale
+  // the same way as the zoomed viewport.
   app: {
     background: C.bg,
-    minHeight: "100dvh",
-    maxWidth: 430,
     margin: "0 auto",
     fontFamily: "'Segoe UI', system-ui, sans-serif",
     color: C.cream,
-    position: "relative"
+    position: "relative",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden"
   },
   header: {
     background: "linear-gradient(180deg,#1A1208 0%,#0F0F0F 100%)",
-    padding: "16px 20px 12px",
+    padding: "14px 20px 10px",
     borderBottom: "1px solid #2A2008",
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between"
+    justifyContent: "space-between",
+    flexShrink: 0
   },
   iconBtn: col => ({
     background: "none",
@@ -1129,38 +1146,56 @@ const base = {
     display: "flex",
     alignItems: "center"
   }),
-  navBar: {
+  // Bottom tab bar: the single primary navigation surface for the whole app.
+  bottomNav: {
     display: "flex",
     background: "#0A0A0A",
-    borderBottom: `1px solid ${C.border}`
+    borderTop: `1px solid ${C.border}`,
+    flexShrink: 0,
+    paddingBottom: "env(safe-area-inset-bottom, 0px)"
   },
-  navBtn: a => ({
+  bottomNavBtn: (active, col) => ({
     flex: 1,
-    padding: "11px 6px",
+    padding: "8px 4px 7px",
     background: "none",
     border: "none",
-    borderBottom: a ? `2px solid ${C.amber}` : "2px solid transparent",
-    color: a ? C.amber : C.navInactive,
-    fontSize: 10,
-    fontWeight: a ? 700 : 500,
-    letterSpacing: "0.1em",
-    textTransform: "uppercase",
-    cursor: "pointer"
-  }),
-  scrollArea: pb => ({
-    padding: `8px 16px ${pb || 100}px`,
     display: "flex",
     flexDirection: "column",
-    gap: 8,
+    alignItems: "center",
+    gap: 3,
+    color: active ? col || C.amber : C.navInactive,
+    fontSize: 10,
+    fontWeight: active ? 700 : 500,
+    letterSpacing: "0.02em",
+    cursor: "pointer",
+    position: "relative"
+  }),
+  // Self-scrolling content region: a direct child of the app's content slot
+  // (flex:1, minHeight:0 lets it shrink to the available space instead of
+  // overflowing it, and overflowY:auto scrolls only this region).
+  scrollArea: pb => ({
+    flex: 1,
+    minHeight: 0,
     overflowY: "auto",
-    maxHeight: "calc(100dvh - 175px)"
+    padding: `8px 16px ${pb || 24}px`,
+    display: "flex",
+    flexDirection: "column",
+    gap: 8
+  }),
+  // Non-scrolling content block: for screens nested inside another element
+  // that already owns the scrolling (e.g. the Progression sub-tabs).
+  staticArea: pb => ({
+    padding: `8px 16px ${pb || 24}px`,
+    display: "flex",
+    flexDirection: "column",
+    gap: 8
   }),
   catChip: (a, col) => ({
     padding: "5px 13px",
     borderRadius: 20,
     border: `1px solid ${a ? col : "#2A2A2A"}`,
     background: a ? col + "22" : "transparent",
-    color: a ? col : "#888",
+    color: a ? col : "#AEB0C0",
     fontSize: 12,
     fontWeight: a ? 600 : 400,
     cursor: "pointer",
@@ -2374,7 +2409,7 @@ function LevelScreen({
   const remM = Math.round(info.remainingMin % 60);
   return /*#__PURE__*/React.createElement("div", {
     style: {
-      ...base.scrollArea(24),
+      ...base.staticArea(24),
       alignItems: "center"
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -2426,6 +2461,78 @@ function LevelScreen({
       textAlign: "center"
     }
   }, T("timeToNext", remH, remM), info.level + 1)));
+}
+
+// ─── PROGRESSION SCREEN (Niveau / Stats / Badges, merged under sub-tabs) ──────
+
+function ProgressionScreen({
+  stats,
+  exercises,
+  onClearStats,
+  badges,
+  subProgress,
+  practiceDays
+}) {
+  const T = useT();
+  const [subTab, setSubTab] = useState("level");
+  const TABS = [{
+    id: "level",
+    label: T("progressTabLevel")
+  }, {
+    id: "stats",
+    label: T("progressTabStats")
+  }, {
+    id: "badges",
+    label: T("progressTabBadges")
+  }];
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      height: "100%"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 6,
+      padding: "10px 16px 4px",
+      flexShrink: 0
+    }
+  }, TABS.map(t => /*#__PURE__*/React.createElement("button", {
+    key: t.id,
+    onClick: () => setSubTab(t.id),
+    style: {
+      flex: 1,
+      padding: "8px 6px",
+      borderRadius: 8,
+      cursor: "pointer",
+      border: `1px solid ${subTab === t.id ? C.amber : "#2A2A2A"}`,
+      background: subTab === t.id ? "#C8873A22" : "transparent",
+      color: subTab === t.id ? C.amber : C.navInactive,
+      fontSize: 11,
+      fontWeight: subTab === t.id ? 700 : 500,
+      letterSpacing: "0.08em",
+      textTransform: "uppercase"
+    }
+  }, t.label))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minHeight: 0,
+      overflowY: "auto"
+    }
+  }, subTab === "level" && /*#__PURE__*/React.createElement(LevelScreen, {
+    stats: stats
+  }), subTab === "stats" && /*#__PURE__*/React.createElement(StatsScreen, {
+    stats: stats,
+    exercises: exercises,
+    onClear: onClearStats
+  }), subTab === "badges" && /*#__PURE__*/React.createElement(BadgesScreen, {
+    badges: badges,
+    stats: stats,
+    subProgress: subProgress,
+    exercises: exercises,
+    practiceDays: practiceDays
+  })));
 }
 
 // ─── LIBRARY SCREEN ───────────────────────────────────────────────────────────
@@ -2531,7 +2638,7 @@ function LibraryScreen({
     }
   }, suggestions.map((ex, rank) => {
     const cat = categories.find(c => c.id === ex.categoryId);
-    const col = cat?.color || "#888";
+    const col = cat?.color || "#AEB0C0";
     const added = inSession.has(ex.id);
     return /*#__PURE__*/React.createElement("div", {
       key: ex.id,
@@ -2590,7 +2697,7 @@ function LibraryScreen({
       }
     }, categoryName(cat, lang), " · ", /*#__PURE__*/React.createElement("span", {
       style: {
-        color: "#4A5A4A",
+        color: "#8FAF8F",
         fontWeight: 400
       }
     }, fmtSuggestTime(ex)))), /*#__PURE__*/React.createElement("div", {
@@ -2651,7 +2758,7 @@ function LibraryScreen({
               width: 8,
               height: 8,
               borderRadius: "50%",
-              background: cat?.color || "#888",
+              background: cat?.color || "#AEB0C0",
               flexShrink: 0
             }
           }), /*#__PURE__*/React.createElement("span", {
@@ -2660,19 +2767,19 @@ function LibraryScreen({
               fontWeight: 800,
               letterSpacing: "0.14em",
               textTransform: "uppercase",
-              color: cat?.color || "#888"
+              color: cat?.color || "#AEB0C0"
             }
           }, cat ? categoryName(cat, lang) : T("unknownCategory")), /*#__PURE__*/React.createElement("div", {
             style: {
               flex: 1,
               height: 1,
-              background: (cat?.color || "#888") + "33"
+              background: (cat?.color || "#AEB0C0") + "33"
             }
           }));
         }
         const ex = item.ex;
         const cat = categories.find(c => c.id === ex.categoryId);
-        const col = cat?.color || "#888";
+        const col = cat?.color || "#AEB0C0";
         const added = inSession.has(ex.id);
         return /*#__PURE__*/React.createElement("div", {
           key: ex.id,
@@ -2761,7 +2868,7 @@ function LibraryScreen({
     // Single category — flat list (category already obvious from filter)
     return filtered.map(ex => {
       const cat = categories.find(c => c.id === ex.categoryId);
-      const col = cat?.color || "#888";
+      const col = cat?.color || "#AEB0C0";
       const added = inSession.has(ex.id);
       return /*#__PURE__*/React.createElement("div", {
         key: ex.id,
@@ -2851,232 +2958,7 @@ function LibraryScreen({
 
 // ─── PRESETS SCREEN ───────────────────────────────────────────────────────────
 
-function PresetsScreen({
-  presets,
-  setPresets,
-  tasks,
-  setTasks,
-  onLoadGoToSession
-}) {
-  const T = useT();
-  const lang = useLang();
-  const [saveName, setSaveName] = useState("");
-  const [saveOpen, setSaveOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState(null);
-  const savePreset = () => {
-    if (!saveName.trim() || tasks.length === 0) return;
-    const preset = {
-      id: uid(),
-      name: saveName.trim(),
-      tasks: tasks.map(t => ({
-        ...t
-      })),
-      createdAt: Date.now()
-    };
-    setPresets(prev => [preset, ...prev]);
-    setSaveName("");
-    setSaveOpen(false);
-  };
-  const loadPreset = preset => {
-    setTasks(preset.tasks.map(t => ({
-      ...t,
-      id: uid()
-    })));
-    onLoadGoToSession();
-  };
-  const deletePreset = id => {
-    setPresets(prev => prev.filter(p => p.id !== id));
-    setDeleteId(null);
-  };
-  return /*#__PURE__*/React.createElement("div", {
-    style: base.scrollArea(24)
-  }, !saveOpen ? /*#__PURE__*/React.createElement("button", {
-    style: {
-      ...base.pillBtn(false),
-      width: "100%",
-      textAlign: "center",
-      padding: "12px",
-      color: tasks.length > 0 ? C.amber : C.muted,
-      border: `1px solid ${tasks.length > 0 ? C.amber + "55" : "#222"}`,
-      cursor: tasks.length > 0 ? "pointer" : "default"
-    },
-    onClick: () => tasks.length > 0 && setSaveOpen(true),
-    title: tasks.length === 0 ? T("addExercisesFirst") : ""
-  }, T("saveCurrentPreset"), tasks.length === 0 ? T("saveCurrentEmpty") : "") : /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: "#151208",
-      border: "1px solid #2A1E08",
-      borderRadius: 10,
-      padding: "14px"
-    }
-  }, /*#__PURE__*/React.createElement("label", {
-    style: base.label
-  }, T("presetName")), /*#__PURE__*/React.createElement("input", {
-    style: {
-      ...base.input,
-      marginBottom: 10
-    },
-    autoFocus: true,
-    value: saveName,
-    onChange: e => setSaveName(e.target.value),
-    placeholder: T("presetPlaceholder"),
-    autoComplete: "off",
-    autoCorrect: "off",
-    spellCheck: false,
-    onKeyDown: e => {
-      if (e.key === "Enter") savePreset();
-      if (e.key === "Escape") setSaveOpen(false);
-    }
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 8
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    style: {
-      ...base.pillBtn(false),
-      flex: 1,
-      textAlign: "center"
-    },
-    onClick: () => setSaveOpen(false)
-  }, T("cancelBtn")), /*#__PURE__*/React.createElement("button", {
-    style: {
-      ...base.pillBtn(true),
-      flex: 2
-    },
-    onClick: savePreset
-  }, T("saveBtn")))), presets.length === 0 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: "center",
-      padding: "44px 20px",
-      color: "#3A3A3A"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 40,
-      marginBottom: 10
-    }
-  }, "📋"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 13,
-      lineHeight: 1.7
-    }
-  }, T("noPresetsTitle"), /*#__PURE__*/React.createElement("br", null), T("noPresetsSub"))), presets.map(p => {
-    const totalMin = p.tasks.reduce((s, t) => s + (t.minutes || 0), 0);
-    const isDeleting = deleteId === p.id;
-    return /*#__PURE__*/React.createElement("div", {
-      key: p.id,
-      style: {
-        background: C.surface,
-        border: `1px solid ${C.border}`,
-        borderRadius: 10,
-        overflow: "hidden"
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        padding: "12px 14px",
-        display: "flex",
-        alignItems: "center",
-        gap: 10
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        flex: 1
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 14,
-        fontWeight: 700,
-        color: C.cream
-      }
-    }, p.name), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 11,
-        color: C.muted,
-        marginTop: 2
-      }
-    }, T("exercisesCount", p.tasks.length), " · ", totalMin, "m")), !isDeleting ? /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        gap: 6
-      }
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => loadPreset(p),
-      style: {
-        padding: "6px 12px",
-        background: "#C8873A22",
-        border: `1px solid ${C.amber}55`,
-        borderRadius: 7,
-        color: C.amber,
-        fontSize: 12,
-        fontWeight: 700,
-        cursor: "pointer"
-      }
-    }, T("loadBtn")), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setDeleteId(p.id),
-      style: {
-        width: 28,
-        height: 28,
-        borderRadius: 7,
-        background: "none",
-        border: "1px solid #2A2A2A",
-        color: C.muted,
-        fontSize: 14,
-        cursor: "pointer",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center"
-      }
-    }, "×")) : /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        gap: 6
-      }
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => setDeleteId(null),
-      style: {
-        padding: "5px 10px",
-        background: "#222",
-        border: "1px solid #333",
-        borderRadius: 7,
-        color: "#888",
-        fontSize: 11,
-        cursor: "pointer"
-      }
-    }, T("keepBtn")), /*#__PURE__*/React.createElement("button", {
-      onClick: () => deletePreset(p.id),
-      style: {
-        padding: "5px 10px",
-        background: "#3A0A0A",
-        border: "1px solid #6A1A1A",
-        borderRadius: 7,
-        color: "#F87171",
-        fontSize: 11,
-        fontWeight: 700,
-        cursor: "pointer"
-      }
-    }, T("deleteBtn")))), /*#__PURE__*/React.createElement("div", {
-      style: {
-        padding: "6px 14px 10px",
-        display: "flex",
-        flexWrap: "wrap",
-        gap: 5
-      }
-    }, p.tasks.map((t, i) => /*#__PURE__*/React.createElement("span", {
-      key: i,
-      style: {
-        fontSize: 10,
-        background: "#1A1A1A",
-        border: "1px solid #2A2A2A",
-        borderRadius: 5,
-        padding: "3px 7px",
-        color: "#888"
-      }
-    }, t.icon, " ", exerciseName(t, lang), " · ", t.minutes, "m"))));
-  }));
-}
-
-// ─── SESSION SCREEN ───────────────────────────────────────────────────────────
+// ─── SESSION SCREEN (task queue + collapsible presets) ────────────────────────
 
 function SessionScreen({
   tasks,
@@ -3091,6 +2973,8 @@ function SessionScreen({
   const lang = useLang();
   const [saveName, setSaveName] = useState("");
   const [saveOpen, setSaveOpen] = useState(false);
+  const [presetsExpanded, setPresetsExpanded] = useState(false);
+  const [deletePresetId, setDeletePresetId] = useState(null);
   const totalSec = tasks.reduce((s, t) => s + t.minutes * 60, 0);
   const upd = (id, d) => setTasks(prev => prev.map(t => t.id === id ? {
     ...t,
@@ -3157,11 +3041,266 @@ function SessionScreen({
     setSaveName("");
     setSaveOpen(false);
   };
-  return /*#__PURE__*/React.createElement(React.Fragment, null, tasks.length === 0 ? /*#__PURE__*/React.createElement("div", {
+  const loadPreset = preset => {
+    setTasks(preset.tasks.map(t => ({
+      ...t,
+      id: uid()
+    })));
+    setPresetsExpanded(false);
+  };
+  const deletePreset = id => {
+    setPresets(prev => prev.filter(p => p.id !== id));
+    setDeletePresetId(null);
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      height: "100%"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minHeight: 0,
+      overflowY: "auto",
+      padding: "8px 16px 16px",
+      display: "flex",
+      flexDirection: "column",
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...base.card,
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: () => setPresetsExpanded(e => !e),
+    style: {
+      padding: "10px 14px",
+      borderBottom: presetsExpanded ? `1px solid ${C.faint}` : "none",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 8,
+      cursor: "pointer"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 9
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: "inline-block",
+      fontSize: 9,
+      color: C.amber,
+      transition: "transform 0.2s ease-out",
+      transform: presetsExpanded ? "rotate(90deg)" : "rotate(0deg)"
+    }
+  }, "▶"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      fontWeight: 700,
+      letterSpacing: "0.1em",
+      textTransform: "uppercase",
+      color: C.cream
+    }
+  }, T("myPresetsTitle"))), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: C.muted
+    }
+  }, presets.length)), presetsExpanded && /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "12px 14px 14px",
+      display: "flex",
+      flexDirection: "column",
+      gap: 10
+    }
+  }, !saveOpen ? /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...base.pillBtn(false),
+      width: "100%",
+      textAlign: "center",
+      padding: "10px",
+      color: tasks.length > 0 ? C.amber : C.muted,
+      border: `1px solid ${tasks.length > 0 ? C.amber + "55" : "#222"}`,
+      cursor: tasks.length > 0 ? "pointer" : "default"
+    },
+    onClick: () => tasks.length > 0 && setSaveOpen(true),
+    title: tasks.length === 0 ? T("addExercisesFirst") : ""
+  }, T("saveCurrentPreset"), tasks.length === 0 ? T("saveCurrentEmpty") : "") : /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "#151208",
+      border: "1px solid #2A1E08",
+      borderRadius: 10,
+      padding: "14px"
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: base.label
+  }, T("presetName")), /*#__PURE__*/React.createElement("input", {
+    style: {
+      ...base.input,
+      marginBottom: 10
+    },
+    autoFocus: true,
+    value: saveName,
+    onChange: e => setSaveName(e.target.value),
+    placeholder: T("presetPlaceholder"),
+    autoComplete: "off",
+    autoCorrect: "off",
+    spellCheck: false,
+    onKeyDown: e => {
+      if (e.key === "Enter") savePreset();
+      if (e.key === "Escape") setSaveOpen(false);
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...base.pillBtn(false),
+      flex: 1,
+      textAlign: "center"
+    },
+    onClick: () => setSaveOpen(false)
+  }, T("cancelBtn")), /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...base.pillBtn(true),
+      flex: 2
+    },
+    onClick: savePreset
+  }, T("saveBtn")))), presets.length === 0 ? /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: "center",
-      padding: "52px 20px",
-      color: "#3A3A3A"
+      padding: "20px 10px",
+      color: "#8D8D9C"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      lineHeight: 1.6
+    }
+  }, T("noPresetsTitle"), " ", T("noPresetsSub"))) : presets.map(p => {
+    const totalMin = p.tasks.reduce((s, t) => s + (t.minutes || 0), 0);
+    const isDeleting = deletePresetId === p.id;
+    return /*#__PURE__*/React.createElement("div", {
+      key: p.id,
+      style: {
+        background: C.surface,
+        border: `1px solid ${C.border}`,
+        borderRadius: 10,
+        overflow: "hidden"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: "12px 14px",
+        display: "flex",
+        alignItems: "center",
+        gap: 10
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 14,
+        fontWeight: 700,
+        color: C.cream
+      }
+    }, p.name), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 11,
+        color: C.muted,
+        marginTop: 2
+      }
+    }, T("exercisesCount", p.tasks.length), " · ", totalMin, "m")), !isDeleting ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 6
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => loadPreset(p),
+      style: {
+        padding: "6px 12px",
+        background: "#C8873A22",
+        border: `1px solid ${C.amber}55`,
+        borderRadius: 7,
+        color: C.amber,
+        fontSize: 12,
+        fontWeight: 700,
+        cursor: "pointer"
+      }
+    }, T("loadBtn")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setDeletePresetId(p.id),
+      style: {
+        width: 28,
+        height: 28,
+        borderRadius: 7,
+        background: "none",
+        border: "1px solid #2A2A2A",
+        color: C.muted,
+        fontSize: 14,
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
+      }
+    }, "×")) : /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 6
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setDeletePresetId(null),
+      style: {
+        padding: "5px 10px",
+        background: "#222",
+        border: "1px solid #333",
+        borderRadius: 7,
+        color: "#AEB0C0",
+        fontSize: 11,
+        cursor: "pointer"
+      }
+    }, T("keepBtn")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => deletePreset(p.id),
+      style: {
+        padding: "5px 10px",
+        background: "#3A0A0A",
+        border: "1px solid #6A1A1A",
+        borderRadius: 7,
+        color: "#F87171",
+        fontSize: 11,
+        fontWeight: 700,
+        cursor: "pointer"
+      }
+    }, T("deleteBtn")))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: "6px 14px 10px",
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 5
+      }
+    }, p.tasks.map((t, i) => /*#__PURE__*/React.createElement("span", {
+      key: i,
+      style: {
+        fontSize: 10,
+        background: "#1A1A1A",
+        border: "1px solid #2A2A2A",
+        borderRadius: 5,
+        padding: "3px 7px",
+        color: "#AEB0C0"
+      }
+    }, t.icon, " ", exerciseName(t, lang), " · ", t.minutes, "m"))));
+  }))), tasks.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "center",
+      padding: "40px 20px",
+      color: "#8D8D9C"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -3173,9 +3312,7 @@ function SessionScreen({
       fontSize: 13,
       lineHeight: 1.8
     }
-  }, T("emptySession"), /*#__PURE__*/React.createElement("br", null), T("emptySessionSub"))) : /*#__PURE__*/React.createElement("div", {
-    style: base.scrollArea(180)
-  }, tasks.map((task, i) => /*#__PURE__*/React.createElement("div", {
+  }, T("emptySession"), /*#__PURE__*/React.createElement("br", null), T("emptySessionSub"))) : tasks.map((task, i) => /*#__PURE__*/React.createElement("div", {
     key: task.id,
     ref: node => {
       if (node) rowRefs.current[task.id] = node;else delete rowRefs.current[task.id];
@@ -3212,7 +3349,7 @@ function SessionScreen({
       height: 20,
       borderRadius: "50%",
       background: "#2A2A2A",
-      color: "#6B5A3A",
+      color: "#C9A876",
       fontSize: 9,
       fontWeight: 700,
       display: "flex",
@@ -3294,60 +3431,11 @@ function SessionScreen({
       padding: 0
     },
     onClick: () => rm(task.id)
-  }, "×")))), saveOpen && /*#__PURE__*/React.createElement("div", {
+  }, "×")))), /*#__PURE__*/React.createElement("div", {
     style: {
-      margin: "0 16px 8px",
-      padding: "12px 14px",
-      background: "#151208",
-      border: "1px solid #2A1E08",
-      borderRadius: 10,
-      display: "flex",
-      flexDirection: "column",
-      gap: 8
-    }
-  }, /*#__PURE__*/React.createElement("label", {
-    style: base.label
-  }, T("savePresetTitle")), /*#__PURE__*/React.createElement("input", {
-    style: base.input,
-    autoFocus: true,
-    value: saveName,
-    onChange: e => setSaveName(e.target.value),
-    placeholder: T("presetPlaceholder"),
-    autoComplete: "off",
-    autoCorrect: "off",
-    spellCheck: false,
-    onKeyDown: e => {
-      if (e.key === "Enter") savePreset();
-      if (e.key === "Escape") setSaveOpen(false);
-    }
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 8
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    style: {
-      ...base.pillBtn(false),
-      flex: 1,
-      textAlign: "center"
-    },
-    onClick: () => setSaveOpen(false)
-  }, T("cancelBtn")), /*#__PURE__*/React.createElement("button", {
-    style: {
-      ...base.pillBtn(true),
-      flex: 2
-    },
-    onClick: savePreset
-  }, T("savePresetBtn")))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "fixed",
-      bottom: 0,
-      left: "50%",
-      transform: "translateX(-50%)",
-      width: "100%",
-      maxWidth: 430,
-      background: "linear-gradient(0deg,#0A0A0A 85%,transparent)",
-      padding: "10px 16px 22px"
+      flexShrink: 0,
+      padding: "10px 16px 16px",
+      background: "linear-gradient(0deg,#0A0A0A 85%,transparent)"
     }
   }, tasks.length > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
@@ -3378,17 +3466,7 @@ function SessionScreen({
       display: "flex",
       gap: 8
     }
-  }, tasks.length > 0 && !saveOpen && /*#__PURE__*/React.createElement("button", {
-    style: {
-      ...base.pillBtn(false),
-      padding: "12px 14px",
-      flexShrink: 0,
-      color: C.amber,
-      border: `1px solid ${C.amber}44`
-    },
-    onClick: () => setSaveOpen(true),
-    title: T("savePresetTitle")
-  }, "💾"), sessionInProgress ? /*#__PURE__*/React.createElement("button", {
+  }, sessionInProgress ? /*#__PURE__*/React.createElement("button", {
     style: {
       ...base.pillBtn(true),
       flex: 1,
@@ -3679,7 +3757,7 @@ function ActiveSessionScreen({
   }, T("exercisesCount", tasks.length), " · ", formatTotalMin(totalSec)), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
-      color: "#3A4A3A",
+      color: "#8FAF8F",
       marginBottom: 28
     }
   }, T("consistency")), /*#__PURE__*/React.createElement("button", {
@@ -3700,12 +3778,13 @@ function ActiveSessionScreen({
     color: "#4FC3F7"
   }), /*#__PURE__*/React.createElement("div", {
     style: {
-      padding: "14px 16px 100px",
+      flex: 1,
+      minHeight: 0,
+      padding: "14px 16px 24px",
       display: "flex",
       flexDirection: "column",
       gap: 14,
-      overflowY: "auto",
-      maxHeight: "calc(100dvh - 110px)"
+      overflowY: "auto"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -4116,7 +4195,7 @@ function ActiveSessionScreen({
   }, T("overallProgress")), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 11,
-      color: "#6B5A3A",
+      color: "#C9A876",
       fontFamily: "monospace"
     }
   }, overallPct, "%")), /*#__PURE__*/React.createElement("div", {
@@ -5061,7 +5140,7 @@ function SettingsScreen({
   }, T("resetBadgesConfirmTitle")), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
-      color: "#6A4A4A",
+      color: "#B08A8A",
       marginBottom: 12
     }
   }, T("resetBadgesConfirmMsg")), /*#__PURE__*/React.createElement("div", {
@@ -5077,7 +5156,7 @@ function SettingsScreen({
       border: "1px solid #333",
       borderRadius: 8,
       padding: "9px",
-      color: "#888",
+      color: "#AEB0C0",
       fontSize: 12,
       cursor: "pointer"
     }
@@ -5337,26 +5416,23 @@ function App() {
   // value from an ancestor, since a component never consumes the Provider it
   // renders). Translate directly from its own `lang` state instead.
   const T = (key, ...args) => translate(lang, key, ...args);
-  const NAV_TABS = [{
-    id: "library",
-    label: T("navLibrary")
-  }, {
-    id: "presets",
-    label: presets.length > 0 ? `${T("navPresets")} (${presets.length})` : T("navPresets")
-  }, {
-    id: "session",
-    label: tasks.length > 0 ? `${T("navSession")} (${tasks.length})` : T("navSession")
-  }];
-  const statsCount = Object.values(stats).filter(s => s.totalSec > 0).length;
-  const unlockedBadgeCount = Object.keys(badges).length;
   const sessionInProgress = sessionActive && !sessionDone;
   const currentLevel = levelFromMinutes(totalPracticeSec(stats) / 60);
+  const sessionTabActive = tab === "session" || tab === "active";
+  // CSS `zoom` magnifies the rendered box beyond its own layout size, so a
+  // 100dvh-tall element zoomed to 1.35x would visually spill 35% past the
+  // real viewport. Dividing height/maxWidth by the same factor before zoom
+  // is applied cancels that out, keeping the app exactly viewport-sized (and
+  // its internal flex proportions untouched) at every display size.
+  const zoomFactor = DISPLAY_ZOOM[displaySize] || 1;
   return /*#__PURE__*/React.createElement(LangContext.Provider, {
     value: lang
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       ...base.app,
-      zoom: DISPLAY_ZOOM[displaySize] || 1
+      zoom: zoomFactor,
+      height: `calc(100dvh / ${zoomFactor})`,
+      maxWidth: `calc(430px / ${zoomFactor})`
     },
     onClick: ensureAudio
   }, /*#__PURE__*/React.createElement("style", null, `
@@ -5379,13 +5455,6 @@ function App() {
         }
         @keyframes activePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
       `), /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "sticky",
-      top: 0,
-      zIndex: 20,
-      background: C.bg
-    }
-  }, /*#__PURE__*/React.createElement("div", {
     style: base.header
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -5412,208 +5481,23 @@ function App() {
     }
   }), /*#__PURE__*/React.createElement(LevelPill, {
     level: currentLevel,
-    onClick: () => setTab(t => t === "level" ? "library" : "level")
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 8
-    }
-  }, tab === "active" && sessionActive && /*#__PURE__*/React.createElement("button", {
+    onClick: () => setTab("progress")
+  })), tab === "active" && sessionActive && /*#__PURE__*/React.createElement("button", {
     style: {
       ...base.pillBtn(false),
       fontSize: 12,
       color: C.muted
     },
     onClick: backToMenu
-  }, T("headerEnd")), /*#__PURE__*/React.createElement("button", {
-    title: T("headerLibrary"),
-    onClick: () => setTab("library"),
-    style: {
-      width: 36,
-      height: 36,
-      borderRadius: 8,
-      padding: 0,
-      cursor: "pointer",
-      border: tab === "library" ? `1px solid ${C.amber}` : "1px solid #2A2A2A",
-      background: tab === "library" ? "#C8873A22" : "none",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      flexShrink: 0
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    width: "17",
-    height: "17",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: tab === "library" ? C.amber : C.navInactive,
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
-  }), /*#__PURE__*/React.createElement("polyline", {
-    points: "9 22 9 12 15 12 15 22"
-  }))), /*#__PURE__*/React.createElement("button", {
-    title: T("headerStats"),
-    onClick: () => setTab(t => t === "stats" ? "library" : "stats"),
-    style: {
-      width: 36,
-      height: 36,
-      borderRadius: 8,
-      padding: 0,
-      cursor: "pointer",
-      border: tab === "stats" ? "1px solid #4FC3F7" : "1px solid #2A2A2A",
-      background: tab === "stats" ? "#4FC3F722" : "none",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      flexShrink: 0,
-      position: "relative"
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    width: "18",
-    height: "18",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: tab === "stats" ? "#4FC3F7" : C.navInactive,
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }, /*#__PURE__*/React.createElement("line", {
-    x1: "18",
-    y1: "20",
-    x2: "18",
-    y2: "10"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "12",
-    y1: "20",
-    x2: "12",
-    y2: "4"
-  }), /*#__PURE__*/React.createElement("line", {
-    x1: "6",
-    y1: "20",
-    x2: "6",
-    y2: "14"
-  })), statsCount > 0 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "absolute",
-      top: -3,
-      right: -3,
-      width: 10,
-      height: 10,
-      borderRadius: "50%",
-      background: "#4FC3F7",
-      border: "2px solid #0F0F0F"
-    }
-  })), /*#__PURE__*/React.createElement("button", {
-    title: T("headerBadges"),
-    onClick: () => setTab(t => t === "badges" ? "library" : "badges"),
-    style: {
-      width: 36,
-      height: 36,
-      borderRadius: 8,
-      padding: 0,
-      cursor: "pointer",
-      border: tab === "badges" ? "1px solid #34D399" : "1px solid #2A2A2A",
-      background: tab === "badges" ? "#34D39922" : "none",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      flexShrink: 0,
-      position: "relative"
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    width: "18",
-    height: "18",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: tab === "badges" ? "#34D399" : C.navInactive,
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }, /*#__PURE__*/React.createElement("circle", {
-    cx: "12",
-    cy: "8",
-    r: "6"
-  }), /*#__PURE__*/React.createElement("path", {
-    d: "M8.5 13.5 7 22l5-3 5 3-1.5-8.5"
-  })), unlockedBadgeCount > 0 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "absolute",
-      top: -3,
-      right: -3,
-      width: 10,
-      height: 10,
-      borderRadius: "50%",
-      background: "#34D399",
-      border: "2px solid #0F0F0F"
-    }
-  })), /*#__PURE__*/React.createElement("button", {
-    title: T("headerSettings"),
-    onClick: () => setTab(t => t === "settings" ? "library" : "settings"),
-    style: {
-      width: 36,
-      height: 36,
-      borderRadius: 8,
-      background: tab === "settings" ? "#C8873A22" : "none",
-      border: tab === "settings" ? `1px solid ${C.amber}` : "1px solid #2A2A2A",
-      cursor: "pointer",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: 0,
-      flexShrink: 0
-    }
-  }, /*#__PURE__*/React.createElement("svg", {
-    width: "18",
-    height: "18",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: tab === "settings" ? C.amber : C.navInactive,
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }, /*#__PURE__*/React.createElement("circle", {
-    cx: "12",
-    cy: "12",
-    r: "3"
-  }), /*#__PURE__*/React.createElement("path", {
-    d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
-  }))))), tab !== "settings" && tab !== "stats" && tab !== "badges" && tab !== "level" && /*#__PURE__*/React.createElement("div", {
-    style: base.navBar
-  }, NAV_TABS.map(t => /*#__PURE__*/React.createElement("button", {
-    key: t.id,
-    style: base.navBtn(tab === t.id),
-    onClick: () => setTab(t.id)
-  }, t.label)), sessionInProgress && /*#__PURE__*/React.createElement("button", {
-    style: {
-      ...base.navBtn(tab === "active"),
-      color: tab === "active" ? "#34D399" : "#2A5A3A",
-      borderBottomColor: tab === "active" ? "#34D399" : "transparent",
-      position: "relative"
-    },
-    onClick: () => setTab("active")
-  }, T("navActive"), /*#__PURE__*/React.createElement("span", {
-    style: {
-      position: "absolute",
-      top: 4,
-      right: 4,
-      width: 6,
-      height: 6,
-      borderRadius: "50%",
-      background: "#34D399",
-      animation: "activePulse 1.5s ease-in-out infinite"
-    }
-  }))), sessionInProgress && tab !== "active" && /*#__PURE__*/React.createElement("div", {
+  }, T("headerEnd"))), sessionInProgress && tab !== "active" && /*#__PURE__*/React.createElement("div", {
     style: {
       background: "#0D1A0D",
       borderBottom: "1px solid #2A5A2A",
       padding: "8px 16px",
       display: "flex",
       alignItems: "center",
-      gap: 10
+      gap: 10,
+      flexShrink: 0
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
@@ -5643,19 +5527,21 @@ function App() {
       cursor: "pointer",
       fontWeight: 700
     }
-  }, T("resumeBtn")))), tab === "library" && /*#__PURE__*/React.createElement(LibraryScreen, {
+  }, T("resumeBtn"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minHeight: 0,
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden"
+    }
+  }, tab === "library" && /*#__PURE__*/React.createElement(LibraryScreen, {
     exercises: exercises,
     categories: categories,
     tasks: tasks,
     onAdd: addExercise,
     stats: stats,
     subProgress: subProgress
-  }), tab === "presets" && /*#__PURE__*/React.createElement(PresetsScreen, {
-    presets: presets,
-    setPresets: setPresets,
-    tasks: tasks,
-    setTasks: setTasks,
-    onLoadGoToSession: () => setTab("session")
   }), tab === "session" && /*#__PURE__*/React.createElement(SessionScreen, {
     tasks: tasks,
     setTasks: setTasks,
@@ -5664,6 +5550,13 @@ function App() {
     onReturnToSession: returnToSession,
     presets: presets,
     setPresets: setPresets
+  }), tab === "progress" && /*#__PURE__*/React.createElement(ProgressionScreen, {
+    stats: stats,
+    exercises: exercises,
+    onClearStats: () => setStats({}),
+    badges: badges,
+    subProgress: subProgress,
+    practiceDays: practiceDays
   }), tab === "settings" && /*#__PURE__*/React.createElement(SettingsScreen, {
     exercises: exercises,
     setExercises: setExercises,
@@ -5676,18 +5569,6 @@ function App() {
     displaySize: displaySize,
     onDisplaySizeChange: setDisplaySize,
     onResetBadges: () => setBadges({})
-  }), tab === "stats" && /*#__PURE__*/React.createElement(StatsScreen, {
-    stats: stats,
-    exercises: exercises,
-    onClear: () => setStats({})
-  }), tab === "badges" && /*#__PURE__*/React.createElement(BadgesScreen, {
-    badges: badges,
-    stats: stats,
-    subProgress: subProgress,
-    exercises: exercises,
-    practiceDays: practiceDays
-  }), tab === "level" && /*#__PURE__*/React.createElement(LevelScreen, {
-    stats: stats
   }), tab === "active" && /*#__PURE__*/React.createElement(ActiveSessionScreen, {
     tasks: tasks,
     setTasks: setTasks,
@@ -5711,7 +5592,108 @@ function App() {
     setDone: setSessionDone,
     elapsedRef: sessionElapsedRef,
     committedRef: sessionCommittedRef
-  }), badgeCelebrationQueue.length > 0 && /*#__PURE__*/React.createElement(BadgeCelebration, {
+  })), /*#__PURE__*/React.createElement("div", {
+    style: base.bottomNav
+  }, /*#__PURE__*/React.createElement("button", {
+    style: base.bottomNavBtn(tab === "library"),
+    onClick: () => setTab("library")
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "20",
+    height: "20",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: tab === "library" ? C.amber : C.navInactive,
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+  }), /*#__PURE__*/React.createElement("polyline", {
+    points: "9 22 9 12 15 12 15 22"
+  })), T("navLibrary")), /*#__PURE__*/React.createElement("button", {
+    style: base.bottomNavBtn(sessionTabActive, sessionInProgress ? "#34D399" : C.amber),
+    onClick: () => setTab(sessionInProgress ? "active" : "session")
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      position: "relative",
+      display: "flex"
+    }
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "20",
+    height: "20",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: sessionTabActive ? sessionInProgress ? "#34D399" : C.amber : C.navInactive,
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("path", {
+    d: "M9 18V5l12-2v13"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "6",
+    cy: "18",
+    r: "3"
+  }), /*#__PURE__*/React.createElement("circle", {
+    cx: "18",
+    cy: "16",
+    r: "3"
+  })), sessionInProgress && /*#__PURE__*/React.createElement("span", {
+    style: {
+      position: "absolute",
+      top: -2,
+      right: -4,
+      width: 7,
+      height: 7,
+      borderRadius: "50%",
+      background: "#34D399",
+      animation: "activePulse 1.5s ease-in-out infinite"
+    }
+  })), tasks.length > 0 ? `${T("navSession")} (${tasks.length})` : T("navSession")), /*#__PURE__*/React.createElement("button", {
+    style: base.bottomNavBtn(tab === "progress", "#4FC3F7"),
+    onClick: () => setTab("progress")
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "20",
+    height: "20",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: tab === "progress" ? "#4FC3F7" : C.navInactive,
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("line", {
+    x1: "18",
+    y1: "20",
+    x2: "18",
+    y2: "10"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "12",
+    y1: "20",
+    x2: "12",
+    y2: "4"
+  }), /*#__PURE__*/React.createElement("line", {
+    x1: "6",
+    y1: "20",
+    x2: "6",
+    y2: "14"
+  })), T("navProgress")), /*#__PURE__*/React.createElement("button", {
+    style: base.bottomNavBtn(tab === "settings"),
+    onClick: () => setTab("settings")
+  }, /*#__PURE__*/React.createElement("svg", {
+    width: "20",
+    height: "20",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: tab === "settings" ? C.amber : C.navInactive,
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, /*#__PURE__*/React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "3"
+  }), /*#__PURE__*/React.createElement("path", {
+    d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+  })), T("navSettings"))), badgeCelebrationQueue.length > 0 && /*#__PURE__*/React.createElement(BadgeCelebration, {
     key: badgeCelebrationQueue[0],
     badgeId: badgeCelebrationQueue[0],
     lang: lang,

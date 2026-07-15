@@ -5,6 +5,9 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 const STRINGS = {
   en: {
     navLibrary: "Library", navPresets: "Presets", navSession: "Session", navActive: "▶ Active",
+    navProgress: "Progress", navSettings: "Settings",
+    progressTabLevel: "Level", progressTabStats: "Stats", progressTabBadges: "Badges",
+    myPresetsTitle: "My presets",
     headerEnd: "↩ End", headerLibrary: "Library", headerStats: "Statistics", headerSettings: "Settings", headerBadges: "Badges",
     sessionPaused: "Session paused", resumeBtn: "Resume ▶",
     needsPractice: "Needs Practice", leastWorkedOn: "· least worked on",
@@ -67,6 +70,9 @@ const STRINGS = {
   },
   fr: {
     navLibrary: "Bibliothèque", navPresets: "Modèles", navSession: "Séance", navActive: "▶ En cours",
+    navProgress: "Progression", navSettings: "Réglages",
+    progressTabLevel: "Niveau", progressTabStats: "Stats", progressTabBadges: "Badges",
+    myPresetsTitle: "Mes modèles",
     headerEnd: "↩ Fin", headerLibrary: "Bibliothèque", headerStats: "Statistiques", headerSettings: "Réglages", headerBadges: "Badges",
     sessionPaused: "Séance en pause", resumeBtn: "Reprendre ▶",
     needsPractice: "À travailler", leastWorkedOn: "· les moins pratiqués",
@@ -210,7 +216,7 @@ function StatsScreen({ stats, exercises, onClear }) {
   }
 
   if (entries.length === 0) return (
-    <div style={{ textAlign: "center", padding: "60px 24px", color: "#3A3A3A" }}>
+    <div style={{ textAlign: "center", padding: "60px 24px", color: "#8D8D9C" }}>
       <div style={{ fontSize: 46, marginBottom: 12 }}>📊</div>
       <div style={{ fontSize: 14, lineHeight: 1.6 }}>
         {T("statsEmpty")}<br />{T("statsEmptySub")}
@@ -222,7 +228,7 @@ function StatsScreen({ stats, exercises, onClear }) {
   const totalSessions   = Math.max(...entries.map(e => e.sessions));
 
   return (
-    <div style={{ padding: "12px 16px 40px", display: "flex", flexDirection: "column", gap: 12, overflowY: "auto", maxHeight: "calc(100dvh - 110px)" }}>
+    <div style={{ padding: "12px 16px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
       {/* Summary row */}
       <div style={{ display: "flex", gap: 8 }}>
         {[
@@ -232,7 +238,7 @@ function StatsScreen({ stats, exercises, onClear }) {
         ].map(s => (
           <div key={s.label} style={{ flex: 1, background: "#151208", border: "1px solid #2A1E08", borderRadius: 10, padding: "10px 8px", textAlign: "center" }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: "#C8873A", fontFamily: "monospace" }}>{s.value}</div>
-            <div style={{ fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "#4A4A5A", marginTop: 3 }}>{s.label}</div>
+            <div style={{ fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "#8D8D9C", marginTop: 3 }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -240,7 +246,7 @@ function StatsScreen({ stats, exercises, onClear }) {
       {/* Per-exercise bars */}
       <div style={{ background: "#0D0D0D", border: "1px solid #1A1A1A", borderRadius: 12, overflow: "hidden" }}>
         <div style={{ padding: "10px 14px", borderBottom: "1px solid #1A1A1A" }}>
-          <span style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: "#4A4A5A" }}>{T("statsMostPractised")}</span>
+          <span style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: "#8D8D9C" }}>{T("statsMostPractised")}</span>
         </div>
         {entries.map((e, i) => (
           <div key={e.exerciseId || i} style={{ padding: "10px 14px", borderBottom: "1px solid #111" }}>
@@ -252,7 +258,7 @@ function StatsScreen({ stats, exercises, onClear }) {
             <div style={{ height: 4, background: "#1A1A1A", borderRadius: 2, overflow: "hidden" }}>
               <div style={{ height: "100%", width: `${Math.round((e.totalSec / maxSec) * 100)}%`, background: i === 0 ? "linear-gradient(90deg,#6B3A0A,#C8873A)" : "linear-gradient(90deg,#2A2A3A,#4A4A6A)", borderRadius: 2, transition: "width 0.6s ease-out" }} />
             </div>
-            <div style={{ fontSize: 10, color: "#4A4A5A", marginTop: 4 }}>{T("sessionsCount", e.sessions)}</div>
+            <div style={{ fontSize: 10, color: "#8D8D9C", marginTop: 4 }}>{T("sessionsCount", e.sessions)}</div>
           </div>
         ))}
       </div>
@@ -267,11 +273,11 @@ function StatsScreen({ stats, exercises, onClear }) {
       ) : (
         <div style={{ background: "#1A0A0A", border: "1px solid #5A1A1A", borderRadius: 10, padding: "14px 16px" }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: "#F87171", marginBottom: 4 }}>{T("statsConfirmTitle")}</div>
-          <div style={{ fontSize: 11, color: "#6A4A4A", marginBottom: 12 }}>{T("statsConfirmMsg")}</div>
+          <div style={{ fontSize: 11, color: "#B08A8A", marginBottom: 12 }}>{T("statsConfirmMsg")}</div>
           <div style={{ display: "flex", gap: 8 }}>
             <button
               onClick={() => setConfirmClear(false)}
-              style={{ flex: 1, background: "#222", border: "1px solid #333", borderRadius: 8, padding: "9px", color: "#888", fontSize: 12, cursor: "pointer" }}
+              style={{ flex: 1, background: "#222", border: "1px solid #333", borderRadius: 8, padding: "9px", color: "#AEB0C0", fontSize: 12, cursor: "pointer" }}
             >
               {T("cancelBtn")}
             </button>
@@ -300,7 +306,7 @@ function BadgesScreen({ badges, stats, subProgress, exercises, practiceDays }) {
   }
 
   return (
-    <div style={base.scrollArea(24)}>
+    <div style={base.staticArea(24)}>
       <div style={{ textAlign: "center", padding: "4px 8px 12px" }}>
         <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.6 }}>{T("badgesIntro")}</div>
       </div>
@@ -609,20 +615,32 @@ function extractYouTubeId(url) {
 
 // ─── STYLES ──────────────────────────────────────────────────────────────────
 
-const C = { bg: "#0F0F0F", surface: "#151515", border: "#1E1E1E", amber: "#C8873A", amberDim: "#6B3A0A", cream: "#F5EDD6", muted: "#4A4A5A", navInactive: "#8D8D9C", faint: "#1A1A1A" };
+const C = { bg: "#0F0F0F", surface: "#151515", border: "#1E1E1E", amber: "#C8873A", amberDim: "#6B3A0A", cream: "#F5EDD6", muted: "#8D8D9C", navInactive: "#8D8D9C", faint: "#1A1A1A" };
 
 // Display size setting: a single CSS `zoom` factor scales the whole app
 // (text, icons, spacing) uniformly without touching every font-size value.
 const DISPLAY_ZOOM = { small: 0.95, medium: 1.15, large: 1.35 };
 
 const base = {
-  app: { background: C.bg, minHeight: "100dvh", maxWidth: 430, margin: "0 auto", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.cream, position: "relative" },
-  header: { background: "linear-gradient(180deg,#1A1208 0%,#0F0F0F 100%)", padding: "16px 20px 12px", borderBottom: "1px solid #2A2008", display: "flex", alignItems: "center", justifyContent: "space-between" },
+  // The whole app is a fixed-height flex column: header (flexShrink:0) +
+  // content (flex:1, its own overflow) + bottom nav (flexShrink:0). This
+  // replaces the old calc(100dvh - Npx) magic numbers, which broke under the
+  // "large" display-size CSS zoom because a fixed pixel offset doesn't scale
+  // the same way as the zoomed viewport.
+  app: { background: C.bg, margin: "0 auto", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.cream, position: "relative", display: "flex", flexDirection: "column", overflow: "hidden" },
+  header: { background: "linear-gradient(180deg,#1A1208 0%,#0F0F0F 100%)", padding: "14px 20px 10px", borderBottom: "1px solid #2A2008", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 },
   iconBtn: (col) => ({ background: "none", border: "none", color: col || C.muted, fontSize: 18, cursor: "pointer", padding: "4px 6px", borderRadius: 6, display: "flex", alignItems: "center" }),
-  navBar: { display: "flex", background: "#0A0A0A", borderBottom: `1px solid ${C.border}` },
-  navBtn: (a) => ({ flex: 1, padding: "11px 6px", background: "none", border: "none", borderBottom: a ? `2px solid ${C.amber}` : "2px solid transparent", color: a ? C.amber : C.navInactive, fontSize: 10, fontWeight: a ? 700 : 500, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer" }),
-  scrollArea: (pb) => ({ padding: `8px 16px ${pb||100}px`, display: "flex", flexDirection: "column", gap: 8, overflowY: "auto", maxHeight: "calc(100dvh - 175px)" }),
-  catChip: (a, col) => ({ padding: "5px 13px", borderRadius: 20, border: `1px solid ${a ? col : "#2A2A2A"}`, background: a ? col+"22" : "transparent", color: a ? col : "#888", fontSize: 12, fontWeight: a ? 600 : 400, cursor: "pointer", whiteSpace: "nowrap" }),
+  // Bottom tab bar: the single primary navigation surface for the whole app.
+  bottomNav: { display: "flex", background: "#0A0A0A", borderTop: `1px solid ${C.border}`, flexShrink: 0, paddingBottom: "env(safe-area-inset-bottom, 0px)" },
+  bottomNavBtn: (active, col) => ({ flex: 1, padding: "8px 4px 7px", background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, color: active ? (col || C.amber) : C.navInactive, fontSize: 10, fontWeight: active ? 700 : 500, letterSpacing: "0.02em", cursor: "pointer", position: "relative" }),
+  // Self-scrolling content region: a direct child of the app's content slot
+  // (flex:1, minHeight:0 lets it shrink to the available space instead of
+  // overflowing it, and overflowY:auto scrolls only this region).
+  scrollArea: (pb) => ({ flex: 1, minHeight: 0, overflowY: "auto", padding: `8px 16px ${pb||24}px`, display: "flex", flexDirection: "column", gap: 8 }),
+  // Non-scrolling content block: for screens nested inside another element
+  // that already owns the scrolling (e.g. the Progression sub-tabs).
+  staticArea: (pb) => ({ padding: `8px 16px ${pb||24}px`, display: "flex", flexDirection: "column", gap: 8 }),
+  catChip: (a, col) => ({ padding: "5px 13px", borderRadius: 20, border: `1px solid ${a ? col : "#2A2A2A"}`, background: a ? col+"22" : "transparent", color: a ? col : "#AEB0C0", fontSize: 12, fontWeight: a ? 600 : 400, cursor: "pointer", whiteSpace: "nowrap" }),
   exCard: (col) => ({ background: C.surface, border: `1px solid ${C.border}`, borderLeft: `3px solid ${col}`, borderRadius: 10, padding: "11px 13px", display: "flex", alignItems: "center", gap: 11, cursor: "pointer", userSelect: "none" }),
   pillBtn: (primary) => ({ padding: primary ? "13px" : "10px 16px", borderRadius: 10, border: primary ? "none" : `1px solid #2A2A2A`, background: primary ? `linear-gradient(135deg,${C.amber},#A86020)` : C.surface, color: primary ? "#0F0F0F" : "#AEB0C0", fontSize: primary ? 14 : 12, fontWeight: primary ? 800 : 500, cursor: "pointer", letterSpacing: "0.06em", width: primary ? "100%" : "auto" }),
   input: { background: "#1A1A1A", border: `1px solid #2A2A2A`, borderRadius: 8, padding: "9px 12px", color: C.cream, fontSize: 13, width: "100%", boxSizing: "border-box", outline: "none", fontFamily: "inherit" },
@@ -1030,7 +1048,7 @@ function LevelScreen({ stats }) {
   const remM = Math.round(info.remainingMin % 60);
 
   return (
-    <div style={{ ...base.scrollArea(24), alignItems: "center" }}>
+    <div style={{ ...base.staticArea(24), alignItems: "center" }}>
       <div style={{ textAlign: "center", padding: "4px 8px 4px" }}>
         <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.6 }}>{T("levelIntro")}</div>
       </div>
@@ -1043,6 +1061,45 @@ function LevelScreen({ stats }) {
         <div style={{ fontSize: 12, color: C.muted, marginTop: 8, textAlign: "center" }}>
           {T("timeToNext", remH, remM)}{info.level + 1}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PROGRESSION SCREEN (Niveau / Stats / Badges, merged under sub-tabs) ──────
+
+function ProgressionScreen({ stats, exercises, onClearStats, badges, subProgress, practiceDays }) {
+  const T = useT();
+  const [subTab, setSubTab] = useState("level");
+  const TABS = [
+    { id: "level",  label: T("progressTabLevel") },
+    { id: "stats",  label: T("progressTabStats") },
+    { id: "badges", label: T("progressTabBadges") },
+  ];
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <div style={{ display: "flex", gap: 6, padding: "10px 16px 4px", flexShrink: 0 }}>
+        {TABS.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setSubTab(t.id)}
+            style={{
+              flex: 1, padding: "8px 6px", borderRadius: 8, cursor: "pointer",
+              border: `1px solid ${subTab === t.id ? C.amber : "#2A2A2A"}`,
+              background: subTab === t.id ? "#C8873A22" : "transparent",
+              color: subTab === t.id ? C.amber : C.navInactive,
+              fontSize: 11, fontWeight: subTab === t.id ? 700 : 500,
+              letterSpacing: "0.08em", textTransform: "uppercase",
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+        {subTab === "level"  && <LevelScreen stats={stats} />}
+        {subTab === "stats"  && <StatsScreen stats={stats} exercises={exercises} onClear={onClearStats} />}
+        {subTab === "badges" && <BadgesScreen badges={badges} stats={stats} subProgress={subProgress} exercises={exercises} practiceDays={practiceDays} />}
       </div>
     </div>
   );
@@ -1112,7 +1169,7 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, stats, subProgress
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
               {suggestions.map((ex, rank) => {
                 const cat = categories.find(c => c.id === ex.categoryId);
-                const col = cat?.color || "#888";
+                const col = cat?.color || "#AEB0C0";
                 const added = inSession.has(ex.id);
                 return (
                   <div key={ex.id}
@@ -1131,7 +1188,7 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, stats, subProgress
                     <span style={{ fontSize: 16, flexShrink: 0 }}>{ex.icon}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: C.cream, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{exerciseName(ex, lang)}</div>
-                      <div style={{ fontSize: 10, color: col, marginTop: 1, fontWeight: 600 }}>{categoryName(cat, lang)} · <span style={{ color: "#4A5A4A", fontWeight: 400 }}>{fmtSuggestTime(ex)}</span></div>
+                      <div style={{ fontSize: 10, color: col, marginTop: 1, fontWeight: 600 }}>{categoryName(cat, lang)} · <span style={{ color: "#8FAF8F", fontWeight: 400 }}>{fmtSuggestTime(ex)}</span></div>
                     </div>
                     <div style={{ width: 24, height: 24, borderRadius: "50%", background: added ? "transparent" : "#C8873A22",
                       border: `1px solid ${added ? "#2A2A2A" : C.amber}`, color: added ? C.muted : C.amber,
@@ -1164,15 +1221,15 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, stats, subProgress
                 const cat = item.cat;
                 return (
                   <div key={"h-" + (cat?.id || idx)} style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: idx === 0 ? 4 : 12, paddingBottom: 4 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: cat?.color || "#888", flexShrink: 0 }} />
-                    <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", color: cat?.color || "#888" }}>{cat ? categoryName(cat, lang) : T("unknownCategory")}</span>
-                    <div style={{ flex: 1, height: 1, background: (cat?.color || "#888") + "33" }} />
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: cat?.color || "#AEB0C0", flexShrink: 0 }} />
+                    <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", color: cat?.color || "#AEB0C0" }}>{cat ? categoryName(cat, lang) : T("unknownCategory")}</span>
+                    <div style={{ flex: 1, height: 1, background: (cat?.color || "#AEB0C0") + "33" }} />
                   </div>
                 );
               }
               const ex = item.ex;
               const cat = categories.find(c => c.id === ex.categoryId);
-              const col = cat?.color || "#888";
+              const col = cat?.color || "#AEB0C0";
               const added = inSession.has(ex.id);
               return (
                 <div key={ex.id} style={{ ...base.exCard(col), opacity: added ? 0.5 : 1 }} onClick={() => !added && onAdd(ex)}>
@@ -1198,7 +1255,7 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, stats, subProgress
           // Single category — flat list (category already obvious from filter)
           return filtered.map(ex => {
             const cat = categories.find(c => c.id === ex.categoryId);
-            const col = cat?.color || "#888";
+            const col = cat?.color || "#AEB0C0";
             const added = inSession.has(ex.id);
             return (
               <div key={ex.id} style={{ ...base.exCard(col), opacity: added ? 0.5 : 1 }} onClick={() => !added && onAdd(ex)}>
@@ -1228,110 +1285,15 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, stats, subProgress
 
 // ─── PRESETS SCREEN ───────────────────────────────────────────────────────────
 
-function PresetsScreen({ presets, setPresets, tasks, setTasks, onLoadGoToSession }) {
-  const T = useT();
-  const lang = useLang();
-  const [saveName, setSaveName] = useState("");
-  const [saveOpen, setSaveOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState(null);
-
-  const savePreset = () => {
-    if (!saveName.trim() || tasks.length === 0) return;
-    const preset = { id: uid(), name: saveName.trim(), tasks: tasks.map(t => ({ ...t })), createdAt: Date.now() };
-    setPresets(prev => [preset, ...prev]);
-    setSaveName(""); setSaveOpen(false);
-  };
-
-  const loadPreset = (preset) => {
-    setTasks(preset.tasks.map(t => ({ ...t, id: uid() })));
-    onLoadGoToSession();
-  };
-
-  const deletePreset = (id) => { setPresets(prev => prev.filter(p => p.id !== id)); setDeleteId(null); };
-
-  return (
-    <div style={base.scrollArea(24)}>
-      {/* Save current queue as preset */}
-      {!saveOpen ? (
-        <button
-          style={{ ...base.pillBtn(false), width: "100%", textAlign: "center", padding: "12px",
-            color: tasks.length > 0 ? C.amber : C.muted,
-            border: `1px solid ${tasks.length > 0 ? C.amber + "55" : "#222"}`,
-            cursor: tasks.length > 0 ? "pointer" : "default" }}
-          onClick={() => tasks.length > 0 && setSaveOpen(true)}
-          title={tasks.length === 0 ? T("addExercisesFirst") : ""}
-        >
-          {T("saveCurrentPreset")}{tasks.length === 0 ? T("saveCurrentEmpty") : ""}
-        </button>
-      ) : (
-        <div style={{ background: "#151208", border: "1px solid #2A1E08", borderRadius: 10, padding: "14px" }}>
-          <label style={base.label}>{T("presetName")}</label>
-          <input
-            style={{ ...base.input, marginBottom: 10 }} autoFocus
-            value={saveName} onChange={e => setSaveName(e.target.value)}
-            placeholder={T("presetPlaceholder")}
-            autoComplete="off" autoCorrect="off" spellCheck={false}
-            onKeyDown={e => { if (e.key === "Enter") savePreset(); if (e.key === "Escape") setSaveOpen(false); }}
-          />
-          <div style={{ display: "flex", gap: 8 }}>
-            <button style={{ ...base.pillBtn(false), flex: 1, textAlign: "center" }} onClick={() => setSaveOpen(false)}>{T("cancelBtn")}</button>
-            <button style={{ ...base.pillBtn(true), flex: 2 }} onClick={savePreset}>{T("saveBtn")}</button>
-          </div>
-        </div>
-      )}
-
-      {presets.length === 0 && (
-        <div style={{ textAlign: "center", padding: "44px 20px", color: "#3A3A3A" }}>
-          <div style={{ fontSize: 40, marginBottom: 10 }}>📋</div>
-          <div style={{ fontSize: 13, lineHeight: 1.7 }}>{T("noPresetsTitle")}<br />{T("noPresetsSub")}</div>
-        </div>
-      )}
-
-      {presets.map(p => {
-        const totalMin = p.tasks.reduce((s, t) => s + (t.minutes || 0), 0);
-        const isDeleting = deleteId === p.id;
-        return (
-          <div key={p.id} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" }}>
-            <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.cream }}>{p.name}</div>
-                <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{T("exercisesCount", p.tasks.length)} · {totalMin}m</div>
-              </div>
-              {!isDeleting ? (
-                <div style={{ display: "flex", gap: 6 }}>
-                  <button onClick={() => loadPreset(p)} style={{ padding: "6px 12px", background: "#C8873A22", border: `1px solid ${C.amber}55`, borderRadius: 7, color: C.amber, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                    {T("loadBtn")}
-                  </button>
-                  <button onClick={() => setDeleteId(p.id)} style={{ width: 28, height: 28, borderRadius: 7, background: "none", border: "1px solid #2A2A2A", color: C.muted, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
-                </div>
-              ) : (
-                <div style={{ display: "flex", gap: 6 }}>
-                  <button onClick={() => setDeleteId(null)} style={{ padding: "5px 10px", background: "#222", border: "1px solid #333", borderRadius: 7, color: "#888", fontSize: 11, cursor: "pointer" }}>{T("keepBtn")}</button>
-                  <button onClick={() => deletePreset(p.id)} style={{ padding: "5px 10px", background: "#3A0A0A", border: "1px solid #6A1A1A", borderRadius: 7, color: "#F87171", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>{T("deleteBtn")}</button>
-                </div>
-              )}
-            </div>
-            <div style={{ padding: "6px 14px 10px", display: "flex", flexWrap: "wrap", gap: 5 }}>
-              {p.tasks.map((t, i) => (
-                <span key={i} style={{ fontSize: 10, background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 5, padding: "3px 7px", color: "#888" }}>
-                  {t.icon} {exerciseName(t, lang)} · {t.minutes}m
-                </span>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─── SESSION SCREEN ───────────────────────────────────────────────────────────
+// ─── SESSION SCREEN (task queue + collapsible presets) ────────────────────────
 
 function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnToSession, presets, setPresets }) {
   const T = useT();
   const lang = useLang();
   const [saveName, setSaveName] = useState("");
   const [saveOpen, setSaveOpen] = useState(false);
+  const [presetsExpanded, setPresetsExpanded] = useState(false);
+  const [deletePresetId, setDeletePresetId] = useState(null);
   const totalSec = tasks.reduce((s, t) => s + t.minutes * 60, 0);
   const upd = (id, d) => setTasks(prev => prev.map(t => t.id === id ? { ...t, minutes: Math.max(1, t.minutes + d) } : t));
   const rm  = (id) => setTasks(prev => prev.filter(t => t.id !== id));
@@ -1383,20 +1345,111 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
     setPresets(prev => [preset, ...prev]);
     setSaveName(""); setSaveOpen(false);
   };
+  const loadPreset = (preset) => {
+    setTasks(preset.tasks.map(t => ({ ...t, id: uid() })));
+    setPresetsExpanded(false);
+  };
+  const deletePreset = (id) => { setPresets(prev => prev.filter(p => p.id !== id)); setDeletePresetId(null); };
 
   return (
-    <>
-      {tasks.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "52px 20px", color: "#3A3A3A" }}>
-          <div style={{ fontSize: 44, marginBottom: 10 }}>🎸</div>
-          <div style={{ fontSize: 13, lineHeight: 1.8 }}>
-            {T("emptySession")}<br />
-            {T("emptySessionSub")}
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "8px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+
+        {/* Collapsible "Mes présélections" section */}
+        <div style={{ ...base.card, flexShrink: 0 }}>
+          <div onClick={() => setPresetsExpanded(e => !e)}
+            style={{ padding: "10px 14px", borderBottom: presetsExpanded ? `1px solid ${C.faint}` : "none", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, cursor: "pointer" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+              <span style={{ display: "inline-block", fontSize: 9, color: C.amber, transition: "transform 0.2s ease-out", transform: presetsExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>▶</span>
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: C.cream }}>{T("myPresetsTitle")}</span>
+            </div>
+            <span style={{ fontSize: 11, color: C.muted }}>{presets.length}</span>
           </div>
+          {presetsExpanded && (
+            <div style={{ padding: "12px 14px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+              {!saveOpen ? (
+                <button
+                  style={{ ...base.pillBtn(false), width: "100%", textAlign: "center", padding: "10px",
+                    color: tasks.length > 0 ? C.amber : C.muted,
+                    border: `1px solid ${tasks.length > 0 ? C.amber + "55" : "#222"}`,
+                    cursor: tasks.length > 0 ? "pointer" : "default" }}
+                  onClick={() => tasks.length > 0 && setSaveOpen(true)}
+                  title={tasks.length === 0 ? T("addExercisesFirst") : ""}
+                >
+                  {T("saveCurrentPreset")}{tasks.length === 0 ? T("saveCurrentEmpty") : ""}
+                </button>
+              ) : (
+                <div style={{ background: "#151208", border: "1px solid #2A1E08", borderRadius: 10, padding: "14px" }}>
+                  <label style={base.label}>{T("presetName")}</label>
+                  <input
+                    style={{ ...base.input, marginBottom: 10 }} autoFocus
+                    value={saveName} onChange={e => setSaveName(e.target.value)}
+                    placeholder={T("presetPlaceholder")}
+                    autoComplete="off" autoCorrect="off" spellCheck={false}
+                    onKeyDown={e => { if (e.key === "Enter") savePreset(); if (e.key === "Escape") setSaveOpen(false); }}
+                  />
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button style={{ ...base.pillBtn(false), flex: 1, textAlign: "center" }} onClick={() => setSaveOpen(false)}>{T("cancelBtn")}</button>
+                    <button style={{ ...base.pillBtn(true), flex: 2 }} onClick={savePreset}>{T("saveBtn")}</button>
+                  </div>
+                </div>
+              )}
+
+              {presets.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "20px 10px", color: "#8D8D9C" }}>
+                  <div style={{ fontSize: 12, lineHeight: 1.6 }}>{T("noPresetsTitle")} {T("noPresetsSub")}</div>
+                </div>
+              ) : (
+                presets.map(p => {
+                  const totalMin = p.tasks.reduce((s, t) => s + (t.minutes || 0), 0);
+                  const isDeleting = deletePresetId === p.id;
+                  return (
+                    <div key={p.id} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" }}>
+                      <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: C.cream }}>{p.name}</div>
+                          <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{T("exercisesCount", p.tasks.length)} · {totalMin}m</div>
+                        </div>
+                        {!isDeleting ? (
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button onClick={() => loadPreset(p)} style={{ padding: "6px 12px", background: "#C8873A22", border: `1px solid ${C.amber}55`, borderRadius: 7, color: C.amber, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                              {T("loadBtn")}
+                            </button>
+                            <button onClick={() => setDeletePresetId(p.id)} style={{ width: 28, height: 28, borderRadius: 7, background: "none", border: "1px solid #2A2A2A", color: C.muted, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+                          </div>
+                        ) : (
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button onClick={() => setDeletePresetId(null)} style={{ padding: "5px 10px", background: "#222", border: "1px solid #333", borderRadius: 7, color: "#AEB0C0", fontSize: 11, cursor: "pointer" }}>{T("keepBtn")}</button>
+                            <button onClick={() => deletePreset(p.id)} style={{ padding: "5px 10px", background: "#3A0A0A", border: "1px solid #6A1A1A", borderRadius: 7, color: "#F87171", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>{T("deleteBtn")}</button>
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ padding: "6px 14px 10px", display: "flex", flexWrap: "wrap", gap: 5 }}>
+                        {p.tasks.map((t, i) => (
+                          <span key={i} style={{ fontSize: 10, background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 5, padding: "3px 7px", color: "#AEB0C0" }}>
+                            {t.icon} {exerciseName(t, lang)} · {t.minutes}m
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
-      ) : (
-        <div style={base.scrollArea(180)}>
-          {tasks.map((task, i) => (
+
+        {/* Task queue */}
+        {tasks.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "40px 20px", color: "#8D8D9C" }}>
+            <div style={{ fontSize: 44, marginBottom: 10 }}>🎸</div>
+            <div style={{ fontSize: 13, lineHeight: 1.8 }}>
+              {T("emptySession")}<br />
+              {T("emptySessionSub")}
+            </div>
+          </div>
+        ) : (
+          tasks.map((task, i) => (
             <div
               key={task.id}
               ref={node => { if (node) rowRefs.current[task.id] = node; else delete rowRefs.current[task.id]; }}
@@ -1410,7 +1463,7 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
                 style={{ fontSize: 15, flexShrink: 0, color: C.muted, cursor: "grab", touchAction: "none", padding: "4px 2px", lineHeight: 1 }}
                 aria-label="drag to reorder"
               >☰</span>
-              <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#2A2A2A", color: "#6B5A3A", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</div>
+              <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#2A2A2A", color: "#C9A876", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</div>
               <span style={{ fontSize: 15, flexShrink: 0 }}>{task.icon}</span>
               <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{exerciseName(task, lang)}</div>
               <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
@@ -1420,27 +1473,12 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
               </div>
               <button style={{ width: 22, height: 22, borderRadius: "50%", background: "none", border: `1px solid #2A2A2A`, color: C.muted, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }} onClick={() => rm(task.id)}>×</button>
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
 
-      {/* Save-as-preset inline panel */}
-      {saveOpen && (
-        <div style={{ margin: "0 16px 8px", padding: "12px 14px", background: "#151208", border: "1px solid #2A1E08", borderRadius: 10, display: "flex", flexDirection: "column", gap: 8 }}>
-          <label style={base.label}>{T("savePresetTitle")}</label>
-          <input style={base.input} autoFocus value={saveName} onChange={e => setSaveName(e.target.value)}
-            placeholder={T("presetPlaceholder")}
-            autoComplete="off" autoCorrect="off" spellCheck={false}
-            onKeyDown={e => { if (e.key === "Enter") savePreset(); if (e.key === "Escape") setSaveOpen(false); }} />
-          <div style={{ display: "flex", gap: 8 }}>
-            <button style={{ ...base.pillBtn(false), flex: 1, textAlign: "center" }} onClick={() => setSaveOpen(false)}>{T("cancelBtn")}</button>
-            <button style={{ ...base.pillBtn(true), flex: 2 }} onClick={savePreset}>{T("savePresetBtn")}</button>
-          </div>
-        </div>
-      )}
-
-      {/* Sticky footer */}
-      <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, background: "linear-gradient(0deg,#0A0A0A 85%,transparent)", padding: "10px 16px 22px" }}>
+      {/* Footer — normal flow, no longer viewport-fixed */}
+      <div style={{ flexShrink: 0, padding: "10px 16px 16px", background: "linear-gradient(0deg,#0A0A0A 85%,transparent)" }}>
         {tasks.length > 0 && (
           <div style={{ textAlign: "center", marginBottom: 8 }}>
             <div style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: C.muted }}>{T("totalSessionTime")}</div>
@@ -1449,10 +1487,6 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
           </div>
         )}
         <div style={{ display: "flex", gap: 8 }}>
-          {tasks.length > 0 && !saveOpen && (
-            <button style={{ ...base.pillBtn(false), padding: "12px 14px", flexShrink: 0, color: C.amber, border: `1px solid ${C.amber}44` }}
-              onClick={() => setSaveOpen(true)} title={T("savePresetTitle")}>💾</button>
-          )}
           {sessionInProgress ? (
             <button style={{ ...base.pillBtn(true), flex: 1, background: "linear-gradient(135deg,#34D399,#059669)" }} onClick={onReturnToSession}>{T("returnToSession")}</button>
           ) : (
@@ -1460,7 +1494,7 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -1682,7 +1716,7 @@ function ActiveSessionScreen({
         <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.7, marginBottom: 6 }}>
           {T("exercisesCount", tasks.length)} · {formatTotalMin(totalSec)}
         </div>
-        <div style={{ fontSize: 11, color: "#3A4A3A", marginBottom: 28 }}>{T("consistency")}</div>
+        <div style={{ fontSize: 11, color: "#8FAF8F", marginBottom: 28 }}>{T("consistency")}</div>
         <button style={base.pillBtn(true)} onClick={onFinish}>{T("backToSession")}</button>
         <br /><br />
         <button style={{ ...base.pillBtn(false), width: "100%" }} onClick={onBackToMenu}>{T("mainMenu")}</button>
@@ -1697,7 +1731,7 @@ function ActiveSessionScreen({
         @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
       `}</style>
       <FlashOverlay show={flash} color="#4FC3F7" />
-      <div style={{ padding: "14px 16px 100px", display: "flex", flexDirection: "column", gap: 14, overflowY: "auto", maxHeight: "calc(100dvh - 110px)" }}>
+      <div style={{ flex: 1, minHeight: 0, padding: "14px 16px 24px", display: "flex", flexDirection: "column", gap: 14, overflowY: "auto" }}>
         {/* Timer card */}
         <div style={{ background: "#151208", border: "1px solid #2A1E08", borderRadius: 16, padding: "22px 18px", textAlign: "center", flexShrink: 0 }}>
           <div style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: "#A8926A", marginBottom: 3 }}>
@@ -1843,7 +1877,7 @@ function ActiveSessionScreen({
           <div style={{ padding: "10px 14px", background: "#0A0A0A" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
               <span style={{ fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: C.muted }}>{T("overallProgress")}</span>
-              <span style={{ fontSize: 11, color: "#6B5A3A", fontFamily: "monospace" }}>{overallPct}%</span>
+              <span style={{ fontSize: 11, color: "#C9A876", fontFamily: "monospace" }}>{overallPct}%</span>
             </div>
             <div style={{ height: 3, background: C.faint, borderRadius: 2, overflow: "hidden" }}>
               <div style={{ height: "100%", width: `${overallPct}%`, background: C.amber + "55", borderRadius: 2, transition: "width 0.5s" }} />
@@ -2252,9 +2286,9 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
               ) : (
                 <div style={{ background: "#1A0A0A", border: "1px solid #5A1A1A", borderRadius: 10, padding: "14px 16px" }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "#F87171", marginBottom: 4 }}>{T("resetBadgesConfirmTitle")}</div>
-                  <div style={{ fontSize: 11, color: "#6A4A4A", marginBottom: 12 }}>{T("resetBadgesConfirmMsg")}</div>
+                  <div style={{ fontSize: 11, color: "#B08A8A", marginBottom: 12 }}>{T("resetBadgesConfirmMsg")}</div>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={() => setConfirmResetBadges(false)} style={{ flex: 1, background: "#222", border: "1px solid #333", borderRadius: 8, padding: "9px", color: "#888", fontSize: 12, cursor: "pointer" }}>{T("cancelBtn")}</button>
+                    <button onClick={() => setConfirmResetBadges(false)} style={{ flex: 1, background: "#222", border: "1px solid #333", borderRadius: 8, padding: "9px", color: "#AEB0C0", fontSize: 12, cursor: "pointer" }}>{T("cancelBtn")}</button>
                     <button onClick={() => { onResetBadges(); setConfirmResetBadges(false); }} style={{ flex: 1, background: "#5A0A0A", border: "1px solid #8A1A1A", borderRadius: 8, padding: "9px", color: "#F87171", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{T("statsConfirmYes")}</button>
                   </div>
                 </div>
@@ -2452,19 +2486,19 @@ export default function App() {
   // value from an ancestor, since a component never consumes the Provider it
   // renders). Translate directly from its own `lang` state instead.
   const T = (key, ...args) => translate(lang, key, ...args);
-  const NAV_TABS = [
-    { id: "library",  label: T("navLibrary") },
-    { id: "presets",  label: presets.length > 0 ? `${T("navPresets")} (${presets.length})` : T("navPresets") },
-    { id: "session",  label: tasks.length > 0 ? `${T("navSession")} (${tasks.length})` : T("navSession") },
-  ];
-  const statsCount = Object.values(stats).filter(s => s.totalSec > 0).length;
-  const unlockedBadgeCount = Object.keys(badges).length;
   const sessionInProgress = sessionActive && !sessionDone;
   const currentLevel = levelFromMinutes(totalPracticeSec(stats) / 60);
+  const sessionTabActive = tab === "session" || tab === "active";
+  // CSS `zoom` magnifies the rendered box beyond its own layout size, so a
+  // 100dvh-tall element zoomed to 1.35x would visually spill 35% past the
+  // real viewport. Dividing height/maxWidth by the same factor before zoom
+  // is applied cancels that out, keeping the app exactly viewport-sized (and
+  // its internal flex proportions untouched) at every display size.
+  const zoomFactor = DISPLAY_ZOOM[displaySize] || 1;
 
   return (
     <LangContext.Provider value={lang}>
-    <div style={{ ...base.app, zoom: DISPLAY_ZOOM[displaySize] || 1 }} onClick={ensureAudio}>
+    <div style={{ ...base.app, zoom: zoomFactor, height: `calc(100dvh / ${zoomFactor})`, maxWidth: `calc(430px / ${zoomFactor})` }} onClick={ensureAudio}>
       <style>{`
         * { box-sizing: border-box; }
         ::-webkit-scrollbar { display: none; }
@@ -2486,115 +2520,23 @@ export default function App() {
         @keyframes activePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
       `}</style>
 
-      {/* Header + Nav + paused banner are grouped and pinned to the top via
-          sticky positioning, so they stay on screen while the content below
-          scrolls — instead of scrolling away with the page on some phones. */}
-      <div style={{ position: "sticky", top: 0, zIndex: 20, background: C.bg }}>
-      {/* Header */}
+      {/* Header — minimal: logo + level pill, and an End-session shortcut while a session is running */}
       <div style={base.header}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <img src="icon-192.png" alt="Practice Prodigy" style={{ width: 38, height: 38, borderRadius: 9, display: "block", flexShrink: 0 }} />
           <div style={{ width: 1, height: 26, background: "#2A2008", flexShrink: 0 }} />
-          <LevelPill level={currentLevel} onClick={() => setTab(t => t === "level" ? "library" : "level")} />
+          <LevelPill level={currentLevel} onClick={() => setTab("progress")} />
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {tab === "active" && sessionActive && (
-            <button style={{ ...base.pillBtn(false), fontSize: 12, color: C.muted }} onClick={backToMenu}>
-              {T("headerEnd")}
-            </button>
-          )}
-          {(
-            <button
-              title={T("headerLibrary")}
-              onClick={() => setTab("library")}
-              style={{
-                width: 36, height: 36, borderRadius: 8, padding: 0, cursor: "pointer",
-                border: tab === "library" ? `1px solid ${C.amber}` : "1px solid #2A2A2A",
-                background: tab === "library" ? "#C8873A22" : "none",
-                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-              }}
-            >
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={tab === "library" ? C.amber : C.navInactive} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                <polyline points="9 22 9 12 15 12 15 22"/>
-              </svg>
-            </button>
-          )}
-          {(
-            <button
-              title={T("headerStats")}
-              onClick={() => setTab(t => t === "stats" ? "library" : "stats")}
-              style={{
-                width: 36, height: 36, borderRadius: 8, padding: 0, cursor: "pointer",
-                border: tab === "stats" ? "1px solid #4FC3F7" : "1px solid #2A2A2A",
-                background: tab === "stats" ? "#4FC3F722" : "none",
-                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                position: "relative"
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={tab === "stats" ? "#4FC3F7" : C.navInactive} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
-              </svg>
-              {statsCount > 0 && (
-                <div style={{ position: "absolute", top: -3, right: -3, width: 10, height: 10, borderRadius: "50%", background: "#4FC3F7", border: "2px solid #0F0F0F" }} />
-              )}
-            </button>
-          )}
-          {(
-            <button
-              title={T("headerBadges")}
-              onClick={() => setTab(t => t === "badges" ? "library" : "badges")}
-              style={{
-                width: 36, height: 36, borderRadius: 8, padding: 0, cursor: "pointer",
-                border: tab === "badges" ? "1px solid #34D399" : "1px solid #2A2A2A",
-                background: tab === "badges" ? "#34D39922" : "none",
-                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                position: "relative"
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={tab === "badges" ? "#34D399" : C.navInactive} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="8" r="6"/>
-                <path d="M8.5 13.5 7 22l5-3 5 3-1.5-8.5"/>
-              </svg>
-              {unlockedBadgeCount > 0 && (
-                <div style={{ position: "absolute", top: -3, right: -3, width: 10, height: 10, borderRadius: "50%", background: "#34D399", border: "2px solid #0F0F0F" }} />
-              )}
-            </button>
-          )}
-          {(
-            <button
-              title={T("headerSettings")}
-              onClick={() => setTab(t => t === "settings" ? "library" : "settings")}
-              style={{ width: 36, height: 36, borderRadius: 8, background: tab === "settings" ? "#C8873A22" : "none", border: tab === "settings" ? `1px solid ${C.amber}` : "1px solid #2A2A2A", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, flexShrink: 0 }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={tab === "settings" ? C.amber : C.navInactive} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-              </svg>
-            </button>
-          )}
-        </div>
+        {tab === "active" && sessionActive && (
+          <button style={{ ...base.pillBtn(false), fontSize: 12, color: C.muted }} onClick={backToMenu}>
+            {T("headerEnd")}
+          </button>
+        )}
       </div>
 
-      {/* Nav */}
-      {tab !== "settings" && tab !== "stats" && tab !== "badges" && tab !== "level" && (
-        <div style={base.navBar}>
-          {NAV_TABS.map(t => (
-            <button key={t.id} style={base.navBtn(tab === t.id)} onClick={() => setTab(t.id)}>{t.label}</button>
-          ))}
-          {sessionInProgress && (
-            <button style={{ ...base.navBtn(tab === "active"), color: tab === "active" ? "#34D399" : "#2A5A3A", borderBottomColor: tab === "active" ? "#34D399" : "transparent", position: "relative" }}
-              onClick={() => setTab("active")}>
-              {T("navActive")}
-              <span style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: "50%", background: "#34D399", animation: "activePulse 1.5s ease-in-out infinite" }} />
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Paused-session banner — shown on Library/Session when a session is paused */}
+      {/* Paused-session banner — shown everywhere except the active session screen itself */}
       {sessionInProgress && tab !== "active" && (
-        <div style={{ background: "#0D1A0D", borderBottom: "1px solid #2A5A2A", padding: "8px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ background: "#0D1A0D", borderBottom: "1px solid #2A5A2A", padding: "8px 16px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
           <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#34D399", flexShrink: 0, display: "inline-block" }} />
           <span style={{ fontSize: 12, color: "#34D399", flex: 1, fontWeight: 600 }}>
             {T("sessionPaused")} · {exerciseName(tasks[sessionCurrent], lang)}
@@ -2604,16 +2546,14 @@ export default function App() {
           </button>
         </div>
       )}
-      </div>
 
-      {/* Screens */}
+      {/* Content — the single sizing box for the active screen; each screen
+          fills it (flex:1, minHeight:0) and owns its own scrolling. */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {tab === "library"  && <LibraryScreen exercises={exercises} categories={categories} tasks={tasks} onAdd={addExercise} stats={stats} subProgress={subProgress} />}
-      {tab === "presets"  && <PresetsScreen presets={presets} setPresets={setPresets} tasks={tasks} setTasks={setTasks} onLoadGoToSession={() => setTab("session")} />}
       {tab === "session"  && <SessionScreen tasks={tasks} setTasks={setTasks} onStart={startSession} sessionInProgress={sessionInProgress} onReturnToSession={returnToSession} presets={presets} setPresets={setPresets} />}
+      {tab === "progress" && <ProgressionScreen stats={stats} exercises={exercises} onClearStats={() => setStats({})} badges={badges} subProgress={subProgress} practiceDays={practiceDays} />}
       {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} />}
-      {tab === "stats"    && <StatsScreen stats={stats} exercises={exercises} onClear={() => setStats({})} />}
-      {tab === "badges"   && <BadgesScreen badges={badges} stats={stats} subProgress={subProgress} exercises={exercises} practiceDays={practiceDays} />}
-      {tab === "level"    && <LevelScreen stats={stats} />}
       {tab === "active"   && <ActiveSessionScreen
         tasks={tasks} setTasks={setTasks} onFinish={endSession} onBackToMenu={backToMenu}
         audioCtx={audioCtx} masterGainRef={masterGainRef} onCommitStats={commitStats}
@@ -2626,6 +2566,44 @@ export default function App() {
         done={sessionDone} setDone={setSessionDone}
         elapsedRef={sessionElapsedRef} committedRef={sessionCommittedRef}
       />}
+      </div>
+
+      {/* Bottom navigation — the single primary nav surface for the app */}
+      <div style={base.bottomNav}>
+        <button style={base.bottomNavBtn(tab === "library")} onClick={() => setTab("library")}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={tab === "library" ? C.amber : C.navInactive} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          {T("navLibrary")}
+        </button>
+        <button style={base.bottomNavBtn(sessionTabActive, sessionInProgress ? "#34D399" : C.amber)}
+          onClick={() => setTab(sessionInProgress ? "active" : "session")}>
+          <span style={{ position: "relative", display: "flex" }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={sessionTabActive ? (sessionInProgress ? "#34D399" : C.amber) : C.navInactive} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+            </svg>
+            {sessionInProgress && (
+              <span style={{ position: "absolute", top: -2, right: -4, width: 7, height: 7, borderRadius: "50%", background: "#34D399", animation: "activePulse 1.5s ease-in-out infinite" }} />
+            )}
+          </span>
+          {tasks.length > 0 ? `${T("navSession")} (${tasks.length})` : T("navSession")}
+        </button>
+        <button style={base.bottomNavBtn(tab === "progress", "#4FC3F7")} onClick={() => setTab("progress")}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={tab === "progress" ? "#4FC3F7" : C.navInactive} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+          </svg>
+          {T("navProgress")}
+        </button>
+        <button style={base.bottomNavBtn(tab === "settings")} onClick={() => setTab("settings")}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={tab === "settings" ? C.amber : C.navInactive} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          {T("navSettings")}
+        </button>
+      </div>
+
       {badgeCelebrationQueue.length > 0 && (
         <BadgeCelebration
           key={badgeCelebrationQueue[0]}
