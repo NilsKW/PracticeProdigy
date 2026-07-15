@@ -1521,7 +1521,7 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
                 <span style={{ fontSize: 13, fontFamily: "monospace", color: C.amber, width: 34, textAlign: "center", fontWeight: 700 }}>{task.minutes}m</span>
                 <button style={{ width: 22, height: 22, borderRadius: "50%", background: "#222", border: `1px solid #333`, color: C.cream, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }} onClick={() => upd(task.id, 1)}>+</button>
               </div>
-              <button style={{ width: 22, height: 22, borderRadius: "50%", background: "none", border: `1px solid #2A2A2A`, color: C.muted, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }} onClick={() => rm(task.id)}>×</button>
+              <button style={{ width: 22, height: 22, borderRadius: "50%", background: "none", border: `1px solid #2A2A2A`, color: "#F87171", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }} onClick={() => rm(task.id)}>×</button>
             </div>
           ))
         )}
