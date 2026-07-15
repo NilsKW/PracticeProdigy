@@ -2577,6 +2577,7 @@ function LibraryScreen({
   categories,
   tasks,
   onAdd,
+  onRemove,
   stats,
   subProgress
 }) {
@@ -2735,21 +2736,42 @@ function LibraryScreen({
         color: "#8FAF8F",
         fontWeight: 400
       }
-    }, fmtSuggestTime(ex)))), /*#__PURE__*/React.createElement("div", {
+    }, fmtSuggestTime(ex)))), added ? /*#__PURE__*/React.createElement("button", {
+      onClick: e => {
+        e.stopPropagation();
+        onRemove(ex.id);
+      },
       style: {
         width: 24,
         height: 24,
         borderRadius: "50%",
-        background: added ? "transparent" : "#C8873A22",
-        border: `1px solid ${added ? "#2A2A2A" : C.amber}`,
-        color: added ? C.muted : C.amber,
+        background: "#F8717122",
+        border: "1px solid #F87171",
+        color: "#F87171",
+        fontSize: 15,
+        fontWeight: 800,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        cursor: "pointer",
+        padding: 0
+      }
+    }, "×") : /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: 24,
+        height: 24,
+        borderRadius: "50%",
+        background: "#C8873A22",
+        border: `1px solid ${C.amber}`,
+        color: C.amber,
         fontSize: 15,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         flexShrink: 0
       }
-    }, added ? "✓" : "+"));
+    }, "+"));
   }))), (() => {
     if (filtered.length === 0) return /*#__PURE__*/React.createElement("div", {
       style: {
@@ -2881,7 +2903,28 @@ function LibraryScreen({
             marginRight: 4,
             fontWeight: 700
           }
-        }, "▶"), /*#__PURE__*/React.createElement("div", {
+        }, "▶"), added ? /*#__PURE__*/React.createElement("button", {
+          onClick: e => {
+            e.stopPropagation();
+            onRemove(ex.id);
+          },
+          style: {
+            width: 26,
+            height: 26,
+            borderRadius: "50%",
+            background: "#F8717122",
+            border: "1px solid #F87171",
+            color: "#F87171",
+            fontSize: 17,
+            fontWeight: 800,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+            cursor: "pointer",
+            padding: 0
+          }
+        }, "×") : /*#__PURE__*/React.createElement("div", {
           style: {
             width: 26,
             height: 26,
@@ -2893,9 +2936,7 @@ function LibraryScreen({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            flexShrink: 0,
-            opacity: added ? 0 : 1,
-            pointerEvents: added ? "none" : "auto"
+            flexShrink: 0
           }
         }, "+"));
       });
@@ -2970,7 +3011,28 @@ function LibraryScreen({
           marginRight: 4,
           fontWeight: 700
         }
-      }, "▶"), /*#__PURE__*/React.createElement("div", {
+      }, "▶"), added ? /*#__PURE__*/React.createElement("button", {
+        onClick: e => {
+          e.stopPropagation();
+          onRemove(ex.id);
+        },
+        style: {
+          width: 26,
+          height: 26,
+          borderRadius: "50%",
+          background: "#F8717122",
+          border: "1px solid #F87171",
+          color: "#F87171",
+          fontSize: 17,
+          fontWeight: 800,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          cursor: "pointer",
+          padding: 0
+        }
+      }, "×") : /*#__PURE__*/React.createElement("div", {
         style: {
           width: 26,
           height: 26,
@@ -2982,9 +3044,7 @@ function LibraryScreen({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          flexShrink: 0,
-          opacity: added ? 0 : 1,
-          pointerEvents: added ? "none" : "auto"
+          flexShrink: 0
         }
       }, "+"));
     });
@@ -5472,6 +5532,9 @@ function App() {
       subExercises: ex.subExercises || []
     }]);
   };
+  const removeExerciseFromSession = exerciseId => {
+    setTasks(prev => prev.filter(t => t.exerciseId !== exerciseId));
+  };
   const startSession = () => {
     ensureAudio();
     // Reset all session progress when starting fresh
@@ -5646,6 +5709,7 @@ function App() {
     categories: categories,
     tasks: tasks,
     onAdd: addExercise,
+    onRemove: removeExerciseFromSession,
     stats: stats,
     subProgress: subProgress
   }), tab === "session" && /*#__PURE__*/React.createElement(SessionScreen, {

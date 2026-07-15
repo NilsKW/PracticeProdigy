@@ -1123,7 +1123,7 @@ function ProgressionScreen({ stats, exercises, onClearStats, badges, subProgress
 
 // ─── LIBRARY SCREEN ───────────────────────────────────────────────────────────
 
-function LibraryScreen({ exercises, categories, tasks, onAdd, stats, subProgress }) {
+function LibraryScreen({ exercises, categories, tasks, onAdd, onRemove, stats, subProgress }) {
   const T = useT();
   const lang = useLang();
   const [catId, setCatId] = useState("all");
@@ -1206,11 +1206,18 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, stats, subProgress
                       <div style={{ fontSize: 12, fontWeight: 600, color: C.cream, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{exerciseName(ex, lang)}</div>
                       <div style={{ fontSize: 10, color: col, marginTop: 1, fontWeight: 600 }}>{categoryName(cat, lang)} · <span style={{ color: "#8FAF8F", fontWeight: 400 }}>{fmtSuggestTime(ex)}</span></div>
                     </div>
-                    <div style={{ width: 24, height: 24, borderRadius: "50%", background: added ? "transparent" : "#C8873A22",
-                      border: `1px solid ${added ? "#2A2A2A" : C.amber}`, color: added ? C.muted : C.amber,
-                      fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      {added ? "✓" : "+"}
-                    </div>
+                    {added ? (
+                      <button
+                        onClick={e => { e.stopPropagation(); onRemove(ex.id); }}
+                        style={{ width: 24, height: 24, borderRadius: "50%", background: "#F8717122",
+                          border: "1px solid #F87171", color: "#F87171", fontSize: 15, fontWeight: 800,
+                          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer", padding: 0 }}
+                      >×</button>
+                    ) : (
+                      <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#C8873A22",
+                        border: `1px solid ${C.amber}`, color: C.amber,
+                        fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</div>
+                    )}
                   </div>
                 );
               })}
@@ -1263,7 +1270,18 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, stats, subProgress
                   {ex.youtubeUrl && extractYouTubeId(ex.youtubeUrl) && (
                     <span style={{ fontSize: 10, background: "#FF000033", border: "1px solid #FF000066", color: "#FF6666", borderRadius: 4, padding: "2px 5px", flexShrink: 0, marginRight: 4, fontWeight: 700 }}>▶</span>
                   )}
-                  <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#C8873A22", border: `1px solid ${C.amber}`, color: C.amber, fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, opacity: added ? 0 : 1, pointerEvents: added ? "none" : "auto" }}>+</div>
+                  {added ? (
+                    <button
+                      onClick={e => { e.stopPropagation(); onRemove(ex.id); }}
+                      style={{ width: 26, height: 26, borderRadius: "50%", background: "#F8717122",
+                        border: "1px solid #F87171", color: "#F87171", fontSize: 17, fontWeight: 800,
+                        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer", padding: 0 }}
+                    >×</button>
+                  ) : (
+                    <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#C8873A22",
+                      border: `1px solid ${C.amber}`, color: C.amber,
+                      fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</div>
+                  )}
                 </div>
               );
             });
@@ -1289,7 +1307,18 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, stats, subProgress
                 {ex.youtubeUrl && extractYouTubeId(ex.youtubeUrl) && (
                   <span style={{ fontSize: 10, background: "#FF000033", border: "1px solid #FF000066", color: "#FF6666", borderRadius: 4, padding: "2px 5px", flexShrink: 0, marginRight: 4, fontWeight: 700 }}>▶</span>
                 )}
-                <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#C8873A22", border: `1px solid ${C.amber}`, color: C.amber, fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, opacity: added ? 0 : 1, pointerEvents: added ? "none" : "auto" }}>+</div>
+                {added ? (
+                  <button
+                    onClick={e => { e.stopPropagation(); onRemove(ex.id); }}
+                    style={{ width: 26, height: 26, borderRadius: "50%", background: "#F8717122",
+                      border: "1px solid #F87171", color: "#F87171", fontSize: 17, fontWeight: 800,
+                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer", padding: 0 }}
+                  >×</button>
+                ) : (
+                  <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#C8873A22",
+                    border: `1px solid ${C.amber}`, color: C.amber,
+                    fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</div>
+                )}
               </div>
             );
           });
@@ -2474,6 +2503,10 @@ export default function App() {
     setTasks(prev => [...prev, { id: uid(), exerciseId: ex.id, name: ex.name, icon: ex.icon, minutes: ex.defaultMin, categoryId: ex.categoryId, youtubeUrl: ex.youtubeUrl || "", bpm: ex.bpm || 0, beatsPerBar: ex.beatsPerBar || 4, subExercises: ex.subExercises || [] }]);
   };
 
+  const removeExerciseFromSession = (exerciseId) => {
+    setTasks(prev => prev.filter(t => t.exerciseId !== exerciseId));
+  };
+
   const startSession = () => {
     ensureAudio();
     // Reset all session progress when starting fresh
@@ -2583,7 +2616,7 @@ export default function App() {
       {/* Content — the single sizing box for the active screen; each screen
           fills it (flex:1, minHeight:0) and owns its own scrolling. */}
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      {tab === "library"  && <LibraryScreen exercises={exercises} categories={categories} tasks={tasks} onAdd={addExercise} stats={stats} subProgress={subProgress} />}
+      {tab === "library"  && <LibraryScreen exercises={exercises} categories={categories} tasks={tasks} onAdd={addExercise} onRemove={removeExerciseFromSession} stats={stats} subProgress={subProgress} />}
       {tab === "session"  && <SessionScreen tasks={tasks} setTasks={setTasks} onStart={startSession} sessionInProgress={sessionInProgress} onReturnToSession={returnToSession} presets={presets} setPresets={setPresets} />}
       {tab === "progress" && <ProgressionScreen stats={stats} exercises={exercises} onClearStats={() => setStats({})} badges={badges} subProgress={subProgress} practiceDays={practiceDays} subTab={progressSubTab} setSubTab={setProgressSubTab} />}
       {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} />}
