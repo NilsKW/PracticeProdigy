@@ -21,7 +21,7 @@ const STRINGS = {
     saveCurrentPreset: "💾 Save Current Session as Preset", saveCurrentEmpty: " (queue is empty)",
     presetName: "Preset name", saveBtn: "💾 Save", loadBtn: "Load ▶", keepBtn: "Keep", deleteBtn: "Delete",
     nowPlaying: "Now Playing", exerciseOf: "of", remaining: "remaining",
-    skipBtn: "Skip →", previousBtn: "← Previous", pauseBtn: "⏸ Pause", resumePlayBtn: "▶ Resume", playBtn: "▶ Play",
+    skipBtn: "Skip", previousBtn: "Previous", pauseBtn: "⏸ Pause", resumePlayBtn: "▶ Resume", playBtn: "▶ Play",
     refVideo: "Reference Video", opensYoutube: "Opens YouTube ↗",
     sessionSetlist: "Session Setlist", done: "done", overallProgress: "Overall Progress",
     backToMenu: "↩ Back to Main Menu",
@@ -86,7 +86,7 @@ const STRINGS = {
     saveCurrentPreset: "💾 Enregistrer la séance comme modèle", saveCurrentEmpty: " (file vide)",
     presetName: "Nom du modèle", saveBtn: "💾 Enregistrer", loadBtn: "Charger ▶", keepBtn: "Garder", deleteBtn: "Supprimer",
     nowPlaying: "En cours", exerciseOf: "sur", remaining: "restant",
-    skipBtn: "Passer →", previousBtn: "← Précédent", pauseBtn: "⏸ Pause", resumePlayBtn: "▶ Reprendre", playBtn: "▶ Démarrer",
+    skipBtn: "Passer", previousBtn: "Précédent", pauseBtn: "⏸ Pause", resumePlayBtn: "▶ Reprendre", playBtn: "▶ Démarrer",
     refVideo: "Vidéo de référence", opensYoutube: "Ouvrir YouTube ↗",
     sessionSetlist: "Setlist de séance", done: "terminé(s)", overallProgress: "Progression globale",
     backToMenu: "↩ Retour au menu",
@@ -944,11 +944,26 @@ function LevelPill({ level, onClick }) {
   const T = useT();
   return (
     <button onClick={onClick} title={T("headerLevel")} style={{
-      display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 999,
+      display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 999,
       background: "linear-gradient(135deg,#2A1D08,#1A1208)", border: `1px solid ${C.amber}88`,
-      color: C.amber, fontSize: 12, fontWeight: 800, cursor: "pointer", flexShrink: 0, letterSpacing: "0.02em",
+      color: C.amber, fontSize: 14, fontWeight: 800, cursor: "pointer", flexShrink: 0, letterSpacing: "0.02em",
     }}>
-      <span style={{ fontSize: 13 }}>🎸</span>{T("levelShort", level)}
+      <span style={{ fontSize: 16 }}>🎸</span>{T("levelShort", level)}
+    </button>
+  );
+}
+
+// Badge counter shown next to the level pill: how many badges are unlocked
+// so far, tapping it jumps straight to the Badges sub-tab in Progression.
+function BadgeCountPill({ count, onClick }) {
+  const T = useT();
+  return (
+    <button onClick={onClick} title={T("headerBadges")} style={{
+      display: "flex", alignItems: "center", gap: 5, padding: "8px 12px", borderRadius: 999,
+      background: "linear-gradient(135deg,#0A2A18,#0A1A10)", border: "1px solid #34D39988",
+      color: "#34D399", fontSize: 13, fontWeight: 800, cursor: "pointer", flexShrink: 0, letterSpacing: "0.02em",
+    }}>
+      <span style={{ fontSize: 15 }}>🏅</span>{count}
     </button>
   );
 }
@@ -966,14 +981,16 @@ function XPGainPopup({ event, onDone }) {
   const [stage, setStage] = useState(0);
   useEffect(() => {
     const timers = [];
+    // Durations doubled from the original (30/560/620/2400 and 30/1900) so
+    // the gauge-fill animation reads clearly instead of flashing by.
     if (leveledUp) {
-      timers.push(setTimeout(() => setStage(1), 30));
-      timers.push(setTimeout(() => setStage(2), 560));
-      timers.push(setTimeout(() => setStage(3), 620));
-      timers.push(setTimeout(() => onDone(), 2400));
+      timers.push(setTimeout(() => setStage(1), 60));
+      timers.push(setTimeout(() => setStage(2), 1120));
+      timers.push(setTimeout(() => setStage(3), 1240));
+      timers.push(setTimeout(() => onDone(), 4800));
     } else {
-      timers.push(setTimeout(() => setStage(1), 30));
-      timers.push(setTimeout(() => onDone(), 1900));
+      timers.push(setTimeout(() => setStage(1), 60));
+      timers.push(setTimeout(() => onDone(), 3800));
     }
     return () => timers.forEach(clearTimeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -982,11 +999,11 @@ function XPGainPopup({ event, onDone }) {
   let widthPct, transition;
   if (!leveledUp) {
     widthPct = stage >= 1 ? after.pct : before.pct;
-    transition = "width 0.9s cubic-bezier(.2,.8,.3,1)";
+    transition = "width 1.8s cubic-bezier(.2,.8,.3,1)";
   } else if (stage <= 0) { widthPct = before.pct; transition = "none"; }
-  else if (stage === 1) { widthPct = 100; transition = "width 0.5s cubic-bezier(.2,.8,.3,1)"; }
+  else if (stage === 1) { widthPct = 100; transition = "width 1s cubic-bezier(.2,.8,.3,1)"; }
   else if (stage === 2) { widthPct = 0; transition = "none"; }
-  else { widthPct = after.pct; transition = "width 0.7s cubic-bezier(.2,.8,.3,1)"; }
+  else { widthPct = after.pct; transition = "width 1.4s cubic-bezier(.2,.8,.3,1)"; }
 
   const shownLevel = leveledUp && stage < 2 ? before.level : after.level;
 
@@ -1068,9 +1085,8 @@ function LevelScreen({ stats }) {
 
 // ─── PROGRESSION SCREEN (Niveau / Stats / Badges, merged under sub-tabs) ──────
 
-function ProgressionScreen({ stats, exercises, onClearStats, badges, subProgress, practiceDays }) {
+function ProgressionScreen({ stats, exercises, onClearStats, badges, subProgress, practiceDays, subTab, setSubTab }) {
   const T = useT();
-  const [subTab, setSubTab] = useState("level");
   const TABS = [
     { id: "level",  label: T("progressTabLevel") },
     { id: "stats",  label: T("progressTabStats") },
@@ -1355,15 +1371,17 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "8px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
 
-        {/* Collapsible "Mes présélections" section */}
-        <div style={{ ...base.card, flexShrink: 0 }}>
+        {/* Collapsible "Mes présélections" section — styled as a prominent,
+            clearly-tappable button so presets are easy to spot at a glance. */}
+        <div style={{ ...base.card, flexShrink: 0, background: "#1A1208", border: `1px solid ${C.amber}55` }}>
           <div onClick={() => setPresetsExpanded(e => !e)}
-            style={{ padding: "10px 14px", borderBottom: presetsExpanded ? `1px solid ${C.faint}` : "none", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, cursor: "pointer" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-              <span style={{ display: "inline-block", fontSize: 9, color: C.amber, transition: "transform 0.2s ease-out", transform: presetsExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>▶</span>
-              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: C.cream }}>{T("myPresetsTitle")}</span>
+            style={{ padding: "13px 14px", borderBottom: presetsExpanded ? `1px solid ${C.amber}33` : "none", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, cursor: "pointer" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+              <span style={{ display: "inline-block", fontSize: 12, color: C.amber, transition: "transform 0.2s ease-out", transform: presetsExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>▶</span>
+              <span style={{ fontSize: 22 }}>📁</span>
+              <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: "0.05em", textTransform: "uppercase", color: C.cream }}>{T("myPresetsTitle")}</span>
             </div>
-            <span style={{ fontSize: 11, color: C.muted }}>{presets.length}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: C.amber, background: "#C8873A22", border: `1px solid ${C.amber}44`, borderRadius: 999, padding: "3px 10px", minWidth: 22, textAlign: "center" }}>{presets.length}</span>
           </div>
           {presetsExpanded && (
             <div style={{ padding: "12px 14px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
@@ -1438,6 +1456,9 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
             </div>
           )}
         </div>
+
+        {/* Separator between the presets card and the current session queue */}
+        <div style={{ height: 1, background: C.faint, margin: "2px 0", flexShrink: 0 }} />
 
         {/* Task queue */}
         {tasks.length === 0 ? (
@@ -1749,14 +1770,20 @@ function ActiveSessionScreen({
           </div>
           <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 18 }}>
             <button
-              style={{ ...base.pillBtn(false), opacity: current === 0 ? 0.4 : 1, cursor: current === 0 ? "default" : "pointer" }}
+              style={{ ...base.pillBtn(false), fontSize: 15, display: "flex", alignItems: "center", gap: 6, opacity: current === 0 ? 0.4 : 1, cursor: current === 0 ? "default" : "pointer" }}
               onClick={goBack}
               disabled={current === 0}
-            >{T("previousBtn")}</button>
-            <button style={base.pillBtn(false)} onClick={skip}>{T("skipBtn")}</button>
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              {T("previousBtn")}
+            </button>
+            <button style={{ ...base.pillBtn(false), fontSize: 15, display: "flex", alignItems: "center", gap: 6 }} onClick={skip}>
+              {T("skipBtn")}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
             <button
               style={{
-                ...base.pillBtn(true), width: "auto", padding: "12px 28px",
+                ...base.pillBtn(true), width: "auto", padding: "12px 28px", fontSize: 16,
                 background: running
                   ? "linear-gradient(135deg,#34D399,#1F9C6E)"
                   : hasStarted
@@ -1773,9 +1800,9 @@ function ActiveSessionScreen({
           <div style={{ marginTop: 12, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
             <button
               onClick={() => setMetroOn(m => !m)}
-              style={{ padding: "7px 16px", borderRadius: 8, border: `1px solid ${metroOn ? "#34D399" : "#2A2A2A"}`,
+              style={{ padding: "8px 18px", borderRadius: 8, border: `1px solid ${metroOn ? "#34D399" : "#2A2A2A"}`,
                 background: metroOn ? "#34D39922" : "#1A1A1A", color: metroOn ? "#34D399" : C.muted,
-                fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+                fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
               {metroOn ? T("metronomeOn") : T("metronomeOff")}
             </button>
             {metroOn && (
@@ -1866,11 +1893,11 @@ function ActiveSessionScreen({
             return (
               <div key={t.id} style={{ padding: "9px 14px", display: "flex", alignItems: "center", gap: 9, borderBottom: `1px solid #111`, background: st === "cur" ? "#1A1208" : "transparent", opacity: st === "up" ? 0.4 : 1 }}>
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: st === "done" ? "#34D399" : st === "cur" ? C.amber : "#2A2A2A", flexShrink: 0 }} />
-                <span style={{ flex: 1, fontSize: 12, color: st === "done" ? "#5CB88A" : st === "cur" ? C.cream : C.muted, textDecoration: st === "done" ? "line-through" : "none" }}>{exerciseName(t, lang)}</span>
+                <span style={{ flex: 1, fontSize: 14, color: st === "done" ? "#5CB88A" : st === "cur" ? C.cream : C.muted, textDecoration: st === "done" ? "line-through" : "none" }}>{exerciseName(t, lang)}</span>
                 {t.youtubeUrl && extractYouTubeId(t.youtubeUrl) && (
                   <span style={{ fontSize: 9, background: "#FF000044", color: "#FF6666", borderRadius: 3, padding: "1px 4px", fontWeight: 700, flexShrink: 0 }}>▶</span>
                 )}
-                <span style={{ fontSize: 11, fontFamily: "monospace", color: C.muted }}>{t.minutes}m</span>
+                <span style={{ fontSize: 12, fontFamily: "monospace", color: C.muted }}>{t.minutes}m</span>
               </div>
             );
           })}
@@ -2351,6 +2378,10 @@ export default function App() {
   // Most recent XP gain (before/after total practice minutes), driving the
   // gauge-fill toast shown every time an exercise is committed.
   const [xpGain, setXpGain] = useState(null);
+  // Which Progression sub-tab is showing — lifted up here (rather than local
+  // state inside ProgressionScreen) so the header's level/badge pills can
+  // jump straight to a specific sub-tab even if Progression is already open.
+  const [progressSubTab, setProgressSubTab] = useState("level");
   const setCategories = setCats;
   const audioCtx      = useRef(null);
   const masterGainRef = useRef(null);
@@ -2488,6 +2519,7 @@ export default function App() {
   const T = (key, ...args) => translate(lang, key, ...args);
   const sessionInProgress = sessionActive && !sessionDone;
   const currentLevel = levelFromMinutes(totalPracticeSec(stats) / 60);
+  const unlockedBadgeCount = Object.keys(badges).length;
   const sessionTabActive = tab === "session" || tab === "active";
   // CSS `zoom` magnifies the rendered box beyond its own layout size, so a
   // 100dvh-tall element zoomed to 1.35x would visually spill 35% past the
@@ -2525,7 +2557,8 @@ export default function App() {
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <img src="icon-192.png" alt="Practice Prodigy" style={{ width: 38, height: 38, borderRadius: 9, display: "block", flexShrink: 0 }} />
           <div style={{ width: 1, height: 26, background: "#2A2008", flexShrink: 0 }} />
-          <LevelPill level={currentLevel} onClick={() => setTab("progress")} />
+          <LevelPill level={currentLevel} onClick={() => { setProgressSubTab("level"); setTab("progress"); }} />
+          <BadgeCountPill count={unlockedBadgeCount} onClick={() => { setProgressSubTab("badges"); setTab("progress"); }} />
         </div>
         {tab === "active" && sessionActive && (
           <button style={{ ...base.pillBtn(false), fontSize: 12, color: C.muted }} onClick={backToMenu}>
@@ -2552,7 +2585,7 @@ export default function App() {
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {tab === "library"  && <LibraryScreen exercises={exercises} categories={categories} tasks={tasks} onAdd={addExercise} stats={stats} subProgress={subProgress} />}
       {tab === "session"  && <SessionScreen tasks={tasks} setTasks={setTasks} onStart={startSession} sessionInProgress={sessionInProgress} onReturnToSession={returnToSession} presets={presets} setPresets={setPresets} />}
-      {tab === "progress" && <ProgressionScreen stats={stats} exercises={exercises} onClearStats={() => setStats({})} badges={badges} subProgress={subProgress} practiceDays={practiceDays} />}
+      {tab === "progress" && <ProgressionScreen stats={stats} exercises={exercises} onClearStats={() => setStats({})} badges={badges} subProgress={subProgress} practiceDays={practiceDays} subTab={progressSubTab} setSubTab={setProgressSubTab} />}
       {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} />}
       {tab === "active"   && <ActiveSessionScreen
         tasks={tasks} setTasks={setTasks} onFinish={endSession} onBackToMenu={backToMenu}
