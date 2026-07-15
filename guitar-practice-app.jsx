@@ -1695,11 +1695,11 @@ function ActiveSessionScreen({
       <FlashOverlay show={flash} color="#4FC3F7" />
       <div style={{ padding: "14px 16px 100px", display: "flex", flexDirection: "column", gap: 14, overflowY: "auto", maxHeight: "calc(100dvh - 110px)" }}>
         {/* Timer card */}
-        <div style={{ background: "#151208", border: "1px solid #2A1E08", borderRadius: 16, padding: "22px 18px", textAlign: "center" }}>
+        <div style={{ background: "#151208", border: "1px solid #2A1E08", borderRadius: 16, padding: "22px 18px", textAlign: "center", flexShrink: 0 }}>
           <div style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: "#6B5A3A", marginBottom: 3 }}>
             {T("exerciseOf2")} {current + 1} {T("of2")} {tasks.length}
           </div>
-          <div style={{ fontSize: 19, fontWeight: 700, color: C.cream, marginBottom: 18 }}>
+          <div style={{ fontSize: 24, fontWeight: 800, color: C.cream, marginBottom: 18, textTransform: "uppercase", letterSpacing: "0.02em", lineHeight: 1.25 }}>
             {currentTask?.icon} {exerciseName(currentTask, lang)}
           </div>
           <div style={{ fontSize: 58, fontFamily: "monospace", fontWeight: 700, lineHeight: 1, marginBottom: 6, animation: urgent ? "urgentPulse 0.7s ease-in-out infinite" : "none", color: C.amber }}>
@@ -1716,7 +1716,17 @@ function ActiveSessionScreen({
               disabled={current === 0}
             >{T("previousBtn")}</button>
             <button style={base.pillBtn(false)} onClick={skip}>{T("skipBtn")}</button>
-            <button style={{ ...base.pillBtn(true), width: "auto", padding: "12px 28px" }} onClick={() => { setRunning(r => !r); setHasStarted(true); }}>
+            <button
+              style={{
+                ...base.pillBtn(true), width: "auto", padding: "12px 28px",
+                background: running
+                  ? "linear-gradient(135deg,#34D399,#1F9C6E)"
+                  : hasStarted
+                    ? "linear-gradient(135deg,#4FC3F7,#1E7EA8)"
+                    : `linear-gradient(135deg,${C.amber},#A86020)`,
+              }}
+              onClick={() => { setRunning(r => !r); setHasStarted(true); }}
+            >
               {running ? T("pauseBtn") : hasStarted ? T("resumePlayBtn") : T("playBtn")}
             </button>
           </div>
@@ -1761,7 +1771,7 @@ function ActiveSessionScreen({
         {currentTask?.subExercises?.length > 0 && (() => {
           const doneIds = subProgress[currentTask.exerciseId] || [];
           return (
-            <div style={base.card}>
+            <div style={{ ...base.card, flexShrink: 0 }}>
               <div style={{ padding: "10px 14px", borderBottom: `1px solid ${C.faint}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: C.muted }}>{T("subExercisesTitle")}</span>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1786,7 +1796,7 @@ function ActiveSessionScreen({
                     <div style={{ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${checked ? "#34D399" : "#3A3A3A"}`, background: checked ? "#34D399" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 12, color: "#0A0A0A", fontWeight: 900 }}>
                       {checked ? "✓" : ""}
                     </div>
-                    <span style={{ flex: 1, fontSize: 13, color: checked ? "#3A5A40" : C.cream, textDecoration: checked ? "line-through" : "none" }}>
+                    <span style={{ flex: 1, fontSize: 13, color: checked ? "#5CB88A" : C.cream, textDecoration: checked ? "line-through" : "none" }}>
                       {subExerciseLabel(sub, lang)}
                     </span>
                   </div>
@@ -1797,10 +1807,12 @@ function ActiveSessionScreen({
         })()}
 
         {/* YouTube reference video */}
-        <YouTubeCard videoId={extractYouTubeId(currentTask?.youtubeUrl)} />
+        <div style={{ flexShrink: 0 }}>
+          <YouTubeCard videoId={extractYouTubeId(currentTask?.youtubeUrl)} />
+        </div>
 
         {/* Setlist */}
-        <div style={base.card}>
+        <div style={{ ...base.card, flexShrink: 0 }}>
           <div style={{ padding: "10px 14px", borderBottom: `1px solid ${C.faint}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: C.muted }}>{T("sessionSetlist")}</span>
             <span style={{ fontSize: 11, color: C.amber, fontWeight: 700 }}>{current}/{tasks.length} {T("done")}</span>
@@ -1810,7 +1822,7 @@ function ActiveSessionScreen({
             return (
               <div key={t.id} style={{ padding: "9px 14px", display: "flex", alignItems: "center", gap: 9, borderBottom: `1px solid #111`, background: st === "cur" ? "#1A1208" : "transparent", opacity: st === "up" ? 0.4 : 1 }}>
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: st === "done" ? "#34D399" : st === "cur" ? C.amber : "#2A2A2A", flexShrink: 0 }} />
-                <span style={{ flex: 1, fontSize: 12, color: st === "done" ? "#3A5A40" : st === "cur" ? C.cream : C.muted, textDecoration: st === "done" ? "line-through" : "none" }}>{exerciseName(t, lang)}</span>
+                <span style={{ flex: 1, fontSize: 12, color: st === "done" ? "#5CB88A" : st === "cur" ? C.cream : C.muted, textDecoration: st === "done" ? "line-through" : "none" }}>{exerciseName(t, lang)}</span>
                 {t.youtubeUrl && extractYouTubeId(t.youtubeUrl) && (
                   <span style={{ fontSize: 9, background: "#FF000044", color: "#FF6666", borderRadius: 3, padding: "1px 4px", fontWeight: 700, flexShrink: 0 }}>▶</span>
                 )}
@@ -1830,7 +1842,7 @@ function ActiveSessionScreen({
         </div>
 
         {/* Back to menu */}
-        <button style={{ ...base.pillBtn(false), width: "100%", textAlign: "center", color: C.muted, fontSize: 12 }} onClick={() => { flushStats(current); onBackToMenu(); }}>
+        <button style={{ ...base.pillBtn(false), width: "100%", textAlign: "center", color: C.muted, fontSize: 12, flexShrink: 0 }} onClick={() => { flushStats(current); onBackToMenu(); }}>
           {T("backToMenu")}
         </button>
       </div>
