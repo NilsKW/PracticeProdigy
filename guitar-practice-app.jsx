@@ -7,7 +7,7 @@ const STRINGS = {
     navLibrary: "Library", navPresets: "Presets", navSession: "Session", navActive: "▶ Active",
     navProgress: "Progress", navSettings: "Settings",
     progressTabLevel: "Level", progressTabStats: "Stats", progressTabBadges: "Badges",
-    myPresetsTitle: "My presets",
+    myPresetsTitle: "Favorites",
     headerEnd: "↩ End", headerLibrary: "Library", headerStats: "Statistics", headerSettings: "Settings", headerBadges: "Badges",
     sessionPaused: "Session paused", resumeBtn: "Resume ▶",
     needsPractice: "Needs Practice", leastWorkedOn: "· least worked on",
@@ -78,7 +78,7 @@ const STRINGS = {
     navLibrary: "Bibliothèque", navPresets: "Modèles", navSession: "Séance", navActive: "▶ En cours",
     navProgress: "Progression", navSettings: "Réglages",
     progressTabLevel: "Niveau", progressTabStats: "Stats", progressTabBadges: "Badges",
-    myPresetsTitle: "Mes modèles",
+    myPresetsTitle: "Favoris",
     headerEnd: "↩ Fin", headerLibrary: "Bibliothèque", headerStats: "Statistiques", headerSettings: "Réglages", headerBadges: "Badges",
     sessionPaused: "Séance en pause", resumeBtn: "Reprendre ▶",
     needsPractice: "À travailler", leastWorkedOn: "· les moins pratiqués",
@@ -2565,6 +2565,27 @@ export default function App() {
     setSessionNoodleSec(prev => prev + Math.round(sec));
   }, [stats, noodleSec, setNoodleSec]);
 
+  // Briefly flash the bottom-nav "Séance" tab red whenever the session's
+  // exercise count changes (added or removed, from the Library or the
+  // Séance screen itself), so the user notices the queue was modified even
+  // if they're not currently looking at that tab. Only the count matters —
+  // reordering or editing a duration keeps the same length and stays quiet.
+  const prevTasksLengthRef = useRef(tasks.length);
+  const [sessionFlash, setSessionFlash] = useState(0);
+  const [sessionFlashing, setSessionFlashing] = useState(false);
+  useEffect(() => {
+    if (tasks.length !== prevTasksLengthRef.current) {
+      setSessionFlash(f => f + 1);
+    }
+    prevTasksLengthRef.current = tasks.length;
+  }, [tasks.length]);
+  useEffect(() => {
+    if (sessionFlash === 0) return;
+    setSessionFlashing(true);
+    const t = setTimeout(() => setSessionFlashing(false), 450);
+    return () => clearTimeout(t);
+  }, [sessionFlash]);
+
   // Check every badge's unlock condition whenever the stats it depends on
   // change. Newly-met goals are persisted immediately and queued for a
   // celebration; already-unlocked badges are never re-evaluated (a badge
@@ -2694,6 +2715,7 @@ export default function App() {
           transition: background-color 9999s ease-in-out 0s;
         }
         @keyframes activePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+        @keyframes sessionFlashPulse { 0%,100%{transform:scale(1)} 30%{transform:scale(1.18)} }
       `}</style>
 
       {/* Header — minimal: logo + level pill, and an End-session shortcut while a session is running */}
@@ -2755,10 +2777,15 @@ export default function App() {
           </svg>
           {T("navLibrary")}
         </button>
-        <button style={base.bottomNavBtn(sessionTabActive, sessionInProgress ? "#34D399" : C.amber)}
+        <button
+          key={sessionFlash}
+          style={{
+            ...base.bottomNavBtn(sessionTabActive || sessionFlashing, sessionFlashing ? "#F87171" : (sessionInProgress ? "#34D399" : C.amber)),
+            animation: sessionFlashing ? "sessionFlashPulse 0.45s ease-out" : "none",
+          }}
           onClick={() => setTab(sessionInProgress ? "active" : "session")}>
           <span style={{ position: "relative", display: "flex" }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={sessionTabActive ? (sessionInProgress ? "#34D399" : C.amber) : C.navInactive} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={sessionFlashing ? "#F87171" : sessionTabActive ? (sessionInProgress ? "#34D399" : C.amber) : C.navInactive} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
             </svg>
             {sessionInProgress && (
