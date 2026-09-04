@@ -73,6 +73,9 @@ const STRINGS = {
     noodleBackBtn: "↩ Back to session",
     noodleSessionSuffix: (m) => ` (incl. ${m}m noodling)`,
     noodleStatsLabel: "Time spent noodling",
+    filesLabel: "Teaching files (audio, video, image, PDF)", addFileBtn: "+ Add a file", uploadingFile: "Adding…",
+    filesHint: "Files are stored on this device only and work fully offline once added.",
+    downloadFile: "Download", fileMissing: "file missing on this device",
   },
   fr: {
     navLibrary: "Bibliothèque", navPresets: "Modèles", navSession: "Séance", navActive: "▶ En cours",
@@ -144,6 +147,9 @@ const STRINGS = {
     noodleBackBtn: "↩ Retour à la séance",
     noodleSessionSuffix: (m) => ` dont ${m}m à noodler`,
     noodleStatsLabel: "Temps passé à noodler",
+    filesLabel: "Fichiers pédagogiques (audio, vidéo, image, PDF)", addFileBtn: "+ Ajouter un fichier", uploadingFile: "Ajout en cours…",
+    filesHint: "Les fichiers sont stockés uniquement sur cet appareil et restent disponibles hors ligne une fois ajoutés.",
+    downloadFile: "Télécharger", fileMissing: "fichier introuvable sur cet appareil",
   },
 };
 
@@ -644,6 +650,66 @@ function extractYouTubeId(url) {
   return null;
 }
 
+// ─── ATTACHED FILE STORAGE (IndexedDB) ────────────────────────────────────────
+// Teaching files (audio/video/image/PDF) attached to an exercise are stored as
+// Blobs in IndexedDB, not localStorage — localStorage is text-only and capped
+// at a few MB, which can't hold audio/video. Each file is keyed by a hash of
+// its own content (not a random id), so re-adding the same file is a no-op
+// and — once exercise groups become shareable between users — an exported
+// file reference stays valid and dedupes cleanly on import.
+const FILES_DB_NAME = "PracticeProdigyFiles";
+const FILES_STORE = "files";
+let _filesDbPromise = null;
+function openFilesDb() {
+  if (!_filesDbPromise) {
+    _filesDbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open(FILES_DB_NAME, 1);
+      req.onupgradeneeded = () => { req.result.createObjectStore(FILES_STORE); };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  return _filesDbPromise;
+}
+async function fileStorePut(id, blob) {
+  const db = await openFilesDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(FILES_STORE, "readwrite");
+    tx.objectStore(FILES_STORE).put(blob, id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+async function fileStoreGet(id) {
+  const db = await openFilesDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(FILES_STORE, "readonly");
+    const req = tx.objectStore(FILES_STORE).get(id);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function hashBlob(blob) {
+  const buf = await blob.arrayBuffer();
+  const digest = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+function fileKind(type) {
+  if ((type || "").startsWith("audio/")) return "audio";
+  if ((type || "").startsWith("video/")) return "video";
+  if ((type || "").startsWith("image/")) return "image";
+  if (type === "application/pdf") return "pdf";
+  return "other";
+}
+function fileKindIcon(kind) {
+  return kind === "audio" ? "🎵" : kind === "video" ? "🎬" : kind === "image" ? "🖼️" : kind === "pdf" ? "📄" : "📎";
+}
+function formatFileSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 // ─── STYLES ──────────────────────────────────────────────────────────────────
 
 const C = { bg: "#0F0F0F", surface: "#151515", border: "#1E1E1E", amber: "#C8873A", amberDim: "#6B3A0A", cream: "#F5EDD6", muted: "#8D8D9C", navInactive: "#8D8D9C", faint: "#1A1A1A" };
@@ -718,6 +784,62 @@ function YouTubeCard({ videoId }) {
           <span style={{ fontSize: 10, color: "#ffffff99" }}>{T("opensYoutube")}</span>
         </div>
       </a>
+    </div>
+  );
+}
+
+// ─── ATTACHED FILE VIEWER ──────────────────────────────────────────────────────
+// Renders a teaching file (audio/video/image/PDF) attached to an exercise,
+// entirely in-app: the Blob is pulled from IndexedDB and played/shown inline
+// via a local blob: URL, so nothing ever opens in a new browser tab.
+function FilePlayer({ file }) {
+  const T = useT();
+  const [url, setUrl] = useState(null);
+  const [missing, setMissing] = useState(false);
+
+  useEffect(() => {
+    let objUrl = null;
+    let cancelled = false;
+    fileStoreGet(file.id).then(blob => {
+      if (cancelled) return;
+      if (!blob) { setMissing(true); return; }
+      objUrl = URL.createObjectURL(blob);
+      setUrl(objUrl);
+    }).catch(() => { if (!cancelled) setMissing(true); });
+    return () => { cancelled = true; if (objUrl) URL.revokeObjectURL(objUrl); };
+  }, [file.id]);
+
+  const kind = fileKind(file.type);
+
+  if (missing) {
+    return (
+      <div style={{ ...base.card, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: C.muted }}>
+        <span>{fileKindIcon(kind)}</span><span>{file.name} — {T("fileMissing")}</span>
+      </div>
+    );
+  }
+  if (!url) return null;
+
+  return (
+    <div style={{ ...base.card, padding: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <span style={{ fontSize: 15, flexShrink: 0 }}>{fileKindIcon(kind)}</span>
+        <span style={{ fontSize: 12, color: C.cream, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file.name}</span>
+        <a href={url} download={file.name} style={{ fontSize: 10, color: C.amber, textDecoration: "none", flexShrink: 0 }}>{T("downloadFile")}</a>
+      </div>
+      {kind === "audio" && <audio controls src={url} style={{ width: "100%", height: 32 }} />}
+      {kind === "video" && <video controls src={url} style={{ width: "100%", borderRadius: 8, maxHeight: 220, display: "block" }} />}
+      {kind === "image" && <img src={url} style={{ width: "100%", borderRadius: 8, display: "block" }} />}
+      {kind === "pdf" && <embed type="application/pdf" src={url} style={{ width: "100%", height: 320, borderRadius: 8, border: "none" }} />}
+    </div>
+  );
+}
+
+function FilesSection({ files }) {
+  if (!files || files.length === 0) return null;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {files.map(f => <FilePlayer key={f.id} file={f} />)}
     </div>
   );
 }
@@ -1995,6 +2117,13 @@ function ActiveSessionScreen({
           <YouTubeCard videoId={extractYouTubeId(currentTask?.youtubeUrl)} />
         </div>
 
+        {/* Attached teaching files (audio/video/image/PDF) */}
+        {currentTask?.files?.length > 0 && (
+          <div style={{ flexShrink: 0 }}>
+            <FilesSection files={currentTask.files} />
+          </div>
+        )}
+
         {/* Setlist */}
         <div style={{ ...base.card, flexShrink: 0 }}>
           <div style={{ padding: "10px 14px", borderBottom: `1px solid ${C.faint}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -2051,16 +2180,18 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack }) {
   // kept, so translations keep working after switching languages again.
   const [form, setForm] = useState(
     isNew
-      ? { name: "", description: "", defaultMin: 10, icon: "🎸", categoryId: categories[0]?.id || "", youtubeUrl: "", bpm: 0, beatsPerBar: 4, subExercises: [] }
+      ? { name: "", description: "", defaultMin: 10, icon: "🎸", categoryId: categories[0]?.id || "", youtubeUrl: "", bpm: 0, beatsPerBar: 4, subExercises: [], files: [] }
       : {
           ...editEx,
           name: exerciseName(editEx, lang),
           description: exerciseDesc(editEx, lang) || "",
           youtubeUrl: editEx.youtubeUrl || "", bpm: editEx.bpm || 0, beatsPerBar: editEx.beatsPerBar || 4,
           subExercises: (editEx.subExercises || []).map(s => ({ id: s.id, label: subExerciseLabel(s, lang), _origLabel: s.label })),
+          files: editEx.files || [],
         }
   );
   const [iconPicker, setIconPicker] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const save = () => {
@@ -2133,6 +2264,49 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack }) {
           {form.youtubeUrl && extractYouTubeId(form.youtubeUrl) && (
             <div style={{ fontSize: 11, color: "#34D399", marginTop: 5 }}>{T("youtubeOk")}{extractYouTubeId(form.youtubeUrl)}</div>
           )}
+        </div>
+        <div>
+          <label style={base.label}>{T("filesLabel")}</label>
+          {(form.files || []).length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
+              {form.files.map(f => (
+                <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 8, padding: "7px 10px" }}>
+                  <span style={{ fontSize: 15, flexShrink: 0 }}>{fileKindIcon(fileKind(f.type))}</span>
+                  <span style={{ flex: 1, fontSize: 12, color: C.cream, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span>
+                  <span style={{ fontSize: 10, color: C.muted, flexShrink: 0 }}>{formatFileSize(f.size)}</span>
+                  <button
+                    onClick={() => setF("files", form.files.filter(x => x.id !== f.id))}
+                    style={{ width: 26, height: 26, borderRadius: 6, background: "none", border: "1px solid #2A2A2A", color: C.muted, fontSize: 13, cursor: "pointer", flexShrink: 0 }}
+                  >×</button>
+                </div>
+              ))}
+            </div>
+          )}
+          <label style={{ ...base.pillBtn(false), textAlign: "center", fontSize: 12, display: "block", cursor: "pointer" }}>
+            {uploadingFile ? T("uploadingFile") : T("addFileBtn")}
+            <input
+              type="file" multiple accept="audio/*,video/*,image/*,application/pdf"
+              style={{ display: "none" }}
+              onChange={async e => {
+                const picked = Array.from(e.target.files || []);
+                e.target.value = "";
+                if (picked.length === 0) return;
+                setUploadingFile(true);
+                try {
+                  const added = [];
+                  for (const file of picked) {
+                    const id = await hashBlob(file);
+                    await fileStorePut(id, file);
+                    added.push({ id, name: file.name, type: file.type, size: file.size });
+                  }
+                  setF("files", [...(form.files || []), ...added]);
+                } finally {
+                  setUploadingFile(false);
+                }
+              }}
+            />
+          </label>
+          <div style={{ fontSize: 10, color: C.muted, marginTop: 6 }}>{T("filesHint")}</div>
         </div>
         <div>
           <label style={base.label}>{T("metronomeLabel")} {T("bpmHint")}</label>
@@ -2629,7 +2803,7 @@ export default function App() {
 
   const addExercise = (ex) => {
     ensureAudio();
-    setTasks(prev => [...prev, { id: uid(), exerciseId: ex.id, name: ex.name, icon: ex.icon, minutes: ex.defaultMin, categoryId: ex.categoryId, youtubeUrl: ex.youtubeUrl || "", bpm: ex.bpm || 0, beatsPerBar: ex.beatsPerBar || 4, subExercises: ex.subExercises || [] }]);
+    setTasks(prev => [...prev, { id: uid(), exerciseId: ex.id, name: ex.name, icon: ex.icon, minutes: ex.defaultMin, categoryId: ex.categoryId, youtubeUrl: ex.youtubeUrl || "", bpm: ex.bpm || 0, beatsPerBar: ex.beatsPerBar || 4, subExercises: ex.subExercises || [], files: ex.files || [] }]);
   };
 
   const removeExerciseFromSession = (exerciseId) => {
