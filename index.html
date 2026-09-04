@@ -241,7 +241,21 @@ const STRINGS = {
     unsavedTitle: "Unsaved changes",
     unsavedMsg: "You have unsaved changes on this exercise. Save them before leaving?",
     unsavedSaveBtn: "Save and leave",
-    unsavedDiscardBtn: "Discard changes"
+    unsavedDiscardBtn: "Discard changes",
+    settingsShare: "share",
+    exportTitle: "Export an exercise group",
+    exportDesc: "Bundle selected categories, their exercises, and any attached files into a single file you can send to someone else.",
+    exportCategoriesLabel: "Categories to include",
+    exportNamePlaceholder: "Pack name (e.g. Oboe — Beginner)",
+    exportBtn: "Export",
+    exportingBtn: "Exporting…",
+    exportError: "Export failed — please try again.",
+    importTitle: "Import an exercise group",
+    importDesc: "Pick a file someone exported from Practice Prodigy — its categories, exercises, and files are added to your library.",
+    importBtn: "+ Choose a file to import",
+    importingBtn: "Importing…",
+    importSuccess: (n, m) => `Imported ${n} exercise${n === 1 ? "" : "s"} across ${m} categor${m === 1 ? "y" : "ies"}.`,
+    importError: "Import failed — the file may not be a valid Practice Prodigy export."
   },
   fr: {
     navLibrary: "Bibliothèque",
@@ -408,7 +422,21 @@ const STRINGS = {
     unsavedTitle: "Modifications non enregistrées",
     unsavedMsg: "Vous avez des modifications non enregistrées sur cet exercice. Les enregistrer avant de quitter ?",
     unsavedSaveBtn: "Enregistrer et quitter",
-    unsavedDiscardBtn: "Quitter sans enregistrer"
+    unsavedDiscardBtn: "Quitter sans enregistrer",
+    settingsShare: "partage",
+    exportTitle: "Exporter un groupe d'exercices",
+    exportDesc: "Regroupe les catégories sélectionnées, leurs exercices et les fichiers attachés en un seul fichier à envoyer à quelqu'un d'autre.",
+    exportCategoriesLabel: "Catégories à inclure",
+    exportNamePlaceholder: "Nom du groupe (ex. Hautbois — Débutant)",
+    exportBtn: "Exporter",
+    exportingBtn: "Export en cours…",
+    exportError: "L'export a échoué — réessayez.",
+    importTitle: "Importer un groupe d'exercices",
+    importDesc: "Choisissez un fichier exporté depuis Practice Prodigy — ses catégories, exercices et fichiers sont ajoutés à votre bibliothèque.",
+    importBtn: "+ Choisir un fichier à importer",
+    importingBtn: "Import en cours…",
+    importSuccess: (n, m) => `${n} exercice${n > 1 ? "s" : ""} importé${n > 1 ? "s" : ""} dans ${m} catégorie${m > 1 ? "s" : ""}.`,
+    importError: "L'import a échoué — le fichier n'est peut-être pas un export Practice Prodigy valide."
   }
 };
 
@@ -1229,6 +1257,109 @@ function formatFileSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// ─── EXERCISE GROUP EXPORT / IMPORT ────────────────────────────────────────────
+// Lets a teacher bundle a set of categories + exercises + their attached
+// files into a single .zip a student downloads once and imports — no
+// backend involved, everything happens client-side. JSZip is loaded lazily
+// (only when export/import is actually used) from the same CDN already
+// trusted for React, so it costs nothing for users who never touch this.
+function loadJSZip() {
+  if (window.JSZip) return Promise.resolve(window.JSZip);
+  if (!loadJSZip._promise) {
+    loadJSZip._promise = new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://unpkg.com/jszip@3.10.1/dist/jszip.min.js";
+      s.onload = () => resolve(window.JSZip);
+      s.onerror = () => reject(new Error("Could not load JSZip"));
+      document.head.appendChild(s);
+    });
+  }
+  return loadJSZip._promise;
+}
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Bundles the given categories/exercises + every file they reference (looked
+// up in IndexedDB by id) into one zip: manifest.json (metadata) + files/<id>
+// (raw blobs). File ids are content hashes, so the exact same zip can be
+// re-imported later (e.g. an updated version of a teacher's pack) and will
+// cleanly overwrite the matching categories/exercises instead of duplicating.
+async function exportExerciseGroup({
+  categories,
+  exercises,
+  packName
+}) {
+  const JSZip = await loadJSZip();
+  const zip = new JSZip();
+  const filesFolder = zip.folder("files");
+  const fileIds = new Set();
+  exercises.forEach(ex => (ex.files || []).forEach(f => fileIds.add(f.id)));
+  for (const id of fileIds) {
+    const blob = await fileStoreGet(id);
+    if (blob) filesFolder.file(id, blob);
+  }
+  const manifest = {
+    formatVersion: 1,
+    packName: packName || "Practice Prodigy",
+    exportedAt: new Date().toISOString(),
+    categories,
+    exercises
+  };
+  zip.file("manifest.json", JSON.stringify(manifest, null, 2));
+  return zip.generateAsync({
+    type: "blob"
+  });
+}
+
+// Reads a .zip produced by exportExerciseGroup: stores each attached file in
+// IndexedDB — re-hashing its content rather than trusting the id in the zip,
+// so file references stay correct even if the archive was altered in
+// transit — then upserts the pack's categories/exercises into the caller's
+// library by id (same id as an existing entry = overwrite, new id = add).
+async function importExerciseGroup(file, existingExercises, existingCategories) {
+  const JSZip = await loadJSZip();
+  const zip = await JSZip.loadAsync(file);
+  const manifestEntry = zip.file("manifest.json");
+  if (!manifestEntry) throw new Error("Missing manifest.json");
+  const manifest = JSON.parse(await manifestEntry.async("string"));
+  if (!manifest || !Array.isArray(manifest.exercises)) throw new Error("Invalid manifest");
+  const keyToRealId = {};
+  const fileEntries = Object.keys(zip.files).filter(name => name.startsWith("files/") && !zip.files[name].dir);
+  for (const name of fileEntries) {
+    const blob = await zip.files[name].async("blob");
+    const realId = await hashBlob(blob);
+    await fileStorePut(realId, blob);
+    keyToRealId[name.slice("files/".length)] = realId;
+  }
+  const importedExercises = manifest.exercises.map(ex => ({
+    ...ex,
+    files: (ex.files || []).map(f => ({
+      ...f,
+      id: keyToRealId[f.id] || f.id
+    }))
+  }));
+  const importedCategories = manifest.categories || [];
+  const catById = new Map(existingCategories.map(c => [c.id, c]));
+  importedCategories.forEach(c => catById.set(c.id, c));
+  const exById = new Map(existingExercises.map(e => [e.id, e]));
+  importedExercises.forEach(e => exById.set(e.id, e));
+  return {
+    categories: Array.from(catById.values()),
+    exercises: Array.from(exById.values()),
+    categoriesCount: importedCategories.length,
+    exercisesCount: importedExercises.length,
+    packName: manifest.packName
+  };
 }
 
 // ─── STYLES ──────────────────────────────────────────────────────────────────
@@ -5563,6 +5694,56 @@ function SettingsScreen({
   const [editEx, setEditEx] = useState(null); // null | "new" | exercise object
   const [editCat, setEditCat] = useState(null); // null | "new" | category object
   const [confirmResetBadges, setConfirmResetBadges] = useState(false);
+  const [exportSelectedCats, setExportSelectedCats] = useState([]);
+  const [exportName, setExportName] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importMsg, setImportMsg] = useState(null); // null | { ok: bool, text }
+  const toggleExportCat = id => setExportSelectedCats(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const doExport = async () => {
+    setExporting(true);
+    try {
+      const cats = categories.filter(c => exportSelectedCats.includes(c.id));
+      const exs = exercises.filter(e => exportSelectedCats.includes(e.categoryId));
+      const blob = await exportExerciseGroup({
+        categories: cats,
+        exercises: exs,
+        packName: exportName
+      });
+      const safeName = (exportName || "practice-prodigy-pack").trim().replace(/[^a-z0-9\-_ ]/gi, "").replace(/\s+/g, "-") || "practice-prodigy-pack";
+      triggerDownload(blob, `${safeName}.zip`);
+    } catch {
+      setImportMsg({
+        ok: false,
+        text: T("exportError")
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+  const handleImportFile = async e => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setImporting(true);
+    setImportMsg(null);
+    try {
+      const result = await importExerciseGroup(file, exercises, categories);
+      setCategories(result.categories);
+      setExercises(result.exercises);
+      setImportMsg({
+        ok: true,
+        text: T("importSuccess", result.exercisesCount, result.categoriesCount)
+      });
+    } catch {
+      setImportMsg({
+        ok: false,
+        text: T("importError")
+      });
+    } finally {
+      setImporting(false);
+    }
+  };
   const closeEditor = () => {
     setEditEx(null);
     setEditCat(null);
@@ -5611,7 +5792,7 @@ function SettingsScreen({
       padding: 3,
       marginBottom: 8
     }
-  }, [["exercises", T("settingsExercises")], ["categories", T("settingsCategories")], ["sound", T("settingsSound")], ["language", T("settingsLanguage")], ["display", T("settingsDisplay")], ["badges", T("settingsBadges")]].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+  }, [["exercises", T("settingsExercises")], ["categories", T("settingsCategories")], ["share", T("settingsShare")], ["sound", T("settingsSound")], ["language", T("settingsLanguage")], ["display", T("settingsDisplay")], ["badges", T("settingsBadges")]].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
     key: id,
     style: {
       flex: 1,
@@ -5985,7 +6166,126 @@ function SettingsScreen({
       color: C.muted,
       fontSize: 14
     }
-  }, "›"))))));
+  }, "›"))))), section === "share" && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: base.card
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "14px 16px"
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      ...base.label,
+      margin: 0
+    }
+  }, T("exportTitle")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: C.muted,
+      marginTop: 4,
+      marginBottom: 12
+    }
+  }, T("exportDesc")), /*#__PURE__*/React.createElement("label", {
+    style: base.label
+  }, T("exportCategoriesLabel")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 8,
+      marginBottom: 12
+    }
+  }, categories.map(cat => /*#__PURE__*/React.createElement("label", {
+    key: cat.id,
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      fontSize: 13,
+      color: C.cream,
+      cursor: "pointer"
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: exportSelectedCats.includes(cat.id),
+    onChange: () => toggleExportCat(cat.id)
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: 10,
+      height: 10,
+      borderRadius: "50%",
+      background: cat.color,
+      flexShrink: 0
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1
+    }
+  }, categoryName(cat, lang)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: C.muted
+    }
+  }, T("exercisesCount", exercises.filter(e => e.categoryId === cat.id).length))))), /*#__PURE__*/React.createElement("input", {
+    style: base.input,
+    value: exportName,
+    onChange: e => setExportName(e.target.value),
+    placeholder: T("exportNamePlaceholder"),
+    autoComplete: "off",
+    autoCorrect: "off",
+    spellCheck: false
+  }), /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...base.pillBtn(true),
+      marginTop: 10,
+      opacity: exportSelectedCats.length === 0 || exporting ? 0.5 : 1
+    },
+    disabled: exportSelectedCats.length === 0 || exporting,
+    onClick: doExport
+  }, exporting ? T("exportingBtn") : T("exportBtn")))), /*#__PURE__*/React.createElement("div", {
+    style: base.card
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "14px 16px"
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      ...base.label,
+      margin: 0
+    }
+  }, T("importTitle")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: C.muted,
+      marginTop: 4,
+      marginBottom: 12
+    }
+  }, T("importDesc")), /*#__PURE__*/React.createElement("label", {
+    style: {
+      ...base.pillBtn(false),
+      textAlign: "center",
+      display: "block",
+      cursor: "pointer"
+    }
+  }, importing ? T("importingBtn") : T("importBtn"), /*#__PURE__*/React.createElement("input", {
+    type: "file",
+    accept: ".zip,application/zip",
+    style: {
+      display: "none"
+    },
+    onChange: handleImportFile,
+    disabled: importing
+  })), importMsg && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: importMsg.ok ? "#34D399" : "#F87171",
+      marginTop: 8
+    }
+  }, importMsg.text)))));
 }
 
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
