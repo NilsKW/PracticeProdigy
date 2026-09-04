@@ -237,7 +237,11 @@ const STRINGS = {
     uploadingFile: "Adding…",
     filesHint: "Files are stored on this device only and work fully offline once added.",
     downloadFile: "Download",
-    fileMissing: "file missing on this device"
+    fileMissing: "file missing on this device",
+    unsavedTitle: "Unsaved changes",
+    unsavedMsg: "You have unsaved changes on this exercise. Save them before leaving?",
+    unsavedSaveBtn: "Save and leave",
+    unsavedDiscardBtn: "Discard changes"
   },
   fr: {
     navLibrary: "Bibliothèque",
@@ -400,7 +404,11 @@ const STRINGS = {
     uploadingFile: "Ajout en cours…",
     filesHint: "Les fichiers sont stockés uniquement sur cet appareil et restent disponibles hors ligne une fois ajoutés.",
     downloadFile: "Télécharger",
-    fileMissing: "fichier introuvable sur cet appareil"
+    fileMissing: "fichier introuvable sur cet appareil",
+    unsavedTitle: "Modifications non enregistrées",
+    unsavedMsg: "Vous avez des modifications non enregistrées sur cet exercice. Les enregistrer avant de quitter ?",
+    unsavedSaveBtn: "Enregistrer et quitter",
+    unsavedDiscardBtn: "Quitter sans enregistrer"
   }
 };
 
@@ -1625,6 +1633,85 @@ function FilePlayer({
       border: "none"
     }
   }));
+}
+
+// Confirmation shown when the user tries to leave the exercise/category
+// editor (switch tab, tap back, or press the phone's back button) while it
+// has unsaved changes — prevents silently losing an edit (e.g. an attached
+// file) that was never explicitly saved.
+function UnsavedChangesModal({
+  canSave,
+  onSave,
+  onDiscard,
+  onCancel
+}) {
+  const T = useT();
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "fixed",
+      inset: 0,
+      zIndex: 400,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+      background: "#000000aa"
+    },
+    onClick: onCancel
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "#151515",
+      border: `1px solid ${C.border}`,
+      borderRadius: 16,
+      padding: "22px 20px",
+      maxWidth: 320,
+      width: "100%",
+      boxShadow: "0 10px 50px #000b"
+    },
+    onClick: e => e.stopPropagation()
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 14,
+      fontWeight: 700,
+      color: C.cream,
+      marginBottom: 8
+    }
+  }, T("unsavedTitle")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: C.muted,
+      lineHeight: 1.5,
+      marginBottom: 18
+    }
+  }, T("unsavedMsg")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    disabled: !canSave,
+    style: {
+      ...base.pillBtn(true),
+      opacity: canSave ? 1 : 0.5,
+      cursor: canSave ? "pointer" : "not-allowed"
+    },
+    onClick: onSave
+  }, T("unsavedSaveBtn")), /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...base.pillBtn(false),
+      textAlign: "center",
+      color: "#F87171",
+      border: "1px solid #3A1A1A"
+    },
+    onClick: onDiscard
+  }, T("unsavedDiscardBtn")), /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...base.pillBtn(false),
+      textAlign: "center"
+    },
+    onClick: onCancel
+  }, T("cancelBtn")))));
 }
 function FilesSection({
   files
@@ -4765,7 +4852,9 @@ function ExerciseEditor({
   editEx,
   categories,
   setExercises,
-  onBack
+  onBack,
+  onRequestBack,
+  guardRef
 }) {
   const T = useT();
   const lang = useLang();
@@ -4807,6 +4896,8 @@ function ExerciseEditor({
     ...f,
     [k]: v
   }));
+  const initialSnapshotRef = useRef(JSON.stringify(form));
+  const dirty = JSON.stringify(form) !== initialSnapshotRef.current;
   const save = () => {
     if (!form.name.trim()) return;
     let finalName = form.name;
@@ -4857,6 +4948,23 @@ function ExerciseEditor({
     setExercises(prev => prev.filter(e => e.id !== form.id));
     onBack();
   };
+
+  // Let the app-level navigation guard know whether this editor has unsaved
+  // changes, so switching tabs (or going back) while dirty can prompt first
+  // instead of silently discarding the edit — e.g. attaching a file, then
+  // tapping "Séance" in the bottom nav without hitting "Enregistrer".
+  useEffect(() => {
+    if (!guardRef) return;
+    guardRef.current = {
+      dirty,
+      canSave: !!form.name.trim(),
+      save,
+      discard: onBack
+    };
+  }, [form]);
+  useEffect(() => () => {
+    if (guardRef) guardRef.current = null;
+  }, []);
   return /*#__PURE__*/React.createElement("div", {
     style: base.scrollArea(24)
   }, /*#__PURE__*/React.createElement("div", {
@@ -4868,7 +4976,7 @@ function ExerciseEditor({
     }
   }, /*#__PURE__*/React.createElement("button", {
     style: base.iconBtn(C.amber),
-    onClick: onBack
+    onClick: onRequestBack || onBack
   }, "←"), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 14,
@@ -5285,7 +5393,9 @@ function CategoryEditor({
   editCat,
   setExercises,
   setCategories,
-  onBack
+  onBack,
+  onRequestBack,
+  guardRef
 }) {
   const T = useT();
   const lang = useLang();
@@ -5301,6 +5411,8 @@ function CategoryEditor({
     ...f,
     [k]: v
   }));
+  const initialSnapshotRef = useRef(JSON.stringify(form));
+  const dirty = JSON.stringify(form) !== initialSnapshotRef.current;
   const save = () => {
     if (!form.name.trim()) return;
     // Only keep the user's edit if it actually differs from the translated
@@ -5326,6 +5438,22 @@ function CategoryEditor({
     setExercises(prev => prev.filter(e => e.categoryId !== form.id));
     onBack();
   };
+
+  // Let the app-level navigation guard know whether this editor has unsaved
+  // changes, so switching tabs (or going back) while dirty can prompt first
+  // instead of silently discarding the edit.
+  useEffect(() => {
+    if (!guardRef) return;
+    guardRef.current = {
+      dirty,
+      canSave: !!form.name.trim(),
+      save,
+      discard: onBack
+    };
+  }, [form]);
+  useEffect(() => () => {
+    if (guardRef) guardRef.current = null;
+  }, []);
   return /*#__PURE__*/React.createElement("div", {
     style: base.scrollArea(24)
   }, /*#__PURE__*/React.createElement("div", {
@@ -5337,7 +5465,7 @@ function CategoryEditor({
     }
   }, /*#__PURE__*/React.createElement("button", {
     style: base.iconBtn(C.amber),
-    onClick: onBack
+    onClick: onRequestBack || onBack
   }, "←"), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 14,
@@ -5426,26 +5554,31 @@ function SettingsScreen({
   onLangChange,
   displaySize,
   onDisplaySizeChange,
-  onResetBadges
+  onResetBadges,
+  editorGuardRef,
+  guardedRun
 }) {
   const T = useT();
   const [section, setSection] = useState("exercises");
   const [editEx, setEditEx] = useState(null); // null | "new" | exercise object
   const [editCat, setEditCat] = useState(null); // null | "new" | category object
   const [confirmResetBadges, setConfirmResetBadges] = useState(false);
+  const closeEditor = () => {
+    setEditEx(null);
+    setEditCat(null);
+  };
+  const requestCloseEditor = () => guardedRun(closeEditor);
 
   // The exercise/category editor has no visible tab bar to go back with, so
   // it's exactly the kind of screen where a phone's back button/gesture would
-  // otherwise leave the app entirely. Trap it here to just close the editor.
+  // otherwise leave the app entirely. Trap it here to just close the editor —
+  // guarded the same way as any other exit, so unsaved changes aren't lost.
   useEffect(() => {
     if (!editEx && !editCat) return;
     history.pushState({
       practiceProdigyEditorOpen: true
     }, "");
-    const onPopState = () => {
-      setEditEx(null);
-      setEditCat(null);
-    };
+    const onPopState = () => requestCloseEditor();
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, [editEx, editCat]);
@@ -5453,13 +5586,17 @@ function SettingsScreen({
     editEx: editEx,
     categories: categories,
     setExercises: setExercises,
-    onBack: () => setEditEx(null)
+    onBack: () => setEditEx(null),
+    onRequestBack: requestCloseEditor,
+    guardRef: editorGuardRef
   });
   if (editCat) return /*#__PURE__*/React.createElement(CategoryEditor, {
     editCat: editCat,
     setExercises: setExercises,
     setCategories: setCategories,
-    onBack: () => setEditCat(null)
+    onBack: () => setEditCat(null),
+    onRequestBack: requestCloseEditor,
+    guardRef: editorGuardRef
   });
 
   // ── SETTINGS MAIN ──
@@ -5899,6 +6036,29 @@ function App() {
   const masterGainRef = useRef(null);
   const [volume, setVolume, volLoaded] = usePersisted("volume", 0.8);
 
+  // Navigation guard: while the Settings exercise/category editor is open
+  // with unsaved changes, any exit (bottom nav, back arrow, phone back
+  // button) should ask first instead of silently discarding the edit.
+  // The editor writes { dirty, canSave, save, discard } into this ref every
+  // render so the guard always has the latest state without prop-drilling
+  // reactive state back up through Settings on every keystroke.
+  const editorGuardRef = useRef(null);
+  const [unsavedPrompt, setUnsavedPrompt] = useState(null); // null | { onProceed, canSave }
+  const guardedRun = action => {
+    if (editorGuardRef.current?.dirty) {
+      setUnsavedPrompt({
+        onProceed: action,
+        canSave: editorGuardRef.current.canSave
+      });
+    } else {
+      action();
+    }
+  };
+  const requestTab = (newTab, extra) => guardedRun(() => {
+    setTab(newTab);
+    if (extra) extra();
+  });
+
   // ── Lifted session progress state ─────────────────────────────────────────
   const [sessionCurrent, setSessionCurrent] = useState(0);
   const [sessionSecondsLeft, setSessionSecondsLeft] = useState(0);
@@ -6169,16 +6329,10 @@ function App() {
     }
   }), /*#__PURE__*/React.createElement(LevelPill, {
     level: currentLevel,
-    onClick: () => {
-      setProgressSubTab("level");
-      setTab("progress");
-    }
+    onClick: () => requestTab("progress", () => setProgressSubTab("level"))
   }), /*#__PURE__*/React.createElement(BadgeCountPill, {
     count: unlockedBadgeCount,
-    onClick: () => {
-      setProgressSubTab("badges");
-      setTab("progress");
-    }
+    onClick: () => requestTab("progress", () => setProgressSubTab("badges"))
   })), tab === "active" && sessionActive && /*#__PURE__*/React.createElement("button", {
     style: {
       ...base.pillBtn(false),
@@ -6269,7 +6423,9 @@ function App() {
     onLangChange: setLang,
     displaySize: displaySize,
     onDisplaySizeChange: setDisplaySize,
-    onResetBadges: () => setBadges({})
+    onResetBadges: () => setBadges({}),
+    editorGuardRef: editorGuardRef,
+    guardedRun: guardedRun
   }), tab === "active" && /*#__PURE__*/React.createElement(ActiveSessionScreen, {
     tasks: tasks,
     setTasks: setTasks,
@@ -6299,7 +6455,7 @@ function App() {
     style: base.bottomNav
   }, /*#__PURE__*/React.createElement("button", {
     style: base.bottomNavBtn(tab === "library"),
-    onClick: () => setTab("library")
+    onClick: () => requestTab("library")
   }, /*#__PURE__*/React.createElement("svg", {
     width: "20",
     height: "20",
@@ -6319,7 +6475,7 @@ function App() {
       ...base.bottomNavBtn(sessionTabActive || sessionFlashing, sessionFlashing ? "#F87171" : sessionInProgress ? "#34D399" : C.amber),
       animation: sessionFlashing ? "sessionFlashPulse 0.45s ease-out" : "none"
     },
-    onClick: () => setTab(sessionInProgress ? "active" : "session")
+    onClick: () => requestTab(sessionInProgress ? "active" : "session")
   }, /*#__PURE__*/React.createElement("span", {
     style: {
       position: "relative",
@@ -6357,7 +6513,7 @@ function App() {
     }
   })), tasks.length > 0 ? `${T("navSession")} (${tasks.length})` : T("navSession")), /*#__PURE__*/React.createElement("button", {
     style: base.bottomNavBtn(tab === "progress", "#4FC3F7"),
-    onClick: () => setTab("progress")
+    onClick: () => requestTab("progress")
   }, /*#__PURE__*/React.createElement("svg", {
     width: "20",
     height: "20",
@@ -6384,7 +6540,7 @@ function App() {
     y2: "14"
   })), T("navProgress")), /*#__PURE__*/React.createElement("button", {
     style: base.bottomNavBtn(tab === "settings"),
-    onClick: () => setTab("settings")
+    onClick: () => requestTab("settings")
   }, /*#__PURE__*/React.createElement("svg", {
     width: "20",
     height: "20",
@@ -6400,7 +6556,22 @@ function App() {
     r: "3"
   }), /*#__PURE__*/React.createElement("path", {
     d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
-  })), T("navSettings"))), badgeCelebrationQueue.length > 0 && /*#__PURE__*/React.createElement(BadgeCelebration, {
+  })), T("navSettings"))), unsavedPrompt && /*#__PURE__*/React.createElement(UnsavedChangesModal, {
+    canSave: unsavedPrompt.canSave,
+    onSave: () => {
+      editorGuardRef.current?.save?.();
+      const proceed = unsavedPrompt.onProceed;
+      setUnsavedPrompt(null);
+      proceed();
+    },
+    onDiscard: () => {
+      editorGuardRef.current?.discard?.();
+      const proceed = unsavedPrompt.onProceed;
+      setUnsavedPrompt(null);
+      proceed();
+    },
+    onCancel: () => setUnsavedPrompt(null)
+  }), badgeCelebrationQueue.length > 0 && /*#__PURE__*/React.createElement(BadgeCelebration, {
     key: badgeCelebrationQueue[0],
     badgeId: badgeCelebrationQueue[0],
     lang: lang,

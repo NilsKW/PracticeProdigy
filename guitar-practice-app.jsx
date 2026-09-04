@@ -76,6 +76,8 @@ const STRINGS = {
     filesLabel: "Teaching files (audio, video, image, PDF)", addFileBtn: "+ Add a file", uploadingFile: "Adding…",
     filesHint: "Files are stored on this device only and work fully offline once added.",
     downloadFile: "Download", fileMissing: "file missing on this device",
+    unsavedTitle: "Unsaved changes", unsavedMsg: "You have unsaved changes on this exercise. Save them before leaving?",
+    unsavedSaveBtn: "Save and leave", unsavedDiscardBtn: "Discard changes",
   },
   fr: {
     navLibrary: "Bibliothèque", navPresets: "Modèles", navSession: "Séance", navActive: "▶ En cours",
@@ -150,6 +152,8 @@ const STRINGS = {
     filesLabel: "Fichiers pédagogiques (audio, vidéo, image, PDF)", addFileBtn: "+ Ajouter un fichier", uploadingFile: "Ajout en cours…",
     filesHint: "Les fichiers sont stockés uniquement sur cet appareil et restent disponibles hors ligne une fois ajoutés.",
     downloadFile: "Télécharger", fileMissing: "fichier introuvable sur cet appareil",
+    unsavedTitle: "Modifications non enregistrées", unsavedMsg: "Vous avez des modifications non enregistrées sur cet exercice. Les enregistrer avant de quitter ?",
+    unsavedSaveBtn: "Enregistrer et quitter", unsavedDiscardBtn: "Quitter sans enregistrer",
   },
 };
 
@@ -831,6 +835,27 @@ function FilePlayer({ file }) {
       {kind === "video" && <video controls src={url} style={{ width: "100%", borderRadius: 8, maxHeight: 220, display: "block" }} />}
       {kind === "image" && <img src={url} style={{ width: "100%", borderRadius: 8, display: "block" }} />}
       {kind === "pdf" && <embed type="application/pdf" src={url} style={{ width: "100%", height: 320, borderRadius: 8, border: "none" }} />}
+    </div>
+  );
+}
+
+// Confirmation shown when the user tries to leave the exercise/category
+// editor (switch tab, tap back, or press the phone's back button) while it
+// has unsaved changes — prevents silently losing an edit (e.g. an attached
+// file) that was never explicitly saved.
+function UnsavedChangesModal({ canSave, onSave, onDiscard, onCancel }) {
+  const T = useT();
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: "#000000aa" }} onClick={onCancel}>
+      <div style={{ background: "#151515", border: `1px solid ${C.border}`, borderRadius: 16, padding: "22px 20px", maxWidth: 320, width: "100%", boxShadow: "0 10px 50px #000b" }} onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.cream, marginBottom: 8 }}>{T("unsavedTitle")}</div>
+        <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.5, marginBottom: 18 }}>{T("unsavedMsg")}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <button disabled={!canSave} style={{ ...base.pillBtn(true), opacity: canSave ? 1 : 0.5, cursor: canSave ? "pointer" : "not-allowed" }} onClick={onSave}>{T("unsavedSaveBtn")}</button>
+          <button style={{ ...base.pillBtn(false), textAlign: "center", color: "#F87171", border: "1px solid #3A1A1A" }} onClick={onDiscard}>{T("unsavedDiscardBtn")}</button>
+          <button style={{ ...base.pillBtn(false), textAlign: "center" }} onClick={onCancel}>{T("cancelBtn")}</button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -2168,7 +2193,7 @@ function ActiveSessionScreen({
 const COLOR_PALETTE = ["#C8873A","#4FC3F7","#A78BFA","#F87171","#34D399","#FBBF24","#FB923C","#F472B6","#60A5FA","#A3E635","#E879F9","#2DD4BF"];
 
 // ── EXERCISE EDITOR (standalone component so hooks are never conditional) ──
-function ExerciseEditor({ editEx, categories, setExercises, onBack }) {
+function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBack, guardRef }) {
   const T = useT();
   const lang = useLang();
   const isNew = editEx === "new";
@@ -2193,6 +2218,8 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack }) {
   const [iconPicker, setIconPicker] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const initialSnapshotRef = useRef(JSON.stringify(form));
+  const dirty = JSON.stringify(form) !== initialSnapshotRef.current;
 
   const save = () => {
     if (!form.name.trim()) return;
@@ -2221,10 +2248,20 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack }) {
   };
   const del = () => { setExercises(prev => prev.filter(e => e.id !== form.id)); onBack(); };
 
+  // Let the app-level navigation guard know whether this editor has unsaved
+  // changes, so switching tabs (or going back) while dirty can prompt first
+  // instead of silently discarding the edit — e.g. attaching a file, then
+  // tapping "Séance" in the bottom nav without hitting "Enregistrer".
+  useEffect(() => {
+    if (!guardRef) return;
+    guardRef.current = { dirty, canSave: !!form.name.trim(), save, discard: onBack };
+  }, [form]);
+  useEffect(() => () => { if (guardRef) guardRef.current = null; }, []);
+
   return (
     <div style={base.scrollArea(24)}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-        <button style={base.iconBtn(C.amber)} onClick={onBack}>←</button>
+        <button style={base.iconBtn(C.amber)} onClick={onRequestBack || onBack}>←</button>
         <span style={{ fontSize: 14, fontWeight: 700, color: C.cream }}>{isNew ? T("newExerciseTitle") : T("editExercise")}</span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -2393,12 +2430,14 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack }) {
 }
 
 // ── CATEGORY EDITOR (standalone component so hooks are never conditional) ──
-function CategoryEditor({ editCat, setExercises, setCategories, onBack }) {
+function CategoryEditor({ editCat, setExercises, setCategories, onBack, onRequestBack, guardRef }) {
   const T = useT();
   const lang = useLang();
   const isNew = editCat === "new";
   const [form, setForm] = useState(isNew ? { name: "", color: COLOR_PALETTE[0] } : { ...editCat, name: categoryName(editCat, lang) });
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const initialSnapshotRef = useRef(JSON.stringify(form));
+  const dirty = JSON.stringify(form) !== initialSnapshotRef.current;
 
   const save = () => {
     if (!form.name.trim()) return;
@@ -2420,10 +2459,19 @@ function CategoryEditor({ editCat, setExercises, setCategories, onBack }) {
     onBack();
   };
 
+  // Let the app-level navigation guard know whether this editor has unsaved
+  // changes, so switching tabs (or going back) while dirty can prompt first
+  // instead of silently discarding the edit.
+  useEffect(() => {
+    if (!guardRef) return;
+    guardRef.current = { dirty, canSave: !!form.name.trim(), save, discard: onBack };
+  }, [form]);
+  useEffect(() => () => { if (guardRef) guardRef.current = null; }, []);
+
   return (
     <div style={base.scrollArea(24)}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-        <button style={base.iconBtn(C.amber)} onClick={onBack}>←</button>
+        <button style={base.iconBtn(C.amber)} onClick={onRequestBack || onBack}>←</button>
         <span style={{ fontSize: 14, fontWeight: 700, color: C.cream }}>{isNew ? T("newCategoryTitle") : T("editCategory")}</span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -2454,26 +2502,29 @@ function CategoryEditor({ editCat, setExercises, setCategories, onBack }) {
   );
 }
 
-function SettingsScreen({ exercises, setExercises, categories, setCategories, volume, onVolumeChange, lang, onLangChange, displaySize, onDisplaySizeChange, onResetBadges }) {
+function SettingsScreen({ exercises, setExercises, categories, setCategories, volume, onVolumeChange, lang, onLangChange, displaySize, onDisplaySizeChange, onResetBadges, editorGuardRef, guardedRun }) {
   const T = useT();
   const [section, setSection] = useState("exercises");
   const [editEx, setEditEx]   = useState(null);  // null | "new" | exercise object
   const [editCat, setEditCat] = useState(null);  // null | "new" | category object
   const [confirmResetBadges, setConfirmResetBadges] = useState(false);
+  const closeEditor = () => { setEditEx(null); setEditCat(null); };
+  const requestCloseEditor = () => guardedRun(closeEditor);
 
   // The exercise/category editor has no visible tab bar to go back with, so
   // it's exactly the kind of screen where a phone's back button/gesture would
-  // otherwise leave the app entirely. Trap it here to just close the editor.
+  // otherwise leave the app entirely. Trap it here to just close the editor —
+  // guarded the same way as any other exit, so unsaved changes aren't lost.
   useEffect(() => {
     if (!editEx && !editCat) return;
     history.pushState({ practiceProdigyEditorOpen: true }, "");
-    const onPopState = () => { setEditEx(null); setEditCat(null); };
+    const onPopState = () => requestCloseEditor();
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, [editEx, editCat]);
 
-  if (editEx)  return <ExerciseEditor  editEx={editEx}   categories={categories} setExercises={setExercises} onBack={() => setEditEx(null)} />;
-  if (editCat) return <CategoryEditor  editCat={editCat} setExercises={setExercises} setCategories={setCategories} onBack={() => setEditCat(null)} />;
+  if (editEx)  return <ExerciseEditor  editEx={editEx}   categories={categories} setExercises={setExercises} onBack={() => setEditEx(null)} onRequestBack={requestCloseEditor} guardRef={editorGuardRef} />;
+  if (editCat) return <CategoryEditor  editCat={editCat} setExercises={setExercises} setCategories={setCategories} onBack={() => setEditCat(null)} onRequestBack={requestCloseEditor} guardRef={editorGuardRef} />;
 
   // ── SETTINGS MAIN ──
   return (
@@ -2680,6 +2731,23 @@ export default function App() {
   const audioCtx      = useRef(null);
   const masterGainRef = useRef(null);
   const [volume, setVolume, volLoaded] = usePersisted("volume", 0.8);
+
+  // Navigation guard: while the Settings exercise/category editor is open
+  // with unsaved changes, any exit (bottom nav, back arrow, phone back
+  // button) should ask first instead of silently discarding the edit.
+  // The editor writes { dirty, canSave, save, discard } into this ref every
+  // render so the guard always has the latest state without prop-drilling
+  // reactive state back up through Settings on every keystroke.
+  const editorGuardRef = useRef(null);
+  const [unsavedPrompt, setUnsavedPrompt] = useState(null); // null | { onProceed, canSave }
+  const guardedRun = (action) => {
+    if (editorGuardRef.current?.dirty) {
+      setUnsavedPrompt({ onProceed: action, canSave: editorGuardRef.current.canSave });
+    } else {
+      action();
+    }
+  };
+  const requestTab = (newTab, extra) => guardedRun(() => { setTab(newTab); if (extra) extra(); });
 
   // ── Lifted session progress state ─────────────────────────────────────────
   const [sessionCurrent, setSessionCurrent]       = useState(0);
@@ -2897,8 +2965,8 @@ export default function App() {
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <img src="icon-192.png" alt="Practice Prodigy" style={{ width: 38, height: 38, borderRadius: 9, display: "block", flexShrink: 0 }} />
           <div style={{ width: 1, height: 26, background: "#2A2008", flexShrink: 0 }} />
-          <LevelPill level={currentLevel} onClick={() => { setProgressSubTab("level"); setTab("progress"); }} />
-          <BadgeCountPill count={unlockedBadgeCount} onClick={() => { setProgressSubTab("badges"); setTab("progress"); }} />
+          <LevelPill level={currentLevel} onClick={() => requestTab("progress", () => setProgressSubTab("level"))} />
+          <BadgeCountPill count={unlockedBadgeCount} onClick={() => requestTab("progress", () => setProgressSubTab("badges"))} />
         </div>
         {tab === "active" && sessionActive && (
           <button style={{ ...base.pillBtn(false), fontSize: 12, color: C.muted }} onClick={backToMenu}>
@@ -2926,7 +2994,7 @@ export default function App() {
       {tab === "library"  && <LibraryScreen exercises={exercises} categories={categories} tasks={tasks} onAdd={addExercise} onRemove={removeExerciseFromSession} stats={stats} subProgress={subProgress} />}
       {tab === "session"  && <SessionScreen tasks={tasks} setTasks={setTasks} onStart={startSession} sessionInProgress={sessionInProgress} onReturnToSession={returnToSession} presets={presets} setPresets={setPresets} />}
       {tab === "progress" && <ProgressionScreen stats={stats} exercises={exercises} onClearStats={() => setStats({})} badges={badges} subProgress={subProgress} practiceDays={practiceDays} noodleSec={noodleSec} subTab={progressSubTab} setSubTab={setProgressSubTab} />}
-      {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} />}
+      {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} editorGuardRef={editorGuardRef} guardedRun={guardedRun} />}
       {tab === "active"   && <ActiveSessionScreen
         tasks={tasks} setTasks={setTasks} onFinish={endSession} onBackToMenu={backToMenu}
         audioCtx={audioCtx} masterGainRef={masterGainRef} onCommitStats={commitStats}
@@ -2944,7 +3012,7 @@ export default function App() {
 
       {/* Bottom navigation — the single primary nav surface for the app */}
       <div style={base.bottomNav}>
-        <button style={base.bottomNavBtn(tab === "library")} onClick={() => setTab("library")}>
+        <button style={base.bottomNavBtn(tab === "library")} onClick={() => requestTab("library")}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={tab === "library" ? C.amber : C.navInactive} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
             <polyline points="9 22 9 12 15 12 15 22"/>
@@ -2957,7 +3025,7 @@ export default function App() {
             ...base.bottomNavBtn(sessionTabActive || sessionFlashing, sessionFlashing ? "#F87171" : (sessionInProgress ? "#34D399" : C.amber)),
             animation: sessionFlashing ? "sessionFlashPulse 0.45s ease-out" : "none",
           }}
-          onClick={() => setTab(sessionInProgress ? "active" : "session")}>
+          onClick={() => requestTab(sessionInProgress ? "active" : "session")}>
           <span style={{ position: "relative", display: "flex" }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={sessionFlashing ? "#F87171" : sessionTabActive ? (sessionInProgress ? "#34D399" : C.amber) : C.navInactive} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
@@ -2968,13 +3036,13 @@ export default function App() {
           </span>
           {tasks.length > 0 ? `${T("navSession")} (${tasks.length})` : T("navSession")}
         </button>
-        <button style={base.bottomNavBtn(tab === "progress", "#4FC3F7")} onClick={() => setTab("progress")}>
+        <button style={base.bottomNavBtn(tab === "progress", "#4FC3F7")} onClick={() => requestTab("progress")}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={tab === "progress" ? "#4FC3F7" : C.navInactive} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
           </svg>
           {T("navProgress")}
         </button>
-        <button style={base.bottomNavBtn(tab === "settings")} onClick={() => setTab("settings")}>
+        <button style={base.bottomNavBtn(tab === "settings")} onClick={() => requestTab("settings")}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={tab === "settings" ? C.amber : C.navInactive} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="3"/>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -2983,6 +3051,24 @@ export default function App() {
         </button>
       </div>
 
+      {unsavedPrompt && (
+        <UnsavedChangesModal
+          canSave={unsavedPrompt.canSave}
+          onSave={() => {
+            editorGuardRef.current?.save?.();
+            const proceed = unsavedPrompt.onProceed;
+            setUnsavedPrompt(null);
+            proceed();
+          }}
+          onDiscard={() => {
+            editorGuardRef.current?.discard?.();
+            const proceed = unsavedPrompt.onProceed;
+            setUnsavedPrompt(null);
+            proceed();
+          }}
+          onCancel={() => setUnsavedPrompt(null)}
+        />
+      )}
       {badgeCelebrationQueue.length > 0 && (
         <BadgeCelebration
           key={badgeCelebrationQueue[0]}
