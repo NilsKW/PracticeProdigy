@@ -1521,17 +1521,25 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, onRemove, stats, s
           if (filtered.length === 0) return (
             <div style={{ textAlign: "center", padding: "40px 20px", color: C.muted, fontSize: 13 }}>{T("noExercisesInCategory")}</div>
           );
-          // When "All" is selected, group by category with section headers
+          // When "All" is selected, group by category with section headers.
+          // Grouped by each category's own membership (not by scanning for
+          // consecutive runs in the exercises array) so a newly added
+          // exercise — always appended at the end of that array — still
+          // lands under its category's single header instead of spawning a
+          // second one at the bottom.
           if (catId === "all") {
             const groups = [];
-            let lastCatId = null;
-            filtered.forEach(ex => {
-              if (ex.categoryId !== lastCatId) {
-                groups.push({ type: "header", cat: categories.find(c => c.id === ex.categoryId) });
-                lastCatId = ex.categoryId;
-              }
-              groups.push({ type: "ex", ex });
+            categories.forEach(cat => {
+              const catExs = filtered.filter(ex => ex.categoryId === cat.id);
+              if (catExs.length === 0) return;
+              groups.push({ type: "header", cat });
+              catExs.forEach(ex => groups.push({ type: "ex", ex }));
             });
+            const orphanExs = filtered.filter(ex => !categories.some(c => c.id === ex.categoryId));
+            if (orphanExs.length > 0) {
+              groups.push({ type: "header", cat: null });
+              orphanExs.forEach(ex => groups.push({ type: "ex", ex }));
+            }
             return groups.map((item, idx) => {
               if (item.type === "header") {
                 const cat = item.cat;
