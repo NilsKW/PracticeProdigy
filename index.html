@@ -4744,6 +4744,25 @@ function ActiveSessionScreen({
     setSecondsLeft(tasks[prevIndex].minutes * 60);
   };
 
+  // Metronome: each exercise carries its own configured BPM/time signature
+  // (0 = off), so switching to a different exercise — by skipping, going
+  // back, finishing one naturally, or starting a session — should reset the
+  // live metronome to THAT exercise's own setting, not whatever was left on
+  // from the previous one. Keyed on the task's own id rather than the
+  // `current` index: endSession/backToMenu/startSession all reset the index
+  // to 0, so a brand-new session's first exercise would share index 0 with
+  // wherever the previous session left off, and an index-only dependency
+  // would miss that as "no change". Each task gets a fresh id when added to
+  // a session, so this fires exactly once per real exercise switch — while
+  // manual on/off or BPM/time-signature changes made mid-exercise (which
+  // don't touch the task's id) are left alone until the next switch.
+  useEffect(() => {
+    setMetroOn((currentTask?.bpm || 0) > 0);
+    setLiveBpm(currentTask?.bpm || 90);
+    setLiveBeatsPerBar(currentTask?.beatsPerBar || 4);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTask?.id]);
+
   // Sub-exercise progress is persisted per exercise id (not per task), so the
   // same recurring exercise keeps one running checklist across sessions.
   const [confirmResetSub, setConfirmResetSub] = useState(false);
