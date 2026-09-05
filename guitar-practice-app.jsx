@@ -2800,7 +2800,23 @@ function CategoryEditor({ editCat, setExercises, setCategories, onBack, onReques
 
 function SettingsScreen({ exercises, setExercises, categories, setCategories, volume, onVolumeChange, lang, onLangChange, displaySize, onDisplaySizeChange, onResetBadges, editorGuardRef, guardedRun, minuteBumpMs, onMinuteBumpMsChange, minuteBumpPct, onMinuteBumpPctChange }) {
   const T = useT();
-  const [section, setSection] = useState("exercises");
+  // null = top-level Réglages menu (a vertical list of categories, Android-
+  // Settings style); a category id = drilled into that section, with a
+  // "← Title" back header — reusing the same simple back-arrow header
+  // pattern already used for the exercise/category editors below, rather
+  // than inventing a separate multi-level breadcrumb for what's really just
+  // one level of nesting.
+  const [section, setSection] = useState(null);
+  const SETTINGS_MENU = [
+    { id: "exercises",  icon: "📝", label: T("settingsExercises") },
+    { id: "categories", icon: "🏷️", label: T("settingsCategories") },
+    { id: "share",      icon: "📤", label: T("settingsShare") },
+    { id: "sound",      icon: "🔊", label: T("settingsSound") },
+    { id: "language",   icon: "🌐", label: T("settingsLanguage") },
+    { id: "display",    icon: "🔠", label: T("settingsDisplay") },
+    { id: "badges",     icon: "🏅", label: T("settingsBadges") },
+    { id: "debug",      icon: "🔧", label: "debug" },
+  ];
   const [editEx, setEditEx]   = useState(null);  // null | "new" | exercise object
   const [editCat, setEditCat] = useState(null);  // null | "new" | category object
   const [confirmResetBadges, setConfirmResetBadges] = useState(false);
@@ -2862,14 +2878,26 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
   // ── SETTINGS MAIN ──
   return (
     <div className="pp-narrow" style={base.scrollArea(24)}>
-      {/* Sub-tabs */}
-      <div style={{ display: "flex", gap: 0, background: "#0A0A0A", borderRadius: 10, padding: 3, marginBottom: 8 }}>
-        {[["exercises", T("settingsExercises")], ["categories", T("settingsCategories")], ["share", T("settingsShare")], ["sound", T("settingsSound")], ["language", T("settingsLanguage")], ["display", T("settingsDisplay")], ["badges", T("settingsBadges")], ["debug", "🔧 debug"]].map(([id, label]) => (
-          <button key={id} style={{ flex: 1, padding: "7px 2px", borderRadius: 8, border: "none", background: section === id ? "#1E1E1E" : "none", color: section === id ? C.amber : C.muted, fontSize: 10, fontWeight: section === id ? 700 : 500, cursor: "pointer", letterSpacing: "0.03em" }} onClick={() => setSection(id)}>
-            {label}
-          </button>
-        ))}
-      </div>
+      {section === null ? (
+        <div style={base.card}>
+          {SETTINGS_MENU.map((item, idx) => (
+            <div
+              key={item.id}
+              style={{ ...base.row, borderBottom: idx < SETTINGS_MENU.length - 1 ? `1px solid ${C.faint}` : "none", cursor: "pointer" }}
+              onClick={() => setSection(item.id)}
+            >
+              <span style={{ fontSize: 17, flexShrink: 0 }}>{item.icon}</span>
+              <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.cream, textTransform: "capitalize" }}>{item.label}</span>
+              <span style={{ color: C.muted, fontSize: 14 }}>›</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+          <button style={base.iconBtn(C.amber)} onClick={() => setSection(null)}>←</button>
+          <span style={{ fontSize: 14, fontWeight: 700, color: C.cream, textTransform: "capitalize" }}>{SETTINGS_MENU.find(m => m.id === section)?.label}</span>
+        </div>
+      )}
 
       {section === "exercises" && (
         <>
