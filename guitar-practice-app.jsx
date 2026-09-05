@@ -1531,7 +1531,7 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, onRemove, stats, s
                 const added = inSession.has(ex.id);
                 return (
                   <div key={ex.id}
-                    onClick={e => !added && onAdd(ex, e.currentTarget.getBoundingClientRect())}
+                    onClick={e => !added && onAdd(ex, (e.currentTarget.querySelector('[data-ex-icon]') || e.currentTarget).getBoundingClientRect())}
                     style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px",
                       background: added ? "#111" : "#0F0F0F", borderRadius: 8,
                       border: `1px solid ${rank === 0 ? C.amber + "44" : "#222"}`,
@@ -1543,7 +1543,7 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, onRemove, stats, s
                       fontSize: 9, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       {rank + 1}
                     </div>
-                    <span style={{ fontSize: 16, flexShrink: 0 }}>{ex.icon}</span>
+                    <span data-ex-icon="1" style={{ fontSize: 16, flexShrink: 0, filter: added ? "grayscale(1) opacity(0.35)" : "none" }}>{ex.icon}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: C.cream, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{exerciseName(ex, lang)}</div>
                       <div style={{ fontSize: 10, color: col, marginTop: 1, fontWeight: 600 }}>{categoryName(cat, lang)} · <span style={{ color: "#8FAF8F", fontWeight: 400 }}>{fmtSuggestTime(ex)}</span></div>
@@ -1605,8 +1605,8 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, onRemove, stats, s
               const col = cat?.color || "#AEB0C0";
               const added = inSession.has(ex.id);
               return (
-                <div key={ex.id} style={{ ...base.exCard(col), opacity: added ? 0.5 : 1 }} onClick={e => !added && onAdd(ex, e.currentTarget.getBoundingClientRect())}>
-                  <span style={{ fontSize: 20, width: 28, textAlign: "center", flexShrink: 0 }}>{ex.icon}</span>
+                <div key={ex.id} style={{ ...base.exCard(col), opacity: added ? 0.5 : 1 }} onClick={e => !added && onAdd(ex, (e.currentTarget.querySelector('[data-ex-icon]') || e.currentTarget).getBoundingClientRect())}>
+                  <span data-ex-icon="1" style={{ fontSize: 20, width: 28, textAlign: "center", flexShrink: 0, filter: added ? "grayscale(1) opacity(0.35)" : "none" }}>{ex.icon}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: C.cream }}>{exerciseName(ex, lang)}</div>
                     {ex.description && <div style={{ fontSize: 11, color: C.muted, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{exerciseDesc(ex, lang)}</div>}
@@ -1642,8 +1642,8 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, onRemove, stats, s
             const col = cat?.color || "#AEB0C0";
             const added = inSession.has(ex.id);
             return (
-              <div key={ex.id} style={{ ...base.exCard(col), opacity: added ? 0.5 : 1 }} onClick={() => !added && onAdd(ex)}>
-                <span style={{ fontSize: 20, width: 28, textAlign: "center", flexShrink: 0 }}>{ex.icon}</span>
+              <div key={ex.id} style={{ ...base.exCard(col), opacity: added ? 0.5 : 1 }} onClick={e => !added && onAdd(ex, (e.currentTarget.querySelector('[data-ex-icon]') || e.currentTarget).getBoundingClientRect())}>
+                <span data-ex-icon="1" style={{ fontSize: 20, width: 28, textAlign: "center", flexShrink: 0, filter: added ? "grayscale(1) opacity(0.35)" : "none" }}>{ex.icon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: C.cream }}>{exerciseName(ex, lang)}</div>
                   {ex.description && <div style={{ fontSize: 11, color: C.muted, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{exerciseDesc(ex, lang)}</div>}
@@ -1926,7 +1926,7 @@ function FlyingExerciseIcon({ icon, from, to }) {
       fontSize: 40, pointerEvents: "none",
       transform: flown ? `translate(${endX - startX}px, ${endY - startY}px) scale(0.25)` : "translate(0,0) scale(1)",
       opacity: flown ? 0 : 1,
-      transition: "transform 1.1s cubic-bezier(0.3,0,0.6,1), opacity 1.1s ease-in 0.6s",
+      transition: "transform 0.37s cubic-bezier(0.3,0,0.6,1), opacity 0.37s ease-in 0.1s",
     }}>{icon}</div>
   );
 }
@@ -1947,12 +1947,12 @@ function AddedToast({ text }) {
       transform: `translateX(-50%) translateY(${visible ? 0 : 8}px)`,
       opacity: visible ? 1 : 0,
       transition: "opacity 0.3s ease-out, transform 0.3s ease-out",
-      background: "#1A1A1A", border: `1px solid ${C.border}`, borderRadius: 20,
+      background: "#122019", border: "1px solid #34D39966", borderRadius: 20,
       padding: "8px 16px", display: "flex", alignItems: "center", gap: 7,
       boxShadow: "0 4px 20px #000a", pointerEvents: "none", whiteSpace: "nowrap",
     }}>
       <span style={{ fontSize: 13, color: "#34D399", fontWeight: 800 }}>✓</span>
-      <span style={{ fontSize: 12, color: C.cream, fontWeight: 600 }}>{text}</span>
+      <span style={{ fontSize: 12, color: "#34D399", fontWeight: 700 }}>{text}</span>
     </div>
   );
 }
@@ -3164,7 +3164,7 @@ export default function App() {
       const toRect = sessionNavRef.current.getBoundingClientRect();
       const id = uid();
       setFlyingItems(f => [...f, { id, icon: ex.icon, fromRect, toRect }]);
-      setTimeout(() => setFlyingItems(f => f.filter(i => i.id !== id)), 1500);
+      setTimeout(() => setFlyingItems(f => f.filter(i => i.id !== id)), 550);
     }
     const toastId = uid();
     setAddedToast({ id: toastId, text: T("addedToSessionToast") });
