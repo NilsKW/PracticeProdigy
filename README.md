@@ -9,7 +9,7 @@ Practice Prodigy est une application web progressive (PWA) conçue pour organise
 ## ✨ Fonctionnalités
 
 ### 📚 Bibliothèque d'exercices
-- Bibliothèque de 18 exercices préconfigurés dans 7 catégories : Échauffement, Gammes, Accords, Technique, Improvisation, Travail sur morceau, Oreille musicale
+- Bibliothèque de 11 exercices préconfigurés, généralistes (pas spécifiques à un instrument), dans 5 catégories : Échauffements, Technique instrumentale, Improvisation, Théorie, Arpèges
 - Ajout d'exercices personnalisés avec nom, description, icône, catégorie et durée par défaut
 - Sous-exercices : découpage d'un exercice en une checklist réutilisable (ex. positions d'une gamme), avec suivi de progression persistant d'une séance à l'autre
 - Lien vers une vidéo YouTube de référence par exercice

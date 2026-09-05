@@ -654,10 +654,10 @@ const BADGE_CONDITIONS = {
                 progress: ctx => ({ current: totalPracticeSec(ctx.stats), target: 15 * HOUR }) },
   "streak-3": { check: ctx => longestDayStreak(ctx.practiceDays) >= 3,
                 progress: ctx => ({ current: Math.min(longestDayStreak(ctx.practiceDays), 3), target: 3, unit: "days" }) },
-  "spider-2h": { goal: 2 * HOUR, check: ctx => (ctx.stats["warm3"]?.totalSec || 0) >= 2 * HOUR,
-                 progress: ctx => ({ current: ctx.stats["warm3"]?.totalSec || 0, target: 2 * HOUR }) },
+  "stretch-2h": { goal: 2 * HOUR, check: ctx => (ctx.stats["warm2"]?.totalSec || 0) >= 2 * HOUR,
+                  progress: ctx => ({ current: ctx.stats["warm2"]?.totalSec || 0, target: 2 * HOUR }) },
   "scale-complete": {
-    check: ctx => ctx.exercises.some(ex => ex.categoryId === "cat-scales" && (ex.subExercises || []).length > 0
+    check: ctx => ctx.exercises.some(ex => ex.categoryId === "cat-improv" && (ex.subExercises || []).length > 0
       && (ctx.subProgress[ex.id] || []).length >= ex.subExercises.length),
   },
 };
