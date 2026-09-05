@@ -1500,6 +1500,12 @@ const base = {
     cursor: "pointer",
     whiteSpace: "nowrap"
   }),
+  // minWidth: 0 matters once this card sits in a CSS grid cell (see .pp-grid):
+  // grid/flex items default to min-width:auto, which is based on their
+  // content's un-shrunk intrinsic size — without overriding it, a long
+  // exercise name would force the whole grid wider than its container
+  // instead of the name truncating (its own overflow/ellipsis is already
+  // set), so the row scrolls horizontally rather than wrapping to a new line.
   exCard: col => ({
     background: C.surface,
     border: `1px solid ${C.border}`,
@@ -1510,7 +1516,8 @@ const base = {
     alignItems: "center",
     gap: 11,
     cursor: "pointer",
-    userSelect: "none"
+    userSelect: "none",
+    minWidth: 0
   }),
   pillBtn: primary => ({
     padding: primary ? "13px" : "10px 16px",
@@ -6882,14 +6889,13 @@ function App() {
           .pp-app { max-width: calc(960px / var(--zoom)); }
         }
         /* Library exercise list: stays a single column on phone (unchanged),
-           reflows into 2/3 columns once there's room, so browsing doesn't
-           mean one long vertical scroll on tablet/desktop. */
+           reflows into a fixed 2-column grid (each card exactly 50% width)
+           once there's room, so browsing doesn't mean one long vertical
+           scroll on tablet/desktop — a 3rd exercise wraps to a new row
+           rather than the row scrolling horizontally. */
         @media (min-width: 700px) {
           .pp-grid { display: grid !important; grid-template-columns: repeat(2, 1fr); gap: 8px; }
           .pp-grid > * { margin-bottom: 0 !important; }
-        }
-        @media (min-width: 1100px) {
-          .pp-grid { grid-template-columns: repeat(3, 1fr); }
         }
         /* Focused single-task content (forms, the active-session timer) stays
            a comfortable reading width and centers itself instead of

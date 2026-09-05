@@ -871,7 +871,13 @@ const base = {
   // that already owns the scrolling (e.g. the Progression sub-tabs).
   staticArea: (pb) => ({ padding: `8px 16px ${pb||24}px`, display: "flex", flexDirection: "column", gap: 8 }),
   catChip: (a, col) => ({ padding: "5px 13px", borderRadius: 20, border: `1px solid ${a ? col : "#2A2A2A"}`, background: a ? col+"22" : "transparent", color: a ? col : "#AEB0C0", fontSize: 12, fontWeight: a ? 600 : 400, cursor: "pointer", whiteSpace: "nowrap" }),
-  exCard: (col) => ({ background: C.surface, border: `1px solid ${C.border}`, borderLeft: `3px solid ${col}`, borderRadius: 10, padding: "11px 13px", display: "flex", alignItems: "center", gap: 11, cursor: "pointer", userSelect: "none" }),
+  // minWidth: 0 matters once this card sits in a CSS grid cell (see .pp-grid):
+  // grid/flex items default to min-width:auto, which is based on their
+  // content's un-shrunk intrinsic size — without overriding it, a long
+  // exercise name would force the whole grid wider than its container
+  // instead of the name truncating (its own overflow/ellipsis is already
+  // set), so the row scrolls horizontally rather than wrapping to a new line.
+  exCard: (col) => ({ background: C.surface, border: `1px solid ${C.border}`, borderLeft: `3px solid ${col}`, borderRadius: 10, padding: "11px 13px", display: "flex", alignItems: "center", gap: 11, cursor: "pointer", userSelect: "none", minWidth: 0 }),
   pillBtn: (primary) => ({ padding: primary ? "13px" : "10px 16px", borderRadius: 10, border: primary ? "none" : `1px solid #2A2A2A`, background: primary ? `linear-gradient(135deg,${C.amber},#A86020)` : C.surface, color: primary ? "#0F0F0F" : "#AEB0C0", fontSize: primary ? 14 : 12, fontWeight: primary ? 800 : 500, cursor: "pointer", letterSpacing: "0.06em", width: primary ? "100%" : "auto" }),
   input: { background: "#1A1A1A", border: `1px solid #2A2A2A`, borderRadius: 8, padding: "9px 12px", color: C.cream, fontSize: 13, width: "100%", boxSizing: "border-box", outline: "none", fontFamily: "inherit" },
   label: { fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: C.muted, marginBottom: 5, display: "block" },
@@ -3305,14 +3311,13 @@ export default function App() {
           .pp-app { max-width: calc(960px / var(--zoom)); }
         }
         /* Library exercise list: stays a single column on phone (unchanged),
-           reflows into 2/3 columns once there's room, so browsing doesn't
-           mean one long vertical scroll on tablet/desktop. */
+           reflows into a fixed 2-column grid (each card exactly 50% width)
+           once there's room, so browsing doesn't mean one long vertical
+           scroll on tablet/desktop — a 3rd exercise wraps to a new row
+           rather than the row scrolling horizontally. */
         @media (min-width: 700px) {
           .pp-grid { display: grid !important; grid-template-columns: repeat(2, 1fr); gap: 8px; }
           .pp-grid > * { margin-bottom: 0 !important; }
-        }
-        @media (min-width: 1100px) {
-          .pp-grid { grid-template-columns: repeat(3, 1fr); }
         }
         /* Focused single-task content (forms, the active-session timer) stays
            a comfortable reading width and centers itself instead of
