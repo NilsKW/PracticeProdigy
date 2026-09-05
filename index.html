@@ -4271,7 +4271,8 @@ function SessionScreen({
 function FlyingExerciseIcon({
   icon,
   from,
-  to
+  to,
+  duration
 }) {
   const [flown, setFlown] = useState(false);
   useEffect(() => {
@@ -4285,6 +4286,11 @@ function FlyingExerciseIcon({
   const startY = from.top + from.height / 2;
   const endX = to.left + to.width / 2;
   const endY = to.top + to.height / 2;
+  // `duration` is exposed as a live-tunable dev slider (Réglages → Debug) so
+  // the exact feel can be dialed in by eye — remove that slider/state once a
+  // final value is picked and just hardcode it back here.
+  const dur = duration ?? 0.37;
+  const delay = dur * (0.1 / 0.37);
   return /*#__PURE__*/React.createElement("div", {
     "data-flying": "1",
     style: {
@@ -4303,7 +4309,7 @@ function FlyingExerciseIcon({
       pointerEvents: "none",
       transform: flown ? `translate(${endX - startX}px, ${endY - startY}px) scale(0.25)` : "translate(0,0) scale(1)",
       opacity: flown ? 0 : 1,
-      transition: "transform 0.37s cubic-bezier(0.3,0,0.6,1), opacity 0.37s ease-in 0.1s"
+      transition: `transform ${dur}s cubic-bezier(0.3,0,0.6,1), opacity ${dur}s ease-in ${delay}s`
     }
   }, icon);
 }
@@ -5941,7 +5947,9 @@ function SettingsScreen({
   onDisplaySizeChange,
   onResetBadges,
   editorGuardRef,
-  guardedRun
+  guardedRun,
+  flyDuration,
+  onFlyDurationChange
 }) {
   const T = useT();
   const [section, setSection] = useState("exercises");
@@ -6047,7 +6055,7 @@ function SettingsScreen({
       padding: 3,
       marginBottom: 8
     }
-  }, [["exercises", T("settingsExercises")], ["categories", T("settingsCategories")], ["share", T("settingsShare")], ["sound", T("settingsSound")], ["language", T("settingsLanguage")], ["display", T("settingsDisplay")], ["badges", T("settingsBadges")]].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+  }, [["exercises", T("settingsExercises")], ["categories", T("settingsCategories")], ["share", T("settingsShare")], ["sound", T("settingsSound")], ["language", T("settingsLanguage")], ["display", T("settingsDisplay")], ["badges", T("settingsBadges")], ["debug", "🔧 debug"]].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
     key: id,
     style: {
       flex: 1,
@@ -6545,7 +6553,53 @@ function SettingsScreen({
       color: importMsg.ok ? "#34D399" : "#F87171",
       marginTop: 8
     }
-  }, importMsg.text)))));
+  }, importMsg.text)))), section === "debug" && /*#__PURE__*/React.createElement("div", {
+    style: base.card
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "14px 16px"
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      ...base.label,
+      margin: 0
+    }
+  }, "Vitesse animation \"vol\" vers Séance (temporaire)"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: C.muted,
+      marginTop: 4,
+      marginBottom: 12
+    }
+  }, "À retirer une fois la vitesse idéale trouvée — dis-la moi et je la fige dans le code."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "range",
+    min: "0.05",
+    max: "1.5",
+    step: "0.01",
+    value: flyDuration,
+    onChange: e => onFlyDurationChange(parseFloat(e.target.value)),
+    style: {
+      flex: 1,
+      accentColor: C.amber,
+      height: 4,
+      cursor: "pointer"
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13,
+      fontFamily: "monospace",
+      color: C.amber,
+      fontWeight: 700,
+      width: 60,
+      textAlign: "right"
+    }
+  }, Math.round(flyDuration * 1000), " ms")))));
 }
 
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
@@ -6719,6 +6773,12 @@ function App() {
   // actually went somewhere, which the red flash alone didn't convey.
   const sessionNavRef = useRef(null);
   const [flyingItems, setFlyingItems] = useState([]);
+  // TEMPORARY dev control (Réglages → Debug): lets the flight animation's
+  // duration be dialed in by eye with a slider instead of guessing values
+  // and re-deploying each time. Remove this state, its Settings section, and
+  // the `duration`/`flyDuration` plumbing once a final speed is picked —
+  // hardcode that value directly in FlyingExerciseIcon instead.
+  const [flyDuration, setFlyDuration] = usePersisted("flyDurationDebug", 0.37);
   // A small, short-lived toast backs up the flying icon with an explicit
   // word — in case the animation alone still isn't enough for some users.
   const [addedToast, setAddedToast] = useState(null);
@@ -6733,7 +6793,8 @@ function App() {
         fromRect,
         toRect
       }]);
-      setTimeout(() => setFlyingItems(f => f.filter(i => i.id !== id)), 550);
+      const totalMs = flyDuration * (1 + 0.1 / 0.37) * 1000 + 150;
+      setTimeout(() => setFlyingItems(f => f.filter(i => i.id !== id)), totalMs);
     }
     const toastId = uid();
     setAddedToast({
@@ -7043,7 +7104,9 @@ function App() {
     onDisplaySizeChange: setDisplaySize,
     onResetBadges: () => setBadges({}),
     editorGuardRef: editorGuardRef,
-    guardedRun: guardedRun
+    guardedRun: guardedRun,
+    flyDuration: flyDuration,
+    onFlyDurationChange: setFlyDuration
   }), tab === "active" && /*#__PURE__*/React.createElement(ActiveSessionScreen, {
     tasks: tasks,
     setTasks: setTasks,
@@ -7179,7 +7242,8 @@ function App() {
     key: item.id,
     icon: item.icon,
     from: item.fromRect,
-    to: item.toRect
+    to: item.toRect,
+    duration: flyDuration
   })), addedToast && /*#__PURE__*/React.createElement(AddedToast, {
     key: addedToast.id,
     text: addedToast.text

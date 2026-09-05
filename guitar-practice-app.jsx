@@ -1919,7 +1919,7 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
 // (pointer-events: none); the actual add already happened by the time this
 // renders. Renders at its start position first, then flips to the end
 // position one frame later so the CSS transition actually animates the move.
-function FlyingExerciseIcon({ icon, from, to }) {
+function FlyingExerciseIcon({ icon, from, to, duration }) {
   const [flown, setFlown] = useState(false);
   useEffect(() => {
     // A plain timeout rather than requestAnimationFrame: rAF callbacks are
@@ -1932,6 +1932,11 @@ function FlyingExerciseIcon({ icon, from, to }) {
   const startY = from.top + from.height / 2;
   const endX = to.left + to.width / 2;
   const endY = to.top + to.height / 2;
+  // `duration` is exposed as a live-tunable dev slider (Réglages → Debug) so
+  // the exact feel can be dialed in by eye — remove that slider/state once a
+  // final value is picked and just hardcode it back here.
+  const dur = duration ?? 0.37;
+  const delay = dur * (0.1 / 0.37);
   return (
     <div data-flying="1" style={{
       position: "fixed", left: startX, top: startY, zIndex: 600,
@@ -1940,7 +1945,7 @@ function FlyingExerciseIcon({ icon, from, to }) {
       fontSize: 40, pointerEvents: "none",
       transform: flown ? `translate(${endX - startX}px, ${endY - startY}px) scale(0.25)` : "translate(0,0) scale(1)",
       opacity: flown ? 0 : 1,
-      transition: "transform 0.37s cubic-bezier(0.3,0,0.6,1), opacity 0.37s ease-in 0.1s",
+      transition: `transform ${dur}s cubic-bezier(0.3,0,0.6,1), opacity ${dur}s ease-in ${delay}s`,
     }}>{icon}</div>
   );
 }
@@ -2755,7 +2760,7 @@ function CategoryEditor({ editCat, setExercises, setCategories, onBack, onReques
   );
 }
 
-function SettingsScreen({ exercises, setExercises, categories, setCategories, volume, onVolumeChange, lang, onLangChange, displaySize, onDisplaySizeChange, onResetBadges, editorGuardRef, guardedRun }) {
+function SettingsScreen({ exercises, setExercises, categories, setCategories, volume, onVolumeChange, lang, onLangChange, displaySize, onDisplaySizeChange, onResetBadges, editorGuardRef, guardedRun, flyDuration, onFlyDurationChange }) {
   const T = useT();
   const [section, setSection] = useState("exercises");
   const [editEx, setEditEx]   = useState(null);  // null | "new" | exercise object
@@ -2821,7 +2826,7 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
     <div className="pp-narrow" style={base.scrollArea(24)}>
       {/* Sub-tabs */}
       <div style={{ display: "flex", gap: 0, background: "#0A0A0A", borderRadius: 10, padding: 3, marginBottom: 8 }}>
-        {[["exercises", T("settingsExercises")], ["categories", T("settingsCategories")], ["share", T("settingsShare")], ["sound", T("settingsSound")], ["language", T("settingsLanguage")], ["display", T("settingsDisplay")], ["badges", T("settingsBadges")]].map(([id, label]) => (
+        {[["exercises", T("settingsExercises")], ["categories", T("settingsCategories")], ["share", T("settingsShare")], ["sound", T("settingsSound")], ["language", T("settingsLanguage")], ["display", T("settingsDisplay")], ["badges", T("settingsBadges")], ["debug", "🔧 debug"]].map(([id, label]) => (
           <button key={id} style={{ flex: 1, padding: "7px 2px", borderRadius: 8, border: "none", background: section === id ? "#1E1E1E" : "none", color: section === id ? C.amber : C.muted, fontSize: 10, fontWeight: section === id ? 700 : 500, cursor: "pointer", letterSpacing: "0.03em" }} onClick={() => setSection(id)}>
             {label}
           </button>
@@ -3015,6 +3020,32 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
           </div>
         </div>
       )}
+
+      {/* TEMPORARY — dev-only tuning control for the "fly to session" icon
+          animation's duration, to dial it in by eye instead of guessing
+          values blind. Remove this whole section (and the flyDuration
+          state/props it reads from) once a final speed is picked. */}
+      {section === "debug" && (
+        <div style={base.card}>
+          <div style={{ padding: "14px 16px" }}>
+            <label style={{ ...base.label, margin: 0 }}>Vitesse animation "vol" vers Séance (temporaire)</label>
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 4, marginBottom: 12 }}>
+              À retirer une fois la vitesse idéale trouvée — dis-la moi et je la fige dans le code.
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <input
+                type="range" min="0.05" max="1.5" step="0.01"
+                value={flyDuration}
+                onChange={e => onFlyDurationChange(parseFloat(e.target.value))}
+                style={{ flex: 1, accentColor: C.amber, height: 4, cursor: "pointer" }}
+              />
+              <span style={{ fontSize: 13, fontFamily: "monospace", color: C.amber, fontWeight: 700, width: 60, textAlign: "right" }}>
+                {Math.round(flyDuration * 1000)} ms
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3171,6 +3202,12 @@ export default function App() {
   // actually went somewhere, which the red flash alone didn't convey.
   const sessionNavRef = useRef(null);
   const [flyingItems, setFlyingItems] = useState([]);
+  // TEMPORARY dev control (Réglages → Debug): lets the flight animation's
+  // duration be dialed in by eye with a slider instead of guessing values
+  // and re-deploying each time. Remove this state, its Settings section, and
+  // the `duration`/`flyDuration` plumbing once a final speed is picked —
+  // hardcode that value directly in FlyingExerciseIcon instead.
+  const [flyDuration, setFlyDuration] = usePersisted("flyDurationDebug", 0.37);
   // A small, short-lived toast backs up the flying icon with an explicit
   // word — in case the animation alone still isn't enough for some users.
   const [addedToast, setAddedToast] = useState(null);
@@ -3180,7 +3217,8 @@ export default function App() {
       const toRect = sessionNavRef.current.getBoundingClientRect();
       const id = uid();
       setFlyingItems(f => [...f, { id, icon: ex.icon, fromRect, toRect }]);
-      setTimeout(() => setFlyingItems(f => f.filter(i => i.id !== id)), 550);
+      const totalMs = flyDuration * (1 + 0.1 / 0.37) * 1000 + 150;
+      setTimeout(() => setFlyingItems(f => f.filter(i => i.id !== id)), totalMs);
     }
     const toastId = uid();
     setAddedToast({ id: toastId, text: T("addedToSessionToast") });
@@ -3378,7 +3416,7 @@ export default function App() {
       {tab === "library"  && <LibraryScreen exercises={exercises} categories={categories} tasks={tasks} onAdd={addExerciseWithFlight} onRemove={removeExerciseFromSession} stats={stats} subProgress={subProgress} />}
       {tab === "session"  && <SessionScreen tasks={tasks} setTasks={setTasks} onStart={startSession} sessionInProgress={sessionInProgress} onReturnToSession={returnToSession} presets={presets} setPresets={setPresets} />}
       {tab === "progress" && <ProgressionScreen stats={stats} exercises={exercises} onClearStats={() => setStats({})} badges={badges} subProgress={subProgress} practiceDays={practiceDays} noodleSec={noodleSec} subTab={progressSubTab} setSubTab={setProgressSubTab} />}
-      {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} editorGuardRef={editorGuardRef} guardedRun={guardedRun} />}
+      {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} editorGuardRef={editorGuardRef} guardedRun={guardedRun} flyDuration={flyDuration} onFlyDurationChange={setFlyDuration} />}
       {tab === "active"   && <ActiveSessionScreen
         tasks={tasks} setTasks={setTasks} onFinish={endSession} onBackToMenu={backToMenu}
         audioCtx={audioCtx} masterGainRef={masterGainRef} onCommitStats={commitStats}
@@ -3437,7 +3475,7 @@ export default function App() {
       </div>
 
       {flyingItems.map(item => (
-        <FlyingExerciseIcon key={item.id} icon={item.icon} from={item.fromRect} to={item.toRect} />
+        <FlyingExerciseIcon key={item.id} icon={item.icon} from={item.fromRect} to={item.toRect} duration={flyDuration} />
       ))}
 
       {addedToast && <AddedToast key={addedToast.id} text={addedToast.text} />}
