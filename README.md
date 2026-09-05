@@ -1,8 +1,10 @@
+🇬🇧 *[Read in English](README.en.md)*
+
 # 🎸 Practice Prodigy
 
-**Planificateur de séances de guitare électrique avec minuteur Pomodoro avancé et gamification**
+**Planificateur de séances de pratique musicale avec minuteur Pomodoro avancé et gamification, pour tout instrument**
 
-Practice Prodigy est une application web progressive (PWA) conçue pour organiser et optimiser vos séances de pratique à la guitare électrique. Elle fonctionne directement depuis votre navigateur, s'installe sur votre téléphone comme une application native, et fonctionne entièrement hors ligne une fois chargée.
+Practice Prodigy est une application web progressive (PWA) conçue pour organiser et optimiser vos séances de pratique instrumentale, quel que soit l'instrument. Elle fonctionne directement depuis votre navigateur, s'installe sur votre téléphone comme une application native, et fonctionne entièrement hors ligne une fois chargée.
 
 ---
 
@@ -15,7 +17,9 @@ Practice Prodigy est une application web progressive (PWA) conçue pour organise
 - Lien vers une vidéo YouTube de référence par exercice
 - Métronome configurable par exercice (10–200 BPM, mesures de 1/4 à 8/4)
 - Encadré **"À travailler"** en haut de la bibliothèque : affiche les 3 exercices les moins pratiqués pour guider votre session
-- Exercices déjà ajoutés à la séance affichés en foncé, avec un bouton rouge **×** pour les retirer directement depuis la bibliothèque
+- Exercices déjà ajoutés à la séance affichés en foncé (avec leur icône en niveaux de gris), avec un bouton rouge **×** pour les retirer directement depuis la bibliothèque
+- Fichiers pédagogiques par exercice (audio, vidéo, image, PDF) : lecture/affichage intégré dans l'appli pendant une séance, sans jamais ouvrir un nouvel onglet
+- Animation d'ajout : l'icône de l'exercice s'envole visuellement vers l'onglet Séance, avec une confirmation "Ajouté à la séance"
 
 ### 📋 Onglet Séance
 - Constitution d'une file d'exercices par simple tap sur le **+**
@@ -49,9 +53,12 @@ Practice Prodigy est une application web progressive (PWA) conçue pour organise
 - **Langue** : Français 🇫🇷 / English 🇬🇧
 - **Affichage** : taille du texte et des boutons (petit / moyen / grand)
 - **Badges** : réinitialisation avec confirmation
+- **Partage** : regrouper des catégories choisies, leurs exercices et leurs fichiers pédagogiques attachés en un seul fichier `.zip` à exporter et partager, et importer un fichier reçu d'un autre utilisateur
 
 ### 🧭 Navigation
 Barre de navigation fixée en bas de l'écran : **Bibliothèque · Séance · Progression · Réglages**. L'icône Séance affiche un indicateur pulsant quand une séance est en cours et amène directement à l'écran actif.
+
+Au tout premier lancement, un court tutoriel (5 étapes, "Passer" possible à tout moment) présente rapidement ces quatre sections.
 
 ---
 
@@ -77,6 +84,7 @@ Barre de navigation fixée en bas de l'écran : **Bibliothèque · Séance · Pr
 | Web Audio API | Sons (cloche, Rhodes, métronome) |
 | Screen Wake Lock API | Maintien de l'écran actif pendant une séance |
 | localStorage | Persistance des données (exercices, favoris, statistiques, niveau, badges) |
+| IndexedDB | Stockage des fichiers pédagogiques attachés (audio/vidéo/image/PDF) |
 | Service Worker | Cache hors ligne |
 | PWA Manifest | Installation sur l'écran d'accueil |
 
