@@ -1919,7 +1919,10 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
 // (pointer-events: none); the actual add already happened by the time this
 // renders. Renders at its start position first, then flips to the end
 // position one frame later so the CSS transition actually animates the move.
-function FlyingExerciseIcon({ icon, from, to, duration }) {
+// Fly duration settled at 750ms.
+const FLY_DURATION_S = 0.75;
+
+function FlyingExerciseIcon({ icon, from, to }) {
   const [flown, setFlown] = useState(false);
   useEffect(() => {
     // A plain timeout rather than requestAnimationFrame: rAF callbacks are
@@ -1932,11 +1935,7 @@ function FlyingExerciseIcon({ icon, from, to, duration }) {
   const startY = from.top + from.height / 2;
   const endX = to.left + to.width / 2;
   const endY = to.top + to.height / 2;
-  // `duration` is exposed as a live-tunable dev slider (Réglages → Debug) so
-  // the exact feel can be dialed in by eye — remove that slider/state once a
-  // final value is picked and just hardcode it back here.
-  const dur = duration ?? 0.37;
-  const delay = dur * (0.1 / 0.37);
+  const delay = FLY_DURATION_S * (0.1 / 0.37);
   return (
     <div data-flying="1" style={{
       position: "fixed", left: startX, top: startY, zIndex: 600,
@@ -1945,7 +1944,7 @@ function FlyingExerciseIcon({ icon, from, to, duration }) {
       fontSize: 40, pointerEvents: "none",
       transform: flown ? `translate(${endX - startX}px, ${endY - startY}px) scale(0.25)` : "translate(0,0) scale(1)",
       opacity: flown ? 0 : 1,
-      transition: `transform ${dur}s cubic-bezier(0.3,0,0.6,1), opacity ${dur}s ease-in ${delay}s`,
+      transition: `transform ${FLY_DURATION_S}s cubic-bezier(0.3,0,0.6,1), opacity ${FLY_DURATION_S}s ease-in ${delay}s`,
     }}>{icon}</div>
   );
 }
@@ -2760,7 +2759,7 @@ function CategoryEditor({ editCat, setExercises, setCategories, onBack, onReques
   );
 }
 
-function SettingsScreen({ exercises, setExercises, categories, setCategories, volume, onVolumeChange, lang, onLangChange, displaySize, onDisplaySizeChange, onResetBadges, editorGuardRef, guardedRun, flyDuration, onFlyDurationChange }) {
+function SettingsScreen({ exercises, setExercises, categories, setCategories, volume, onVolumeChange, lang, onLangChange, displaySize, onDisplaySizeChange, onResetBadges, editorGuardRef, guardedRun, flashDelay, onFlashDelayChange }) {
   const T = useT();
   const [section, setSection] = useState("exercises");
   const [editEx, setEditEx]   = useState(null);  // null | "new" | exercise object
@@ -3021,26 +3020,27 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
         </div>
       )}
 
-      {/* TEMPORARY — dev-only tuning control for the "fly to session" icon
-          animation's duration, to dial it in by eye instead of guessing
-          values blind. Remove this whole section (and the flyDuration
-          state/props it reads from) once a final speed is picked. */}
+      {/* TEMPORARY — dev-only tuning control for how long after the flying
+          icon launches the Séance tab lights up red, to dial it in by eye
+          instead of guessing values blind. Remove this whole section (and
+          the flashDelay state/props it reads from) once a final delay is
+          picked. */}
       {section === "debug" && (
         <div style={base.card}>
           <div style={{ padding: "14px 16px" }}>
-            <label style={{ ...base.label, margin: 0 }}>Vitesse animation "vol" vers Séance (temporaire)</label>
+            <label style={{ ...base.label, margin: 0 }}>Délai avant que "Séance" s'allume en rouge (temporaire)</label>
             <div style={{ fontSize: 11, color: C.muted, marginTop: 4, marginBottom: 12 }}>
-              À retirer une fois la vitesse idéale trouvée — dis-la moi et je la fige dans le code.
+              0 = immédiat, jusqu'à 1,5s après le lancement de l'icône. À retirer une fois le délai idéal trouvé — dis-le moi et je le fige dans le code.
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <input
-                type="range" min="0.05" max="1.5" step="0.01"
-                value={flyDuration}
-                onChange={e => onFlyDurationChange(parseFloat(e.target.value))}
+                type="range" min="0" max="1.5" step="0.01"
+                value={flashDelay}
+                onChange={e => onFlashDelayChange(parseFloat(e.target.value))}
                 style={{ flex: 1, accentColor: C.amber, height: 4, cursor: "pointer" }}
               />
               <span style={{ fontSize: 13, fontFamily: "monospace", color: C.amber, fontWeight: 700, width: 60, textAlign: "right" }}>
-                {Math.round(flyDuration * 1000)} ms
+                {Math.round(flashDelay * 1000)} ms
               </span>
             </div>
           </div>
@@ -3180,12 +3180,23 @@ export default function App() {
   // Séance screen itself), so the user notices the queue was modified even
   // if they're not currently looking at that tab. Only the count matters —
   // reordering or editing a duration keeps the same length and stays quiet.
+  // Adding via the Library goes through the flying-icon animation, though —
+  // for that path specifically, addExerciseWithFlight suppresses this
+  // automatic immediate flash and fires it itself once the icon "lands"
+  // (see flashDelay below), so the tab lighting up reads as the icon's
+  // arrival rather than firing at the same instant it takes off.
   const prevTasksLengthRef = useRef(tasks.length);
   const [sessionFlash, setSessionFlash] = useState(0);
   const [sessionFlashing, setSessionFlashing] = useState(false);
+  const suppressAutoFlashRef = useRef(false);
+  const triggerSessionFlash = () => setSessionFlash(f => f + 1);
   useEffect(() => {
     if (tasks.length !== prevTasksLengthRef.current) {
-      setSessionFlash(f => f + 1);
+      if (suppressAutoFlashRef.current) {
+        suppressAutoFlashRef.current = false;
+      } else {
+        triggerSessionFlash();
+      }
     }
     prevTasksLengthRef.current = tasks.length;
   }, [tasks.length]);
@@ -3202,22 +3213,25 @@ export default function App() {
   // actually went somewhere, which the red flash alone didn't convey.
   const sessionNavRef = useRef(null);
   const [flyingItems, setFlyingItems] = useState([]);
-  // TEMPORARY dev control (Réglages → Debug): lets the flight animation's
-  // duration be dialed in by eye with a slider instead of guessing values
-  // and re-deploying each time. Remove this state, its Settings section, and
-  // the `duration`/`flyDuration` plumbing once a final speed is picked —
-  // hardcode that value directly in FlyingExerciseIcon instead.
-  const [flyDuration, setFlyDuration] = usePersisted("flyDurationDebug", 0.37);
+  // TEMPORARY dev control (Réglages → Debug): how long after the flying icon
+  // is launched the Séance tab lights up red, dialed in live with a slider
+  // instead of guessing values and re-deploying each time — 0 = old
+  // immediate behavior, up to 1.5s. Remove this state and its Settings
+  // section once a final delay is picked, hardcoding that value into the
+  // setTimeout below instead.
+  const [flashDelay, setFlashDelay] = usePersisted("flashDelayDebug", 0.75);
   // A small, short-lived toast backs up the flying icon with an explicit
   // word — in case the animation alone still isn't enough for some users.
   const [addedToast, setAddedToast] = useState(null);
   const addExerciseWithFlight = (ex, fromRect) => {
+    suppressAutoFlashRef.current = true;
     addExercise(ex);
+    setTimeout(triggerSessionFlash, flashDelay * 1000);
     if (fromRect && sessionNavRef.current) {
       const toRect = sessionNavRef.current.getBoundingClientRect();
       const id = uid();
       setFlyingItems(f => [...f, { id, icon: ex.icon, fromRect, toRect }]);
-      const totalMs = flyDuration * (1 + 0.1 / 0.37) * 1000 + 150;
+      const totalMs = FLY_DURATION_S * (1 + 0.1 / 0.37) * 1000 + 150;
       setTimeout(() => setFlyingItems(f => f.filter(i => i.id !== id)), totalMs);
     }
     const toastId = uid();
@@ -3416,7 +3430,7 @@ export default function App() {
       {tab === "library"  && <LibraryScreen exercises={exercises} categories={categories} tasks={tasks} onAdd={addExerciseWithFlight} onRemove={removeExerciseFromSession} stats={stats} subProgress={subProgress} />}
       {tab === "session"  && <SessionScreen tasks={tasks} setTasks={setTasks} onStart={startSession} sessionInProgress={sessionInProgress} onReturnToSession={returnToSession} presets={presets} setPresets={setPresets} />}
       {tab === "progress" && <ProgressionScreen stats={stats} exercises={exercises} onClearStats={() => setStats({})} badges={badges} subProgress={subProgress} practiceDays={practiceDays} noodleSec={noodleSec} subTab={progressSubTab} setSubTab={setProgressSubTab} />}
-      {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} editorGuardRef={editorGuardRef} guardedRun={guardedRun} flyDuration={flyDuration} onFlyDurationChange={setFlyDuration} />}
+      {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} editorGuardRef={editorGuardRef} guardedRun={guardedRun} flashDelay={flashDelay} onFlashDelayChange={setFlashDelay} />}
       {tab === "active"   && <ActiveSessionScreen
         tasks={tasks} setTasks={setTasks} onFinish={endSession} onBackToMenu={backToMenu}
         audioCtx={audioCtx} masterGainRef={masterGainRef} onCommitStats={commitStats}
@@ -3475,7 +3489,7 @@ export default function App() {
       </div>
 
       {flyingItems.map(item => (
-        <FlyingExerciseIcon key={item.id} icon={item.icon} from={item.fromRect} to={item.toRect} duration={flyDuration} />
+        <FlyingExerciseIcon key={item.id} icon={item.icon} from={item.fromRect} to={item.toRect} />
       ))}
 
       {addedToast && <AddedToast key={addedToast.id} text={addedToast.text} />}

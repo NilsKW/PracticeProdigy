@@ -4268,11 +4268,12 @@ function SessionScreen({
 // (pointer-events: none); the actual add already happened by the time this
 // renders. Renders at its start position first, then flips to the end
 // position one frame later so the CSS transition actually animates the move.
+// Fly duration settled at 750ms.
+const FLY_DURATION_S = 0.75;
 function FlyingExerciseIcon({
   icon,
   from,
-  to,
-  duration
+  to
 }) {
   const [flown, setFlown] = useState(false);
   useEffect(() => {
@@ -4286,11 +4287,7 @@ function FlyingExerciseIcon({
   const startY = from.top + from.height / 2;
   const endX = to.left + to.width / 2;
   const endY = to.top + to.height / 2;
-  // `duration` is exposed as a live-tunable dev slider (Réglages → Debug) so
-  // the exact feel can be dialed in by eye — remove that slider/state once a
-  // final value is picked and just hardcode it back here.
-  const dur = duration ?? 0.37;
-  const delay = dur * (0.1 / 0.37);
+  const delay = FLY_DURATION_S * (0.1 / 0.37);
   return /*#__PURE__*/React.createElement("div", {
     "data-flying": "1",
     style: {
@@ -4309,7 +4306,7 @@ function FlyingExerciseIcon({
       pointerEvents: "none",
       transform: flown ? `translate(${endX - startX}px, ${endY - startY}px) scale(0.25)` : "translate(0,0) scale(1)",
       opacity: flown ? 0 : 1,
-      transition: `transform ${dur}s cubic-bezier(0.3,0,0.6,1), opacity ${dur}s ease-in ${delay}s`
+      transition: `transform ${FLY_DURATION_S}s cubic-bezier(0.3,0,0.6,1), opacity ${FLY_DURATION_S}s ease-in ${delay}s`
     }
   }, icon);
 }
@@ -5948,8 +5945,8 @@ function SettingsScreen({
   onResetBadges,
   editorGuardRef,
   guardedRun,
-  flyDuration,
-  onFlyDurationChange
+  flashDelay,
+  onFlashDelayChange
 }) {
   const T = useT();
   const [section, setSection] = useState("exercises");
@@ -6564,14 +6561,14 @@ function SettingsScreen({
       ...base.label,
       margin: 0
     }
-  }, "Vitesse animation \"vol\" vers Séance (temporaire)"), /*#__PURE__*/React.createElement("div", {
+  }, "Délai avant que \"Séance\" s'allume en rouge (temporaire)"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
       color: C.muted,
       marginTop: 4,
       marginBottom: 12
     }
-  }, "À retirer une fois la vitesse idéale trouvée — dis-la moi et je la fige dans le code."), /*#__PURE__*/React.createElement("div", {
+  }, "0 = immédiat, jusqu'à 1,5s après le lancement de l'icône. À retirer une fois le délai idéal trouvé — dis-le moi et je le fige dans le code."), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       alignItems: "center",
@@ -6579,11 +6576,11 @@ function SettingsScreen({
     }
   }, /*#__PURE__*/React.createElement("input", {
     type: "range",
-    min: "0.05",
+    min: "0",
     max: "1.5",
     step: "0.01",
-    value: flyDuration,
-    onChange: e => onFlyDurationChange(parseFloat(e.target.value)),
+    value: flashDelay,
+    onChange: e => onFlashDelayChange(parseFloat(e.target.value)),
     style: {
       flex: 1,
       accentColor: C.amber,
@@ -6599,7 +6596,7 @@ function SettingsScreen({
       width: 60,
       textAlign: "right"
     }
-  }, Math.round(flyDuration * 1000), " ms")))));
+  }, Math.round(flashDelay * 1000), " ms")))));
 }
 
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
@@ -6751,12 +6748,23 @@ function App() {
   // Séance screen itself), so the user notices the queue was modified even
   // if they're not currently looking at that tab. Only the count matters —
   // reordering or editing a duration keeps the same length and stays quiet.
+  // Adding via the Library goes through the flying-icon animation, though —
+  // for that path specifically, addExerciseWithFlight suppresses this
+  // automatic immediate flash and fires it itself once the icon "lands"
+  // (see flashDelay below), so the tab lighting up reads as the icon's
+  // arrival rather than firing at the same instant it takes off.
   const prevTasksLengthRef = useRef(tasks.length);
   const [sessionFlash, setSessionFlash] = useState(0);
   const [sessionFlashing, setSessionFlashing] = useState(false);
+  const suppressAutoFlashRef = useRef(false);
+  const triggerSessionFlash = () => setSessionFlash(f => f + 1);
   useEffect(() => {
     if (tasks.length !== prevTasksLengthRef.current) {
-      setSessionFlash(f => f + 1);
+      if (suppressAutoFlashRef.current) {
+        suppressAutoFlashRef.current = false;
+      } else {
+        triggerSessionFlash();
+      }
     }
     prevTasksLengthRef.current = tasks.length;
   }, [tasks.length]);
@@ -6773,17 +6781,20 @@ function App() {
   // actually went somewhere, which the red flash alone didn't convey.
   const sessionNavRef = useRef(null);
   const [flyingItems, setFlyingItems] = useState([]);
-  // TEMPORARY dev control (Réglages → Debug): lets the flight animation's
-  // duration be dialed in by eye with a slider instead of guessing values
-  // and re-deploying each time. Remove this state, its Settings section, and
-  // the `duration`/`flyDuration` plumbing once a final speed is picked —
-  // hardcode that value directly in FlyingExerciseIcon instead.
-  const [flyDuration, setFlyDuration] = usePersisted("flyDurationDebug", 0.37);
+  // TEMPORARY dev control (Réglages → Debug): how long after the flying icon
+  // is launched the Séance tab lights up red, dialed in live with a slider
+  // instead of guessing values and re-deploying each time — 0 = old
+  // immediate behavior, up to 1.5s. Remove this state and its Settings
+  // section once a final delay is picked, hardcoding that value into the
+  // setTimeout below instead.
+  const [flashDelay, setFlashDelay] = usePersisted("flashDelayDebug", 0.75);
   // A small, short-lived toast backs up the flying icon with an explicit
   // word — in case the animation alone still isn't enough for some users.
   const [addedToast, setAddedToast] = useState(null);
   const addExerciseWithFlight = (ex, fromRect) => {
+    suppressAutoFlashRef.current = true;
     addExercise(ex);
+    setTimeout(triggerSessionFlash, flashDelay * 1000);
     if (fromRect && sessionNavRef.current) {
       const toRect = sessionNavRef.current.getBoundingClientRect();
       const id = uid();
@@ -6793,7 +6804,7 @@ function App() {
         fromRect,
         toRect
       }]);
-      const totalMs = flyDuration * (1 + 0.1 / 0.37) * 1000 + 150;
+      const totalMs = FLY_DURATION_S * (1 + 0.1 / 0.37) * 1000 + 150;
       setTimeout(() => setFlyingItems(f => f.filter(i => i.id !== id)), totalMs);
     }
     const toastId = uid();
@@ -7105,8 +7116,8 @@ function App() {
     onResetBadges: () => setBadges({}),
     editorGuardRef: editorGuardRef,
     guardedRun: guardedRun,
-    flyDuration: flyDuration,
-    onFlyDurationChange: setFlyDuration
+    flashDelay: flashDelay,
+    onFlashDelayChange: setFlashDelay
   }), tab === "active" && /*#__PURE__*/React.createElement(ActiveSessionScreen, {
     tasks: tasks,
     setTasks: setTasks,
@@ -7242,8 +7253,7 @@ function App() {
     key: item.id,
     icon: item.icon,
     from: item.fromRect,
-    to: item.toRect,
-    duration: flyDuration
+    to: item.toRect
   })), addedToast && /*#__PURE__*/React.createElement(AddedToast, {
     key: addedToast.id,
     text: addedToast.text
