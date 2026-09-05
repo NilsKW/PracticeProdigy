@@ -1921,6 +1921,9 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
 // position one frame later so the CSS transition actually animates the move.
 // Fly duration settled at 750ms.
 const FLY_DURATION_S = 0.75;
+// How long after the flying icon launches the Séance nav tab flashes red —
+// tuned live via a temporary debug slider, settled on 400ms.
+const SESSION_FLASH_DELAY_S = 0.4;
 
 function FlyingExerciseIcon({ icon, from, to }) {
   const [flown, setFlown] = useState(false);
@@ -1949,9 +1952,11 @@ function FlyingExerciseIcon({ icon, from, to }) {
   );
 }
 
-// Small, short-lived confirmation shown near the bottom nav when an exercise
-// is added to the session — a plain-word backup to the flying-icon
-// animation, for anyone who doesn't catch the animation itself.
+// Small, short-lived confirmation meant to show near the bottom nav when an
+// exercise is added to the session — a plain-word backup to the flying-icon
+// animation, for anyone who doesn't catch the animation itself. Currently
+// UNUSED (the flying icon alone reads clearly enough on its own) — kept
+// here, ready to wire back in later, rather than deleted outright.
 function AddedToast({ text }) {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -2759,7 +2764,7 @@ function CategoryEditor({ editCat, setExercises, setCategories, onBack, onReques
   );
 }
 
-function SettingsScreen({ exercises, setExercises, categories, setCategories, volume, onVolumeChange, lang, onLangChange, displaySize, onDisplaySizeChange, onResetBadges, editorGuardRef, guardedRun, flashDelay, onFlashDelayChange }) {
+function SettingsScreen({ exercises, setExercises, categories, setCategories, volume, onVolumeChange, lang, onLangChange, displaySize, onDisplaySizeChange, onResetBadges, editorGuardRef, guardedRun }) {
   const T = useT();
   const [section, setSection] = useState("exercises");
   const [editEx, setEditEx]   = useState(null);  // null | "new" | exercise object
@@ -2825,7 +2830,7 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
     <div className="pp-narrow" style={base.scrollArea(24)}>
       {/* Sub-tabs */}
       <div style={{ display: "flex", gap: 0, background: "#0A0A0A", borderRadius: 10, padding: 3, marginBottom: 8 }}>
-        {[["exercises", T("settingsExercises")], ["categories", T("settingsCategories")], ["share", T("settingsShare")], ["sound", T("settingsSound")], ["language", T("settingsLanguage")], ["display", T("settingsDisplay")], ["badges", T("settingsBadges")], ["debug", "🔧 debug"]].map(([id, label]) => (
+        {[["exercises", T("settingsExercises")], ["categories", T("settingsCategories")], ["share", T("settingsShare")], ["sound", T("settingsSound")], ["language", T("settingsLanguage")], ["display", T("settingsDisplay")], ["badges", T("settingsBadges")]].map(([id, label]) => (
           <button key={id} style={{ flex: 1, padding: "7px 2px", borderRadius: 8, border: "none", background: section === id ? "#1E1E1E" : "none", color: section === id ? C.amber : C.muted, fontSize: 10, fontWeight: section === id ? 700 : 500, cursor: "pointer", letterSpacing: "0.03em" }} onClick={() => setSection(id)}>
             {label}
           </button>
@@ -3020,32 +3025,6 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
         </div>
       )}
 
-      {/* TEMPORARY — dev-only tuning control for how long after the flying
-          icon launches the Séance tab lights up red, to dial it in by eye
-          instead of guessing values blind. Remove this whole section (and
-          the flashDelay state/props it reads from) once a final delay is
-          picked. */}
-      {section === "debug" && (
-        <div style={base.card}>
-          <div style={{ padding: "14px 16px" }}>
-            <label style={{ ...base.label, margin: 0 }}>Délai avant que "Séance" s'allume en rouge (temporaire)</label>
-            <div style={{ fontSize: 11, color: C.muted, marginTop: 4, marginBottom: 12 }}>
-              0 = immédiat, jusqu'à 1,5s après le lancement de l'icône. À retirer une fois le délai idéal trouvé — dis-le moi et je le fige dans le code.
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <input
-                type="range" min="0" max="1.5" step="0.01"
-                value={flashDelay}
-                onChange={e => onFlashDelayChange(parseFloat(e.target.value))}
-                style={{ flex: 1, accentColor: C.amber, height: 4, cursor: "pointer" }}
-              />
-              <span style={{ fontSize: 13, fontFamily: "monospace", color: C.amber, fontWeight: 700, width: 60, textAlign: "right" }}>
-                {Math.round(flashDelay * 1000)} ms
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -3180,11 +3159,13 @@ export default function App() {
   // Séance screen itself), so the user notices the queue was modified even
   // if they're not currently looking at that tab. Only the count matters —
   // reordering or editing a duration keeps the same length and stays quiet.
-  // Adding via the Library goes through the flying-icon animation, though —
-  // for that path specifically, addExerciseWithFlight suppresses this
-  // automatic immediate flash and fires it itself once the icon "lands"
-  // (see flashDelay below), so the tab lighting up reads as the icon's
-  // arrival rather than firing at the same instant it takes off.
+  //
+  // `suppressAutoFlashRef` + `triggerSessionFlash` are kept generic/reusable
+  // on purpose: any future action that wants the flash to land at a specific
+  // moment (e.g. timed to another animation) rather than instantly can set
+  // the ref to true right before its own state change, then call
+  // triggerSessionFlash() itself whenever it actually wants the tab to light
+  // up — exactly what addExerciseWithFlight below does for the flying icon.
   const prevTasksLengthRef = useRef(tasks.length);
   const [sessionFlash, setSessionFlash] = useState(0);
   const [sessionFlashing, setSessionFlashing] = useState(false);
@@ -3210,23 +3191,15 @@ export default function App() {
   // "Fly to Séance" animation: when an exercise is added from the Library, a
   // clone of its icon flies from where it was tapped to the bottom-nav
   // Séance button and shrinks away — makes it visually obvious the exercise
-  // actually went somewhere, which the red flash alone didn't convey.
+  // actually went somewhere, which the red flash alone didn't convey. The
+  // nav tab's flash is deliberately delayed (see SESSION_FLASH_DELAY_S) to
+  // land as the icon "arrives" rather than firing the instant it takes off.
   const sessionNavRef = useRef(null);
   const [flyingItems, setFlyingItems] = useState([]);
-  // TEMPORARY dev control (Réglages → Debug): how long after the flying icon
-  // is launched the Séance tab lights up red, dialed in live with a slider
-  // instead of guessing values and re-deploying each time — 0 = old
-  // immediate behavior, up to 1.5s. Remove this state and its Settings
-  // section once a final delay is picked, hardcoding that value into the
-  // setTimeout below instead.
-  const [flashDelay, setFlashDelay] = usePersisted("flashDelayDebug", 0.75);
-  // A small, short-lived toast backs up the flying icon with an explicit
-  // word — in case the animation alone still isn't enough for some users.
-  const [addedToast, setAddedToast] = useState(null);
   const addExerciseWithFlight = (ex, fromRect) => {
     suppressAutoFlashRef.current = true;
     addExercise(ex);
-    setTimeout(triggerSessionFlash, flashDelay * 1000);
+    setTimeout(triggerSessionFlash, SESSION_FLASH_DELAY_S * 1000);
     if (fromRect && sessionNavRef.current) {
       const toRect = sessionNavRef.current.getBoundingClientRect();
       const id = uid();
@@ -3234,9 +3207,6 @@ export default function App() {
       const totalMs = FLY_DURATION_S * (1 + 0.1 / 0.37) * 1000 + 150;
       setTimeout(() => setFlyingItems(f => f.filter(i => i.id !== id)), totalMs);
     }
-    const toastId = uid();
-    setAddedToast({ id: toastId, text: T("addedToSessionToast") });
-    setTimeout(() => setAddedToast(t => (t?.id === toastId ? null : t)), 1800);
   };
 
   // Check every badge's unlock condition whenever the stats it depends on
@@ -3430,7 +3400,7 @@ export default function App() {
       {tab === "library"  && <LibraryScreen exercises={exercises} categories={categories} tasks={tasks} onAdd={addExerciseWithFlight} onRemove={removeExerciseFromSession} stats={stats} subProgress={subProgress} />}
       {tab === "session"  && <SessionScreen tasks={tasks} setTasks={setTasks} onStart={startSession} sessionInProgress={sessionInProgress} onReturnToSession={returnToSession} presets={presets} setPresets={setPresets} />}
       {tab === "progress" && <ProgressionScreen stats={stats} exercises={exercises} onClearStats={() => setStats({})} badges={badges} subProgress={subProgress} practiceDays={practiceDays} noodleSec={noodleSec} subTab={progressSubTab} setSubTab={setProgressSubTab} />}
-      {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} editorGuardRef={editorGuardRef} guardedRun={guardedRun} flashDelay={flashDelay} onFlashDelayChange={setFlashDelay} />}
+      {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} editorGuardRef={editorGuardRef} guardedRun={guardedRun} />}
       {tab === "active"   && <ActiveSessionScreen
         tasks={tasks} setTasks={setTasks} onFinish={endSession} onBackToMenu={backToMenu}
         audioCtx={audioCtx} masterGainRef={masterGainRef} onCommitStats={commitStats}
@@ -3491,8 +3461,6 @@ export default function App() {
       {flyingItems.map(item => (
         <FlyingExerciseIcon key={item.id} icon={item.icon} from={item.fromRect} to={item.toRect} />
       ))}
-
-      {addedToast && <AddedToast key={addedToast.id} text={addedToast.text} />}
 
       {onboardingLoaded && !onboardingDone && (
         <OnboardingTour onDone={() => setOnboardingDone(true)} />
