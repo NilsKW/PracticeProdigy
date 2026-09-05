@@ -23,7 +23,7 @@ const STRINGS = {
     nowPlaying: "Now Playing", exerciseOf: "of", remaining: "remaining",
     skipBtn: "Skip", previousBtn: "Previous", pauseBtn: "⏸ Pause", resumePlayBtn: "▶ Resume", playBtn: "▶ Play",
     refVideo: "Reference Video", opensYoutube: "Opens YouTube ↗",
-    sessionSetlist: "Session Setlist", done: "done", overallProgress: "Overall Progress",
+    done: "done",
     backToMenu: "↩ Back to Main Menu",
     sessionComplete: "Session Complete!", sessionCompleteMsg: "exercises", sessionCompleteTime: "",
     consistency: "Keep it up — consistency builds mastery. 🎸",
@@ -113,7 +113,7 @@ const STRINGS = {
     nowPlaying: "En cours", exerciseOf: "sur", remaining: "restant",
     skipBtn: "Passer", previousBtn: "Précédent", pauseBtn: "⏸ Pause", resumePlayBtn: "▶ Reprendre", playBtn: "▶ Démarrer",
     refVideo: "Vidéo de référence", opensYoutube: "Ouvrir YouTube ↗",
-    sessionSetlist: "Setlist de séance", done: "terminé(s)", overallProgress: "Progression globale",
+    done: "terminé(s)",
     backToMenu: "↩ Retour au menu",
     sessionComplete: "Séance terminée !", sessionCompleteMsg: "exercices", sessionCompleteTime: "",
     consistency: "Continuez — la régularité construit la maîtrise. 🎸",
@@ -1898,6 +1898,38 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
 
 // ─── ACTIVE SESSION ───────────────────────────────────────────────────────────
 
+// Compact vertical stand-in for the old full setlist card: a single gauge
+// that fills top-to-bottom as the session progresses (time-weighted, so a
+// long exercise fills more of it than a short one), plus a "current/total"
+// count. Persists alongside the scrolling content instead of taking its own
+// row in the list, and gives its fill a brief glow each time `current`
+// changes — i.e. every time the user moves to the next exercise.
+function SessionProgressGauge({ pct, current, total }) {
+  const [bump, setBump] = useState(false);
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    if (!mountedRef.current) { mountedRef.current = true; return; }
+    setBump(true);
+    const t = setTimeout(() => setBump(false), 500);
+    return () => clearTimeout(t);
+  }, [current]);
+  return (
+    <div style={{ width: 34, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 8, paddingTop: 2 }}>
+      <div style={{ flex: 1, width: 10, minHeight: 80, background: "#1A1A1A", border: `1px solid ${C.border}`, borderRadius: 6, position: "relative", overflow: "hidden" }}>
+        <div style={{
+          position: "absolute", left: 0, right: 0, top: 0,
+          height: `${Math.max(0, Math.min(100, pct))}%`,
+          background: "linear-gradient(180deg, #C8873A, #6B3A0A)",
+          borderRadius: 6,
+          transition: "height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
+          animation: bump ? "gaugeBump 0.5s ease-out" : "none",
+        }} />
+      </div>
+      <span style={{ fontSize: 11, fontFamily: "monospace", color: C.amber, fontWeight: 700, whiteSpace: "nowrap" }}>{current}/{total}</span>
+    </div>
+  );
+}
+
 function ActiveSessionScreen({
   tasks, setTasks, onFinish, onBackToMenu, audioCtx, masterGainRef, onCommitStats, isVisible,
   onCommitNoodle, sessionNoodleSec,
@@ -2174,9 +2206,11 @@ function ActiveSessionScreen({
       <style>{`
         @keyframes urgentPulse{0%,100%{color:#C8873A}50%{color:#F87171;text-shadow:0 0 16px #F8717188}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes gaugeBump{0%{box-shadow:0 0 0 #C8873A00}40%{box-shadow:0 0 14px 4px #C8873Aaa}100%{box-shadow:0 0 0 #C8873A00}}
       `}</style>
       <FlashOverlay show={flash} color="#4FC3F7" />
-      <div style={{ flex: 1, minHeight: 0, padding: "14px 16px 24px", display: "flex", flexDirection: "column", gap: 14, overflowY: "auto" }}>
+      <div style={{ flex: 1, minHeight: 0, padding: "14px 16px 24px", display: "flex", flexDirection: "row", gap: 10 }}>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 14, overflowY: "auto" }}>
         {/* Timer card */}
         <div style={{ background: "#151208", border: "1px solid #2A1E08", borderRadius: 16, padding: "22px 18px", textAlign: "center", flexShrink: 0 }}>
           <div style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: "#A8926A", marginBottom: 3 }}>
@@ -2319,40 +2353,12 @@ function ActiveSessionScreen({
           </div>
         )}
 
-        {/* Setlist */}
-        <div style={{ ...base.card, flexShrink: 0 }}>
-          <div style={{ padding: "10px 14px", borderBottom: `1px solid ${C.faint}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: C.muted }}>{T("sessionSetlist")}</span>
-            <span style={{ fontSize: 11, color: C.amber, fontWeight: 700 }}>{current}/{tasks.length} {T("done")}</span>
-          </div>
-          {tasks.map((t, i) => {
-            const st = i < current ? "done" : i === current ? "cur" : "up";
-            return (
-              <div key={t.id} style={{ padding: "9px 14px", display: "flex", alignItems: "center", gap: 9, borderBottom: `1px solid #111`, background: st === "cur" ? "#1A1208" : "transparent", opacity: st === "up" ? 0.4 : 1 }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: st === "done" ? "#34D399" : st === "cur" ? C.amber : "#2A2A2A", flexShrink: 0 }} />
-                <span style={{ flex: 1, fontSize: 14, color: st === "done" ? "#5CB88A" : st === "cur" ? C.cream : C.muted, textDecoration: st === "done" ? "line-through" : "none" }}>{exerciseName(t, lang)}</span>
-                {t.youtubeUrl && extractYouTubeId(t.youtubeUrl) && (
-                  <span style={{ fontSize: 9, background: "#FF000044", color: "#FF6666", borderRadius: 3, padding: "1px 4px", fontWeight: 700, flexShrink: 0 }}>▶</span>
-                )}
-                <span style={{ fontSize: 12, fontFamily: "monospace", color: C.muted }}>{t.minutes}m</span>
-              </div>
-            );
-          })}
-          <div style={{ padding: "10px 14px", background: "#0A0A0A" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-              <span style={{ fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: C.muted }}>{T("overallProgress")}</span>
-              <span style={{ fontSize: 11, color: "#C9A876", fontFamily: "monospace" }}>{overallPct}%</span>
-            </div>
-            <div style={{ height: 3, background: C.faint, borderRadius: 2, overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${overallPct}%`, background: C.amber + "55", borderRadius: 2, transition: "width 0.5s" }} />
-            </div>
-          </div>
-        </div>
-
         {/* Back to menu */}
         <button style={{ ...base.pillBtn(false), width: "100%", textAlign: "center", color: C.muted, fontSize: 12, flexShrink: 0 }} onClick={() => { flushStats(current); onBackToMenu(); }}>
           {T("backToMenu")}
         </button>
+      </div>
+      <SessionProgressGauge pct={overallPct} current={current} total={tasks.length} />
       </div>
     </>
   );

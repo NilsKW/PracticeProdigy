@@ -131,9 +131,7 @@ const STRINGS = {
     playBtn: "▶ Play",
     refVideo: "Reference Video",
     opensYoutube: "Opens YouTube ↗",
-    sessionSetlist: "Session Setlist",
     done: "done",
-    overallProgress: "Overall Progress",
     backToMenu: "↩ Back to Main Menu",
     sessionComplete: "Session Complete!",
     sessionCompleteMsg: "exercises",
@@ -326,9 +324,7 @@ const STRINGS = {
     playBtn: "▶ Démarrer",
     refVideo: "Vidéo de référence",
     opensYoutube: "Ouvrir YouTube ↗",
-    sessionSetlist: "Setlist de séance",
     done: "terminé(s)",
-    overallProgress: "Progression globale",
     backToMenu: "↩ Retour au menu",
     sessionComplete: "Séance terminée !",
     sessionCompleteMsg: "exercices",
@@ -4235,6 +4231,71 @@ function SessionScreen({
 
 // ─── ACTIVE SESSION ───────────────────────────────────────────────────────────
 
+// Compact vertical stand-in for the old full setlist card: a single gauge
+// that fills top-to-bottom as the session progresses (time-weighted, so a
+// long exercise fills more of it than a short one), plus a "current/total"
+// count. Persists alongside the scrolling content instead of taking its own
+// row in the list, and gives its fill a brief glow each time `current`
+// changes — i.e. every time the user moves to the next exercise.
+function SessionProgressGauge({
+  pct,
+  current,
+  total
+}) {
+  const [bump, setBump] = useState(false);
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    setBump(true);
+    const t = setTimeout(() => setBump(false), 500);
+    return () => clearTimeout(t);
+  }, [current]);
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 34,
+      flexShrink: 0,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      gap: 8,
+      paddingTop: 2
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      width: 10,
+      minHeight: 80,
+      background: "#1A1A1A",
+      border: `1px solid ${C.border}`,
+      borderRadius: 6,
+      position: "relative",
+      overflow: "hidden"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      top: 0,
+      height: `${Math.max(0, Math.min(100, pct))}%`,
+      background: "linear-gradient(180deg, #C8873A, #6B3A0A)",
+      borderRadius: 6,
+      transition: "height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
+      animation: bump ? "gaugeBump 0.5s ease-out" : "none"
+    }
+  })), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      fontFamily: "monospace",
+      color: C.amber,
+      fontWeight: 700,
+      whiteSpace: "nowrap"
+    }
+  }, current, "/", total));
+}
 function ActiveSessionScreen({
   tasks,
   setTasks,
@@ -4612,6 +4673,7 @@ function ActiveSessionScreen({
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("style", null, `
         @keyframes urgentPulse{0%,100%{color:#C8873A}50%{color:#F87171;text-shadow:0 0 16px #F8717188}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes gaugeBump{0%{box-shadow:0 0 0 #C8873A00}40%{box-shadow:0 0 14px 4px #C8873Aaa}100%{box-shadow:0 0 0 #C8873A00}}
       `), /*#__PURE__*/React.createElement(FlashOverlay, {
     show: flash,
     color: "#4FC3F7"
@@ -4620,6 +4682,14 @@ function ActiveSessionScreen({
       flex: 1,
       minHeight: 0,
       padding: "14px 16px 24px",
+      display: "flex",
+      flexDirection: "row",
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0,
       display: "flex",
       flexDirection: "column",
       gap: 14,
@@ -4998,117 +5068,7 @@ function ActiveSessionScreen({
     }
   }, /*#__PURE__*/React.createElement(FilesSection, {
     files: currentTask.files
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      ...base.card,
-      flexShrink: 0
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: "10px 14px",
-      borderBottom: `1px solid ${C.faint}`,
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center"
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 10,
-      letterSpacing: "0.15em",
-      textTransform: "uppercase",
-      color: C.muted
-    }
-  }, T("sessionSetlist")), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 11,
-      color: C.amber,
-      fontWeight: 700
-    }
-  }, current, "/", tasks.length, " ", T("done"))), tasks.map((t, i) => {
-    const st = i < current ? "done" : i === current ? "cur" : "up";
-    return /*#__PURE__*/React.createElement("div", {
-      key: t.id,
-      style: {
-        padding: "9px 14px",
-        display: "flex",
-        alignItems: "center",
-        gap: 9,
-        borderBottom: `1px solid #111`,
-        background: st === "cur" ? "#1A1208" : "transparent",
-        opacity: st === "up" ? 0.4 : 1
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        width: 8,
-        height: 8,
-        borderRadius: "50%",
-        background: st === "done" ? "#34D399" : st === "cur" ? C.amber : "#2A2A2A",
-        flexShrink: 0
-      }
-    }), /*#__PURE__*/React.createElement("span", {
-      style: {
-        flex: 1,
-        fontSize: 14,
-        color: st === "done" ? "#5CB88A" : st === "cur" ? C.cream : C.muted,
-        textDecoration: st === "done" ? "line-through" : "none"
-      }
-    }, exerciseName(t, lang)), t.youtubeUrl && extractYouTubeId(t.youtubeUrl) && /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 9,
-        background: "#FF000044",
-        color: "#FF6666",
-        borderRadius: 3,
-        padding: "1px 4px",
-        fontWeight: 700,
-        flexShrink: 0
-      }
-    }, "▶"), /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: 12,
-        fontFamily: "monospace",
-        color: C.muted
-      }
-    }, t.minutes, "m"));
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: "10px 14px",
-      background: "#0A0A0A"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      justifyContent: "space-between",
-      marginBottom: 6
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 10,
-      letterSpacing: "0.1em",
-      textTransform: "uppercase",
-      color: C.muted
-    }
-  }, T("overallProgress")), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 11,
-      color: "#C9A876",
-      fontFamily: "monospace"
-    }
-  }, overallPct, "%")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      height: 3,
-      background: C.faint,
-      borderRadius: 2,
-      overflow: "hidden"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      height: "100%",
-      width: `${overallPct}%`,
-      background: C.amber + "55",
-      borderRadius: 2,
-      transition: "width 0.5s"
-    }
-  })))), /*#__PURE__*/React.createElement("button", {
+  })), /*#__PURE__*/React.createElement("button", {
     style: {
       ...base.pillBtn(false),
       width: "100%",
@@ -5121,7 +5081,11 @@ function ActiveSessionScreen({
       flushStats(current);
       onBackToMenu();
     }
-  }, T("backToMenu"))));
+  }, T("backToMenu"))), /*#__PURE__*/React.createElement(SessionProgressGauge, {
+    pct: overallPct,
+    current: current,
+    total: tasks.length
+  })));
 }
 
 // ─── SETTINGS SCREEN ─────────────────────────────────────────────────────────
