@@ -92,6 +92,7 @@ const STRINGS = {
     onboardSessionTitle: "Session", onboardSessionDesc: "Exercises you've added show up here — start your session when you're ready.",
     onboardProgressTitle: "Progression", onboardProgressDesc: "Track your level, stats, and the badges you unlock.",
     onboardSettingsTitle: "Settings", onboardSettingsDesc: "Customize your exercises, categories, and app options.",
+    addedToSessionToast: "Added to session",
   },
   fr: {
     navLibrary: "Bibliothèque", navPresets: "Modèles", navSession: "Séance", navActive: "▶ En cours",
@@ -182,6 +183,7 @@ const STRINGS = {
     onboardSessionTitle: "Séance", onboardSessionDesc: "Les exercices ajoutés arrivent ici — lance ta séance quand tu es prêt.",
     onboardProgressTitle: "Progression", onboardProgressDesc: "Suis ton niveau, tes statistiques et les badges débloqués.",
     onboardSettingsTitle: "Réglages", onboardSettingsDesc: "Personnalise tes exercices, tes catégories et les options de l'appli.",
+    addedToSessionToast: "Ajouté à la séance",
   },
 };
 
@@ -1919,13 +1921,39 @@ function FlyingExerciseIcon({ icon, from, to }) {
   return (
     <div data-flying="1" style={{
       position: "fixed", left: startX, top: startY, zIndex: 600,
-      width: 30, height: 30, marginLeft: -15, marginTop: -15,
+      width: 60, height: 60, marginLeft: -30, marginTop: -30,
       display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: 20, pointerEvents: "none",
+      fontSize: 40, pointerEvents: "none",
       transform: flown ? `translate(${endX - startX}px, ${endY - startY}px) scale(0.25)` : "translate(0,0) scale(1)",
       opacity: flown ? 0 : 1,
-      transition: "transform 0.55s cubic-bezier(0.3,0,0.6,1), opacity 0.55s ease-in 0.15s",
+      transition: "transform 1.1s cubic-bezier(0.3,0,0.6,1), opacity 1.1s ease-in 0.6s",
     }}>{icon}</div>
+  );
+}
+
+// Small, short-lived confirmation shown near the bottom nav when an exercise
+// is added to the session — a plain-word backup to the flying-icon
+// animation, for anyone who doesn't catch the animation itself.
+function AddedToast({ text }) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const t1 = setTimeout(() => setVisible(true), 10);
+    const t2 = setTimeout(() => setVisible(false), 1400);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
+  return (
+    <div style={{
+      position: "fixed", left: "50%", bottom: 76, zIndex: 550,
+      transform: `translateX(-50%) translateY(${visible ? 0 : 8}px)`,
+      opacity: visible ? 1 : 0,
+      transition: "opacity 0.3s ease-out, transform 0.3s ease-out",
+      background: "#1A1A1A", border: `1px solid ${C.border}`, borderRadius: 20,
+      padding: "8px 16px", display: "flex", alignItems: "center", gap: 7,
+      boxShadow: "0 4px 20px #000a", pointerEvents: "none", whiteSpace: "nowrap",
+    }}>
+      <span style={{ fontSize: 13, color: "#34D399", fontWeight: 800 }}>✓</span>
+      <span style={{ fontSize: 12, color: C.cream, fontWeight: 600 }}>{text}</span>
+    </div>
   );
 }
 
@@ -3127,14 +3155,20 @@ export default function App() {
   // actually went somewhere, which the red flash alone didn't convey.
   const sessionNavRef = useRef(null);
   const [flyingItems, setFlyingItems] = useState([]);
+  // A small, short-lived toast backs up the flying icon with an explicit
+  // word — in case the animation alone still isn't enough for some users.
+  const [addedToast, setAddedToast] = useState(null);
   const addExerciseWithFlight = (ex, fromRect) => {
     addExercise(ex);
     if (fromRect && sessionNavRef.current) {
       const toRect = sessionNavRef.current.getBoundingClientRect();
       const id = uid();
       setFlyingItems(f => [...f, { id, icon: ex.icon, fromRect, toRect }]);
-      setTimeout(() => setFlyingItems(f => f.filter(i => i.id !== id)), 750);
+      setTimeout(() => setFlyingItems(f => f.filter(i => i.id !== id)), 1500);
     }
+    const toastId = uid();
+    setAddedToast({ id: toastId, text: T("addedToSessionToast") });
+    setTimeout(() => setAddedToast(t => (t?.id === toastId ? null : t)), 1800);
   };
 
   // Check every badge's unlock condition whenever the stats it depends on
@@ -3364,6 +3398,8 @@ export default function App() {
       {flyingItems.map(item => (
         <FlyingExerciseIcon key={item.id} icon={item.icon} from={item.fromRect} to={item.toRect} />
       ))}
+
+      {addedToast && <AddedToast key={addedToast.id} text={addedToast.text} />}
 
       {onboardingLoaded && !onboardingDone && (
         <OnboardingTour onDone={() => setOnboardingDone(true)} />
