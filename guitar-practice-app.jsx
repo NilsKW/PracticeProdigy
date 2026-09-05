@@ -877,7 +877,10 @@ const base = {
   // exercise name would force the whole grid wider than its container
   // instead of the name truncating (its own overflow/ellipsis is already
   // set), so the row scrolls horizontally rather than wrapping to a new line.
-  exCard: (col) => ({ background: C.surface, border: `1px solid ${C.border}`, borderLeft: `3px solid ${col}`, borderRadius: 10, padding: "11px 13px", display: "flex", alignItems: "center", gap: 11, cursor: "pointer", userSelect: "none", minWidth: 0 }),
+  // No padding/gap here — the +/x action column needs to sit flush against
+  // the card's edge and span its full height (see LibraryScreen), so the
+  // content itself carries its own padding in an inner wrapper instead.
+  exCard: (col) => ({ background: C.surface, border: `1px solid ${C.border}`, borderLeft: `3px solid ${col}`, borderRadius: 10, display: "flex", alignItems: "stretch", cursor: "pointer", userSelect: "none", minWidth: 0, overflow: "hidden" }),
   pillBtn: (primary) => ({ padding: primary ? "13px" : "10px 16px", borderRadius: 10, border: primary ? "none" : `1px solid #2A2A2A`, background: primary ? `linear-gradient(135deg,${C.amber},#A86020)` : C.surface, color: primary ? "#0F0F0F" : "#AEB0C0", fontSize: primary ? 14 : 12, fontWeight: primary ? 800 : 500, cursor: "pointer", letterSpacing: "0.06em", width: primary ? "100%" : "auto" }),
   input: { background: "#1A1A1A", border: `1px solid #2A2A2A`, borderRadius: 8, padding: "9px 12px", color: C.cream, fontSize: 13, width: "100%", boxSizing: "border-box", outline: "none", fontFamily: "inherit" },
   label: { fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: C.muted, marginBottom: 5, display: "block" },
@@ -1538,33 +1541,31 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, onRemove, stats, s
                 return (
                   <div key={ex.id}
                     onClick={e => !added && onAdd(ex, (e.currentTarget.querySelector('[data-ex-icon]') || e.currentTarget).getBoundingClientRect())}
-                    style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px",
-                      background: added ? "#111" : "#0F0F0F", borderRadius: 8,
+                    style={{ display: "flex", alignItems: "stretch", borderRadius: 8,
+                      background: added ? "#111" : "#0F0F0F",
                       border: `1px solid ${rank === 0 ? C.amber + "44" : "#222"}`,
-                      cursor: added ? "default" : "pointer", opacity: added ? 0.5 : 1 }}>
-                    {/* Rank badge */}
-                    <div style={{ width: 18, height: 18, borderRadius: "50%", background: rank === 0 ? "#C8873A44" : "#1A1A1A",
-                      border: `1px solid ${rank === 0 ? C.amber : "#333"}`,
-                      color: rank === 0 ? C.amber : C.muted,
-                      fontSize: 9, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      {rank + 1}
-                    </div>
-                    <span data-ex-icon="1" style={{ fontSize: 16, flexShrink: 0, filter: added ? "grayscale(1) opacity(0.35)" : "none" }}>{ex.icon}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: C.cream, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{exerciseName(ex, lang)}</div>
-                      <div style={{ fontSize: 10, color: col, marginTop: 1, fontWeight: 600 }}>{categoryName(cat, lang)} · <span style={{ color: "#8FAF8F", fontWeight: 400 }}>{fmtSuggestTime(ex)}</span></div>
+                      cursor: added ? "default" : "pointer", opacity: added ? 0.5 : 1, overflow: "hidden" }}>
+                    <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 10, padding: "8px 10px" }}>
+                      {/* Rank badge */}
+                      <div style={{ width: 18, height: 18, borderRadius: "50%", background: rank === 0 ? "#C8873A44" : "#1A1A1A",
+                        border: `1px solid ${rank === 0 ? C.amber : "#333"}`,
+                        color: rank === 0 ? C.amber : C.muted,
+                        fontSize: 9, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        {rank + 1}
+                      </div>
+                      <span data-ex-icon="1" style={{ fontSize: 16, flexShrink: 0, filter: added ? "grayscale(1) opacity(0.35)" : "none" }}>{ex.icon}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: C.cream, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{exerciseName(ex, lang)}</div>
+                        <div style={{ fontSize: 10, color: col, marginTop: 1, fontWeight: 600 }}>{categoryName(cat, lang)} · <span style={{ color: "#8FAF8F", fontWeight: 400 }}>{fmtSuggestTime(ex)}</span></div>
+                      </div>
                     </div>
                     {added ? (
                       <button
                         onClick={e => { e.stopPropagation(); onRemove(ex.id); }}
-                        style={{ width: 24, height: 24, borderRadius: "50%", background: "#F8717122",
-                          border: "1px solid #F87171", color: "#F87171", fontSize: 15, fontWeight: 800,
-                          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer", padding: 0 }}
+                        style={{ width: 38, flexShrink: 0, alignSelf: "stretch", background: "none", border: "none", borderLeft: `1px solid ${C.border}`, color: "#F87171", fontSize: 20, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, lineHeight: 1 }}
                       >×</button>
                     ) : (
-                      <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#C8873A22",
-                        border: `1px solid ${C.amber}`, color: C.amber,
-                        fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</div>
+                      <div style={{ width: 38, flexShrink: 0, alignSelf: "stretch", borderLeft: `1px solid ${C.amber}55`, color: C.amber, fontSize: 18, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>+</div>
                     )}
                   </div>
                 );
@@ -1614,31 +1615,29 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, onRemove, stats, s
               const added = inSession.has(ex.id);
               return (
                 <div key={ex.id} style={{ ...base.exCard(col), opacity: added ? 0.5 : 1 }} onClick={e => !added && onAdd(ex, (e.currentTarget.querySelector('[data-ex-icon]') || e.currentTarget).getBoundingClientRect())}>
-                  <span data-ex-icon="1" style={{ fontSize: 20, width: 28, textAlign: "center", flexShrink: 0, filter: added ? "grayscale(1) opacity(0.35)" : "none" }}>{ex.icon}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: C.cream }}>{exerciseName(ex, lang)}</div>
-                    {ex.description && <div style={{ fontSize: 11, color: C.muted, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{exerciseDesc(ex, lang)}</div>}
+                  <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 11, padding: "11px 13px" }}>
+                    <span data-ex-icon="1" style={{ fontSize: 20, width: 28, textAlign: "center", flexShrink: 0, filter: added ? "grayscale(1) opacity(0.35)" : "none" }}>{ex.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: C.cream }}>{exerciseName(ex, lang)}</div>
+                      {ex.description && <div style={{ fontSize: 11, color: C.muted, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{exerciseDesc(ex, lang)}</div>}
+                    </div>
+                    {ex.subExercises?.length > 0 && (
+                      <span style={{ fontSize: 10, color: "#34D399", background: "#34D39922", border: "1px solid #34D39944", borderRadius: 5, padding: "2px 6px", flexShrink: 0, fontWeight: 700 }}>
+                        {(subProgress[ex.id] || []).length}/{ex.subExercises.length}
+                      </span>
+                    )}
+                    <span style={{ fontSize: 11, color: C.muted, flexShrink: 0 }}>{ex.defaultMin}m</span>
+                    {ex.youtubeUrl && extractYouTubeId(ex.youtubeUrl) && (
+                      <span style={{ fontSize: 10, background: "#FF000033", border: "1px solid #FF000066", color: "#FF6666", borderRadius: 4, padding: "2px 5px", flexShrink: 0, fontWeight: 700 }}>▶</span>
+                    )}
                   </div>
-                  {ex.subExercises?.length > 0 && (
-                    <span style={{ fontSize: 10, color: "#34D399", background: "#34D39922", border: "1px solid #34D39944", borderRadius: 5, padding: "2px 6px", flexShrink: 0, marginRight: 4, fontWeight: 700 }}>
-                      {(subProgress[ex.id] || []).length}/{ex.subExercises.length}
-                    </span>
-                  )}
-                  <span style={{ fontSize: 11, color: C.muted, flexShrink: 0, marginRight: 4 }}>{ex.defaultMin}m</span>
-                  {ex.youtubeUrl && extractYouTubeId(ex.youtubeUrl) && (
-                    <span style={{ fontSize: 10, background: "#FF000033", border: "1px solid #FF000066", color: "#FF6666", borderRadius: 4, padding: "2px 5px", flexShrink: 0, marginRight: 4, fontWeight: 700 }}>▶</span>
-                  )}
                   {added ? (
                     <button
                       onClick={e => { e.stopPropagation(); onRemove(ex.id); }}
-                      style={{ width: 26, height: 26, borderRadius: "50%", background: "#F8717122",
-                        border: "1px solid #F87171", color: "#F87171", fontSize: 17, fontWeight: 800,
-                        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer", padding: 0 }}
+                      style={{ width: 46, flexShrink: 0, alignSelf: "stretch", background: "none", border: "none", borderLeft: `1px solid ${C.border}`, color: "#F87171", fontSize: 26, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, lineHeight: 1 }}
                     >×</button>
                   ) : (
-                    <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#C8873A22",
-                      border: `1px solid ${C.amber}`, color: C.amber,
-                      fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</div>
+                    <div style={{ width: 46, flexShrink: 0, alignSelf: "stretch", borderLeft: `1px solid ${C.amber}55`, color: C.amber, fontSize: 24, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>+</div>
                   )}
                 </div>
               );
@@ -1655,31 +1654,29 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, onRemove, stats, s
             const added = inSession.has(ex.id);
             return (
               <div key={ex.id} style={{ ...base.exCard(col), opacity: added ? 0.5 : 1 }} onClick={e => !added && onAdd(ex, (e.currentTarget.querySelector('[data-ex-icon]') || e.currentTarget).getBoundingClientRect())}>
-                <span data-ex-icon="1" style={{ fontSize: 20, width: 28, textAlign: "center", flexShrink: 0, filter: added ? "grayscale(1) opacity(0.35)" : "none" }}>{ex.icon}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: C.cream }}>{exerciseName(ex, lang)}</div>
-                  {ex.description && <div style={{ fontSize: 11, color: C.muted, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{exerciseDesc(ex, lang)}</div>}
+                <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 11, padding: "11px 13px" }}>
+                  <span data-ex-icon="1" style={{ fontSize: 20, width: 28, textAlign: "center", flexShrink: 0, filter: added ? "grayscale(1) opacity(0.35)" : "none" }}>{ex.icon}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: C.cream }}>{exerciseName(ex, lang)}</div>
+                    {ex.description && <div style={{ fontSize: 11, color: C.muted, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{exerciseDesc(ex, lang)}</div>}
+                  </div>
+                  {ex.subExercises?.length > 0 && (
+                    <span style={{ fontSize: 10, color: "#34D399", background: "#34D39922", border: "1px solid #34D39944", borderRadius: 5, padding: "2px 6px", flexShrink: 0, fontWeight: 700 }}>
+                      {(subProgress[ex.id] || []).length}/{ex.subExercises.length}
+                    </span>
+                  )}
+                  <span style={{ fontSize: 11, color: C.muted, flexShrink: 0 }}>{ex.defaultMin}m</span>
+                  {ex.youtubeUrl && extractYouTubeId(ex.youtubeUrl) && (
+                    <span style={{ fontSize: 10, background: "#FF000033", border: "1px solid #FF000066", color: "#FF6666", borderRadius: 4, padding: "2px 5px", flexShrink: 0, fontWeight: 700 }}>▶</span>
+                  )}
                 </div>
-                {ex.subExercises?.length > 0 && (
-                  <span style={{ fontSize: 10, color: "#34D399", background: "#34D39922", border: "1px solid #34D39944", borderRadius: 5, padding: "2px 6px", flexShrink: 0, marginRight: 4, fontWeight: 700 }}>
-                    {(subProgress[ex.id] || []).length}/{ex.subExercises.length}
-                  </span>
-                )}
-                <span style={{ fontSize: 11, color: C.muted, flexShrink: 0, marginRight: 4 }}>{ex.defaultMin}m</span>
-                {ex.youtubeUrl && extractYouTubeId(ex.youtubeUrl) && (
-                  <span style={{ fontSize: 10, background: "#FF000033", border: "1px solid #FF000066", color: "#FF6666", borderRadius: 4, padding: "2px 5px", flexShrink: 0, marginRight: 4, fontWeight: 700 }}>▶</span>
-                )}
                 {added ? (
                   <button
                     onClick={e => { e.stopPropagation(); onRemove(ex.id); }}
-                    style={{ width: 26, height: 26, borderRadius: "50%", background: "#F8717122",
-                      border: "1px solid #F87171", color: "#F87171", fontSize: 17, fontWeight: 800,
-                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer", padding: 0 }}
+                    style={{ width: 46, flexShrink: 0, alignSelf: "stretch", background: "none", border: "none", borderLeft: `1px solid ${C.border}`, color: "#F87171", fontSize: 26, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, lineHeight: 1 }}
                   >×</button>
                 ) : (
-                  <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#C8873A22",
-                    border: `1px solid ${C.amber}`, color: C.amber,
-                    fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>+</div>
+                  <div style={{ width: 46, flexShrink: 0, alignSelf: "stretch", borderLeft: `1px solid ${C.amber}55`, color: C.amber, fontSize: 24, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>+</div>
                 )}
               </div>
             );
@@ -1867,25 +1864,30 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
             <div
               key={task.id}
               ref={node => { if (node) rowRefs.current[task.id] = node; else delete rowRefs.current[task.id]; }}
-              style={{ background: C.surface, border: `1px solid ${draggingId === task.id ? C.amber : C.border}`, borderRadius: 10, padding: "11px 13px", display: "flex", alignItems: "center", gap: 9, opacity: draggingId === task.id ? 0.6 : 1, transition: "opacity 0.15s, border-color 0.15s" }}
+              style={{ background: C.surface, border: `1px solid ${draggingId === task.id ? C.amber : C.border}`, borderRadius: 10, display: "flex", alignItems: "stretch", opacity: draggingId === task.id ? 0.6 : 1, transition: "opacity 0.15s, border-color 0.15s", overflow: "hidden" }}
             >
-              <span
-                onPointerDown={e => handleDragStart(e, task.id)}
-                onPointerMove={handleDragMove}
-                onPointerUp={handleDragEnd}
-                onPointerCancel={handleDragEnd}
-                style={{ fontSize: 15, flexShrink: 0, color: C.muted, cursor: "grab", touchAction: "none", padding: "4px 2px", lineHeight: 1 }}
-                aria-label="drag to reorder"
-              >☰</span>
-              <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#2A2A2A", color: "#C9A876", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</div>
-              <span style={{ fontSize: 15, flexShrink: 0 }}>{task.icon}</span>
-              <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{exerciseName(task, lang)}</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <button style={{ width: 22, height: 22, borderRadius: "50%", background: "#222", border: `1px solid #333`, color: C.cream, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }} onClick={() => upd(task.id, -1)}>−</button>
-                <span style={{ fontSize: 13, fontFamily: "monospace", color: C.amber, width: 34, textAlign: "center", fontWeight: 700 }}>{task.minutes}m</span>
-                <button style={{ width: 22, height: 22, borderRadius: "50%", background: "#222", border: `1px solid #333`, color: C.cream, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }} onClick={() => upd(task.id, 1)}>+</button>
+              <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 9, padding: "11px 13px" }}>
+                <span
+                  onPointerDown={e => handleDragStart(e, task.id)}
+                  onPointerMove={handleDragMove}
+                  onPointerUp={handleDragEnd}
+                  onPointerCancel={handleDragEnd}
+                  style={{ fontSize: 15, flexShrink: 0, color: C.muted, cursor: "grab", touchAction: "none", padding: "4px 2px", lineHeight: 1 }}
+                  aria-label="drag to reorder"
+                >☰</span>
+                <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#2A2A2A", color: "#C9A876", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</div>
+                <span style={{ fontSize: 15, flexShrink: 0 }}>{task.icon}</span>
+                <div style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600 }}>{exerciseName(task, lang)}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+                  <button style={{ width: 22, height: 22, borderRadius: "50%", background: "#222", border: `1px solid #333`, color: C.cream, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }} onClick={() => upd(task.id, -1)}>−</button>
+                  <span style={{ fontSize: 13, fontFamily: "monospace", color: C.amber, width: 34, textAlign: "center", fontWeight: 700 }}>{task.minutes}m</span>
+                  <button style={{ width: 22, height: 22, borderRadius: "50%", background: "#222", border: `1px solid #333`, color: C.cream, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }} onClick={() => upd(task.id, 1)}>+</button>
+                </div>
               </div>
-              <button style={{ width: 22, height: 22, borderRadius: "50%", background: "none", border: `1px solid #2A2A2A`, color: "#F87171", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }} onClick={() => rm(task.id)}>×</button>
+              <button
+                onClick={() => rm(task.id)}
+                style={{ width: 46, flexShrink: 0, alignSelf: "stretch", background: "none", border: "none", borderLeft: `1px solid ${C.border}`, color: "#F87171", fontSize: 26, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, lineHeight: 1 }}
+              >×</button>
             </div>
           ))
         )}

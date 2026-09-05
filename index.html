@@ -1506,18 +1506,20 @@ const base = {
   // exercise name would force the whole grid wider than its container
   // instead of the name truncating (its own overflow/ellipsis is already
   // set), so the row scrolls horizontally rather than wrapping to a new line.
+  // No padding/gap here — the +/x action column needs to sit flush against
+  // the card's edge and span its full height (see LibraryScreen), so the
+  // content itself carries its own padding in an inner wrapper instead.
   exCard: col => ({
     background: C.surface,
     border: `1px solid ${C.border}`,
     borderLeft: `3px solid ${col}`,
     borderRadius: 10,
-    padding: "11px 13px",
     display: "flex",
-    alignItems: "center",
-    gap: 11,
+    alignItems: "stretch",
     cursor: "pointer",
     userSelect: "none",
-    minWidth: 0
+    minWidth: 0,
+    overflow: "hidden"
   }),
   pillBtn: primary => ({
     padding: primary ? "13px" : "10px 16px",
@@ -3308,14 +3310,22 @@ function LibraryScreen({
       onClick: e => !added && onAdd(ex, (e.currentTarget.querySelector('[data-ex-icon]') || e.currentTarget).getBoundingClientRect()),
       style: {
         display: "flex",
-        alignItems: "center",
-        gap: 10,
-        padding: "8px 10px",
-        background: added ? "#111" : "#0F0F0F",
+        alignItems: "stretch",
         borderRadius: 8,
+        background: added ? "#111" : "#0F0F0F",
         border: `1px solid ${rank === 0 ? C.amber + "44" : "#222"}`,
         cursor: added ? "default" : "pointer",
-        opacity: added ? 0.5 : 1
+        opacity: added ? 0.5 : 1,
+        overflow: "hidden"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1,
+        minWidth: 0,
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "8px 10px"
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
@@ -3365,40 +3375,40 @@ function LibraryScreen({
         color: "#8FAF8F",
         fontWeight: 400
       }
-    }, fmtSuggestTime(ex)))), added ? /*#__PURE__*/React.createElement("button", {
+    }, fmtSuggestTime(ex))))), added ? /*#__PURE__*/React.createElement("button", {
       onClick: e => {
         e.stopPropagation();
         onRemove(ex.id);
       },
       style: {
-        width: 24,
-        height: 24,
-        borderRadius: "50%",
-        background: "#F8717122",
-        border: "1px solid #F87171",
+        width: 38,
+        flexShrink: 0,
+        alignSelf: "stretch",
+        background: "none",
+        border: "none",
+        borderLeft: `1px solid ${C.border}`,
         color: "#F87171",
-        fontSize: 15,
-        fontWeight: 800,
+        fontSize: 20,
+        fontWeight: 900,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        flexShrink: 0,
         cursor: "pointer",
-        padding: 0
+        padding: 0,
+        lineHeight: 1
       }
     }, "×") : /*#__PURE__*/React.createElement("div", {
       style: {
-        width: 24,
-        height: 24,
-        borderRadius: "50%",
-        background: "#C8873A22",
-        border: `1px solid ${C.amber}`,
+        width: 38,
+        flexShrink: 0,
+        alignSelf: "stretch",
+        borderLeft: `1px solid ${C.amber}55`,
         color: C.amber,
-        fontSize: 15,
+        fontSize: 18,
+        fontWeight: 900,
         display: "flex",
         alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0
+        justifyContent: "center"
       }
     }, "+"));
   }))), (() => {
@@ -3496,6 +3506,15 @@ function LibraryScreen({
             opacity: added ? 0.5 : 1
           },
           onClick: e => !added && onAdd(ex, (e.currentTarget.querySelector('[data-ex-icon]') || e.currentTarget).getBoundingClientRect())
+        }, /*#__PURE__*/React.createElement("div", {
+          style: {
+            flex: 1,
+            minWidth: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: 11,
+            padding: "11px 13px"
+          }
         }, /*#__PURE__*/React.createElement("span", {
           "data-ex-icon": "1",
           style: {
@@ -3534,15 +3553,13 @@ function LibraryScreen({
             borderRadius: 5,
             padding: "2px 6px",
             flexShrink: 0,
-            marginRight: 4,
             fontWeight: 700
           }
         }, (subProgress[ex.id] || []).length, "/", ex.subExercises.length), /*#__PURE__*/React.createElement("span", {
           style: {
             fontSize: 11,
             color: C.muted,
-            flexShrink: 0,
-            marginRight: 4
+            flexShrink: 0
           }
         }, ex.defaultMin, "m"), ex.youtubeUrl && extractYouTubeId(ex.youtubeUrl) && /*#__PURE__*/React.createElement("span", {
           style: {
@@ -3553,43 +3570,42 @@ function LibraryScreen({
             borderRadius: 4,
             padding: "2px 5px",
             flexShrink: 0,
-            marginRight: 4,
             fontWeight: 700
           }
-        }, "▶"), added ? /*#__PURE__*/React.createElement("button", {
+        }, "▶")), added ? /*#__PURE__*/React.createElement("button", {
           onClick: e => {
             e.stopPropagation();
             onRemove(ex.id);
           },
           style: {
-            width: 26,
-            height: 26,
-            borderRadius: "50%",
-            background: "#F8717122",
-            border: "1px solid #F87171",
+            width: 46,
+            flexShrink: 0,
+            alignSelf: "stretch",
+            background: "none",
+            border: "none",
+            borderLeft: `1px solid ${C.border}`,
             color: "#F87171",
-            fontSize: 17,
-            fontWeight: 800,
+            fontSize: 26,
+            fontWeight: 900,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            flexShrink: 0,
             cursor: "pointer",
-            padding: 0
+            padding: 0,
+            lineHeight: 1
           }
         }, "×") : /*#__PURE__*/React.createElement("div", {
           style: {
-            width: 26,
-            height: 26,
-            borderRadius: "50%",
-            background: "#C8873A22",
-            border: `1px solid ${C.amber}`,
+            width: 46,
+            flexShrink: 0,
+            alignSelf: "stretch",
+            borderLeft: `1px solid ${C.amber}55`,
             color: C.amber,
-            fontSize: 17,
+            fontSize: 24,
+            fontWeight: 900,
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0
+            justifyContent: "center"
           }
         }, "+"));
       }));
@@ -3613,6 +3629,15 @@ function LibraryScreen({
           opacity: added ? 0.5 : 1
         },
         onClick: e => !added && onAdd(ex, (e.currentTarget.querySelector('[data-ex-icon]') || e.currentTarget).getBoundingClientRect())
+      }, /*#__PURE__*/React.createElement("div", {
+        style: {
+          flex: 1,
+          minWidth: 0,
+          display: "flex",
+          alignItems: "center",
+          gap: 11,
+          padding: "11px 13px"
+        }
       }, /*#__PURE__*/React.createElement("span", {
         "data-ex-icon": "1",
         style: {
@@ -3651,15 +3676,13 @@ function LibraryScreen({
           borderRadius: 5,
           padding: "2px 6px",
           flexShrink: 0,
-          marginRight: 4,
           fontWeight: 700
         }
       }, (subProgress[ex.id] || []).length, "/", ex.subExercises.length), /*#__PURE__*/React.createElement("span", {
         style: {
           fontSize: 11,
           color: C.muted,
-          flexShrink: 0,
-          marginRight: 4
+          flexShrink: 0
         }
       }, ex.defaultMin, "m"), ex.youtubeUrl && extractYouTubeId(ex.youtubeUrl) && /*#__PURE__*/React.createElement("span", {
         style: {
@@ -3670,43 +3693,42 @@ function LibraryScreen({
           borderRadius: 4,
           padding: "2px 5px",
           flexShrink: 0,
-          marginRight: 4,
           fontWeight: 700
         }
-      }, "▶"), added ? /*#__PURE__*/React.createElement("button", {
+      }, "▶")), added ? /*#__PURE__*/React.createElement("button", {
         onClick: e => {
           e.stopPropagation();
           onRemove(ex.id);
         },
         style: {
-          width: 26,
-          height: 26,
-          borderRadius: "50%",
-          background: "#F8717122",
-          border: "1px solid #F87171",
+          width: 46,
+          flexShrink: 0,
+          alignSelf: "stretch",
+          background: "none",
+          border: "none",
+          borderLeft: `1px solid ${C.border}`,
           color: "#F87171",
-          fontSize: 17,
-          fontWeight: 800,
+          fontSize: 26,
+          fontWeight: 900,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          flexShrink: 0,
           cursor: "pointer",
-          padding: 0
+          padding: 0,
+          lineHeight: 1
         }
       }, "×") : /*#__PURE__*/React.createElement("div", {
         style: {
-          width: 26,
-          height: 26,
-          borderRadius: "50%",
-          background: "#C8873A22",
-          border: `1px solid ${C.amber}`,
+          width: 46,
+          flexShrink: 0,
+          alignSelf: "stretch",
+          borderLeft: `1px solid ${C.amber}55`,
           color: C.amber,
-          fontSize: 17,
+          fontSize: 24,
+          fontWeight: 900,
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0
+          justifyContent: "center"
         }
       }, "+"));
     }));
@@ -4099,12 +4121,20 @@ function SessionScreen({
       background: C.surface,
       border: `1px solid ${draggingId === task.id ? C.amber : C.border}`,
       borderRadius: 10,
-      padding: "11px 13px",
+      display: "flex",
+      alignItems: "stretch",
+      opacity: draggingId === task.id ? 0.6 : 1,
+      transition: "opacity 0.15s, border-color 0.15s",
+      overflow: "hidden"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0,
       display: "flex",
       alignItems: "center",
       gap: 9,
-      opacity: draggingId === task.id ? 0.6 : 1,
-      transition: "opacity 0.15s, border-color 0.15s"
+      padding: "11px 13px"
     }
   }, /*#__PURE__*/React.createElement("span", {
     onPointerDown: e => handleDragStart(e, task.id),
@@ -4143,6 +4173,7 @@ function SessionScreen({
   }, task.icon), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
+      minWidth: 0,
       fontSize: 13,
       fontWeight: 600
     }
@@ -4150,7 +4181,8 @@ function SessionScreen({
     style: {
       display: "flex",
       alignItems: "center",
-      gap: 5
+      gap: 5,
+      flexShrink: 0
     }
   }, /*#__PURE__*/React.createElement("button", {
     style: {
@@ -4193,22 +4225,25 @@ function SessionScreen({
       padding: 0
     },
     onClick: () => upd(task.id, 1)
-  }, "+")), /*#__PURE__*/React.createElement("button", {
+  }, "+"))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => rm(task.id),
     style: {
-      width: 22,
-      height: 22,
-      borderRadius: "50%",
+      width: 46,
+      flexShrink: 0,
+      alignSelf: "stretch",
       background: "none",
-      border: `1px solid #2A2A2A`,
+      border: "none",
+      borderLeft: `1px solid ${C.border}`,
       color: "#F87171",
-      fontSize: 13,
+      fontSize: 26,
+      fontWeight: 900,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       cursor: "pointer",
-      padding: 0
-    },
-    onClick: () => rm(task.id)
+      padding: 0,
+      lineHeight: 1
+    }
   }, "×")))), /*#__PURE__*/React.createElement("div", {
     style: {
       flexShrink: 0,
