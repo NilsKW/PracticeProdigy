@@ -1939,7 +1939,16 @@ function FlyingExerciseIcon({ icon, from, to }) {
   const endX = to.left + to.width / 2;
   const endY = to.top + to.height / 2;
   const delay = FLY_DURATION_S * (0.1 / 0.37);
-  return (
+  // Rendered via a portal straight to <body>, bypassing the app shell: that
+  // shell has a CSS `zoom` on it for the "display size" setting, and zoom
+  // makes its box a containing block for position:fixed descendants — any
+  // fixed child left inside it gets its own left/top re-scaled by that same
+  // zoom on top of the already-real (post-zoom) pixels from
+  // getBoundingClientRect(), a double-scaling that grows with distance from
+  // the top-left corner. That's exactly why an icon tapped low on the
+  // screen used to land far from where it should. A portal sidesteps the
+  // whole issue by never being a descendant of the zoomed element at all.
+  return ReactDOM.createPortal(
     <div data-flying="1" style={{
       position: "fixed", left: startX, top: startY, zIndex: 600,
       width: 60, height: 60, marginLeft: -30, marginTop: -30,
@@ -1948,7 +1957,8 @@ function FlyingExerciseIcon({ icon, from, to }) {
       transform: flown ? `translate(${endX - startX}px, ${endY - startY}px) scale(0.25)` : "translate(0,0) scale(1)",
       opacity: flown ? 0 : 1,
       transition: `transform ${FLY_DURATION_S}s cubic-bezier(0.3,0,0.6,1), opacity ${FLY_DURATION_S}s ease-in ${delay}s`,
-    }}>{icon}</div>
+    }}>{icon}</div>,
+    document.body
   );
 }
 
