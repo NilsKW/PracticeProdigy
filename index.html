@@ -268,7 +268,18 @@ const STRINGS = {
     onboardProgressDesc: "Track your level, stats, and the badges you unlock.",
     onboardSettingsTitle: "Settings",
     onboardSettingsDesc: "Customize your exercises, categories, and app options.",
-    addedToSessionToast: "Added to session"
+    addedToSessionToast: "Added to session",
+    settingsFeedback: "feedback",
+    feedbackTitle: "Report a bug or suggest an idea",
+    feedbackDesc: "Opens your email app with the message ready to send to the developer.",
+    feedbackBug: "Bug",
+    feedbackIdea: "Idea",
+    feedbackBugLabel: "What went wrong?",
+    feedbackIdeaLabel: "What's your idea?",
+    feedbackBugPlaceholder: "Describe what happened, and what you expected instead...",
+    feedbackIdeaPlaceholder: "Describe your idea...",
+    feedbackSendBtn: "Send by email",
+    feedbackHint: "Opens your mail app — just hit send once it's ready."
   },
   fr: {
     navLibrary: "Bibliothèque",
@@ -462,7 +473,18 @@ const STRINGS = {
     onboardProgressDesc: "Suis ton niveau, tes statistiques et les badges débloqués.",
     onboardSettingsTitle: "Réglages",
     onboardSettingsDesc: "Personnalise tes exercices, tes catégories et les options de l'appli.",
-    addedToSessionToast: "Ajouté à la séance"
+    addedToSessionToast: "Ajouté à la séance",
+    settingsFeedback: "retours",
+    feedbackTitle: "Signaler un bug ou proposer une idée",
+    feedbackDesc: "Ouvre votre application mail avec le message prêt à envoyer au développeur.",
+    feedbackBug: "Bug",
+    feedbackIdea: "Idée",
+    feedbackBugLabel: "Qu'est-ce qui n'a pas fonctionné ?",
+    feedbackIdeaLabel: "Quelle est votre idée ?",
+    feedbackBugPlaceholder: "Décrivez ce qui s'est passé, et ce à quoi vous vous attendiez...",
+    feedbackIdeaPlaceholder: "Décrivez votre idée...",
+    feedbackSendBtn: "Envoyer par email",
+    feedbackHint: "Ouvre votre application mail — il ne restera qu'à appuyer sur envoyer."
   }
 };
 
@@ -6087,6 +6109,10 @@ function SettingsScreen({
     icon: "🏅",
     label: T("settingsBadges")
   }, {
+    id: "feedback",
+    icon: "💬",
+    label: T("settingsFeedback")
+  }, {
     id: "debug",
     icon: "🔧",
     label: "debug"
@@ -6099,6 +6125,19 @@ function SettingsScreen({
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState(null); // null | { ok: bool, text }
+  const [feedbackType, setFeedbackType] = useState("bug"); // "bug" | "idea"
+  const [feedbackMsg, setFeedbackMsg] = useState("");
+  // No backend to send this to — a mailto: link opens the user's own mail
+  // app with the recipient/subject/body pre-filled, so they just hit send.
+  // Basic device/app context is appended automatically since it's the kind
+  // of thing a bug report needs but is easy to forget to mention.
+  const feedbackMailtoHref = () => {
+    const subject = feedbackType === "bug" ? "Practice Prodigy — Bug" : "Practice Prodigy — Idée";
+    const trimmed = feedbackMsg.trim().slice(0, 1500);
+    const context = ["", "---", `Type : ${feedbackType === "bug" ? "Bug" : "Idée d'amélioration"}`, `Langue : ${lang}`, `Taille d'affichage : ${displaySize}`, `Appareil : ${navigator.userAgent}`].join("\n");
+    const body = trimmed + context;
+    return `mailto:kwiatowski.nils@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
   const toggleExportCat = id => setExportSelectedCats(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   const doExport = async () => {
     setExporting(true);
@@ -6712,7 +6751,85 @@ function SettingsScreen({
       color: importMsg.ok ? "#34D399" : "#F87171",
       marginTop: 8
     }
-  }, importMsg.text)))), section === "debug" && /*#__PURE__*/React.createElement("div", {
+  }, importMsg.text)))), section === "feedback" && /*#__PURE__*/React.createElement("div", {
+    style: base.card
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "14px 16px"
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      ...base.label,
+      margin: 0
+    }
+  }, T("feedbackTitle")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: C.muted,
+      marginTop: 4,
+      marginBottom: 12
+    }
+  }, T("feedbackDesc")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      marginBottom: 12
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setFeedbackType("bug"),
+    style: {
+      flex: 1,
+      padding: "9px 8px",
+      borderRadius: 9,
+      border: `1px solid ${feedbackType === "bug" ? "#F87171" : "#2A2A2A"}`,
+      background: feedbackType === "bug" ? "#F8717122" : "#1A1A1A",
+      color: feedbackType === "bug" ? "#F87171" : C.muted,
+      fontSize: 13,
+      fontWeight: feedbackType === "bug" ? 700 : 400,
+      cursor: "pointer"
+    }
+  }, "🐛 ", T("feedbackBug")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setFeedbackType("idea"),
+    style: {
+      flex: 1,
+      padding: "9px 8px",
+      borderRadius: 9,
+      border: `1px solid ${feedbackType === "idea" ? C.amber : "#2A2A2A"}`,
+      background: feedbackType === "idea" ? "#C8873A22" : "#1A1A1A",
+      color: feedbackType === "idea" ? C.amber : C.muted,
+      fontSize: 13,
+      fontWeight: feedbackType === "idea" ? 700 : 400,
+      cursor: "pointer"
+    }
+  }, "💡 ", T("feedbackIdea"))), /*#__PURE__*/React.createElement("label", {
+    style: base.label
+  }, feedbackType === "bug" ? T("feedbackBugLabel") : T("feedbackIdeaLabel")), /*#__PURE__*/React.createElement("textarea", {
+    style: {
+      ...base.input,
+      height: 110,
+      resize: "none"
+    },
+    value: feedbackMsg,
+    onChange: e => setFeedbackMsg(e.target.value),
+    placeholder: feedbackType === "bug" ? T("feedbackBugPlaceholder") : T("feedbackIdeaPlaceholder")
+  }), /*#__PURE__*/React.createElement("a", {
+    href: feedbackMsg.trim() ? feedbackMailtoHref() : undefined,
+    style: {
+      ...base.pillBtn(true),
+      marginTop: 10,
+      textAlign: "center",
+      display: "block",
+      textDecoration: "none",
+      opacity: feedbackMsg.trim() ? 1 : 0.5,
+      pointerEvents: feedbackMsg.trim() ? "auto" : "none"
+    }
+  }, T("feedbackSendBtn")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: C.muted,
+      marginTop: 8
+    }
+  }, T("feedbackHint")))), section === "debug" && /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",

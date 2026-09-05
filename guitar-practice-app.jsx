@@ -93,6 +93,14 @@ const STRINGS = {
     onboardProgressTitle: "Progression", onboardProgressDesc: "Track your level, stats, and the badges you unlock.",
     onboardSettingsTitle: "Settings", onboardSettingsDesc: "Customize your exercises, categories, and app options.",
     addedToSessionToast: "Added to session",
+    settingsFeedback: "feedback",
+    feedbackTitle: "Report a bug or suggest an idea",
+    feedbackDesc: "Opens your email app with the message ready to send to the developer.",
+    feedbackBug: "Bug", feedbackIdea: "Idea",
+    feedbackBugLabel: "What went wrong?", feedbackIdeaLabel: "What's your idea?",
+    feedbackBugPlaceholder: "Describe what happened, and what you expected instead...",
+    feedbackIdeaPlaceholder: "Describe your idea...",
+    feedbackSendBtn: "Send by email", feedbackHint: "Opens your mail app — just hit send once it's ready.",
   },
   fr: {
     navLibrary: "Bibliothèque", navPresets: "Modèles", navSession: "Séance", navActive: "▶ En cours",
@@ -184,6 +192,14 @@ const STRINGS = {
     onboardProgressTitle: "Progression", onboardProgressDesc: "Suis ton niveau, tes statistiques et les badges débloqués.",
     onboardSettingsTitle: "Réglages", onboardSettingsDesc: "Personnalise tes exercices, tes catégories et les options de l'appli.",
     addedToSessionToast: "Ajouté à la séance",
+    settingsFeedback: "retours",
+    feedbackTitle: "Signaler un bug ou proposer une idée",
+    feedbackDesc: "Ouvre votre application mail avec le message prêt à envoyer au développeur.",
+    feedbackBug: "Bug", feedbackIdea: "Idée",
+    feedbackBugLabel: "Qu'est-ce qui n'a pas fonctionné ?", feedbackIdeaLabel: "Quelle est votre idée ?",
+    feedbackBugPlaceholder: "Décrivez ce qui s'est passé, et ce à quoi vous vous attendiez...",
+    feedbackIdeaPlaceholder: "Décrivez votre idée...",
+    feedbackSendBtn: "Envoyer par email", feedbackHint: "Ouvre votre application mail — il ne restera qu'à appuyer sur envoyer.",
   },
 };
 
@@ -2834,6 +2850,7 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
     { id: "language",   icon: "🌐", label: T("settingsLanguage") },
     { id: "display",    icon: "🔠", label: T("settingsDisplay") },
     { id: "badges",     icon: "🏅", label: T("settingsBadges") },
+    { id: "feedback",   icon: "💬", label: T("settingsFeedback") },
     { id: "debug",      icon: "🔧", label: "debug" },
   ];
   const [editEx, setEditEx]   = useState(null);  // null | "new" | exercise object
@@ -2844,6 +2861,26 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState(null); // null | { ok: bool, text }
+  const [feedbackType, setFeedbackType] = useState("bug"); // "bug" | "idea"
+  const [feedbackMsg, setFeedbackMsg] = useState("");
+  // No backend to send this to — a mailto: link opens the user's own mail
+  // app with the recipient/subject/body pre-filled, so they just hit send.
+  // Basic device/app context is appended automatically since it's the kind
+  // of thing a bug report needs but is easy to forget to mention.
+  const feedbackMailtoHref = () => {
+    const subject = feedbackType === "bug" ? "Practice Prodigy — Bug" : "Practice Prodigy — Idée";
+    const trimmed = feedbackMsg.trim().slice(0, 1500);
+    const context = [
+      "",
+      "---",
+      `Type : ${feedbackType === "bug" ? "Bug" : "Idée d'amélioration"}`,
+      `Langue : ${lang}`,
+      `Taille d'affichage : ${displaySize}`,
+      `Appareil : ${navigator.userAgent}`,
+    ].join("\n");
+    const body = trimmed + context;
+    return `mailto:kwiatowski.nils@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
   const toggleExportCat = (id) => setExportSelectedCats(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   const doExport = async () => {
     setExporting(true);
@@ -3102,6 +3139,37 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
                 <div style={{ fontSize: 11, color: importMsg.ok ? "#34D399" : "#F87171", marginTop: 8 }}>{importMsg.text}</div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {section === "feedback" && (
+        <div style={base.card}>
+          <div style={{ padding: "14px 16px" }}>
+            <label style={{ ...base.label, margin: 0 }}>{T("feedbackTitle")}</label>
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 4, marginBottom: 12 }}>{T("feedbackDesc")}</div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              <button
+                onClick={() => setFeedbackType("bug")}
+                style={{ flex: 1, padding: "9px 8px", borderRadius: 9, border: `1px solid ${feedbackType === "bug" ? "#F87171" : "#2A2A2A"}`, background: feedbackType === "bug" ? "#F8717122" : "#1A1A1A", color: feedbackType === "bug" ? "#F87171" : C.muted, fontSize: 13, fontWeight: feedbackType === "bug" ? 700 : 400, cursor: "pointer" }}
+              >🐛 {T("feedbackBug")}</button>
+              <button
+                onClick={() => setFeedbackType("idea")}
+                style={{ flex: 1, padding: "9px 8px", borderRadius: 9, border: `1px solid ${feedbackType === "idea" ? C.amber : "#2A2A2A"}`, background: feedbackType === "idea" ? "#C8873A22" : "#1A1A1A", color: feedbackType === "idea" ? C.amber : C.muted, fontSize: 13, fontWeight: feedbackType === "idea" ? 700 : 400, cursor: "pointer" }}
+              >💡 {T("feedbackIdea")}</button>
+            </div>
+            <label style={base.label}>{feedbackType === "bug" ? T("feedbackBugLabel") : T("feedbackIdeaLabel")}</label>
+            <textarea
+              style={{ ...base.input, height: 110, resize: "none" }}
+              value={feedbackMsg}
+              onChange={e => setFeedbackMsg(e.target.value)}
+              placeholder={feedbackType === "bug" ? T("feedbackBugPlaceholder") : T("feedbackIdeaPlaceholder")}
+            />
+            <a
+              href={feedbackMsg.trim() ? feedbackMailtoHref() : undefined}
+              style={{ ...base.pillBtn(true), marginTop: 10, textAlign: "center", display: "block", textDecoration: "none", opacity: feedbackMsg.trim() ? 1 : 0.5, pointerEvents: feedbackMsg.trim() ? "auto" : "none" }}
+            >{T("feedbackSendBtn")}</a>
+            <div style={{ fontSize: 10, color: C.muted, marginTop: 8 }}>{T("feedbackHint")}</div>
           </div>
         </div>
       )}
