@@ -80,7 +80,7 @@ const STRINGS = {
     unsavedSaveBtn: "Save and leave", unsavedDiscardBtn: "Discard changes",
     settingsShare: "share",
     exportTitle: "Export an exercise group", exportDesc: "Bundle selected categories, their exercises, and any attached files into a single file you can send to someone else.",
-    exportCategoriesLabel: "Categories to include", exportNamePlaceholder: "Pack name (e.g. Oboe — Beginner)",
+    exportNameLabel: "Group name (also used as the file name)", exportCategoriesLabel: "Categories to include", exportNamePlaceholder: "Pack name (e.g. Oboe — Beginner)",
     exportBtn: "Export", exportingBtn: "Exporting…", exportError: "Export failed — please try again.",
     importTitle: "Import an exercise group", importDesc: "Pick a file someone exported from Practice Prodigy — its categories, exercises, and files are added to your library.",
     importBtn: "+ Choose a file to import", importingBtn: "Importing…",
@@ -164,7 +164,7 @@ const STRINGS = {
     unsavedSaveBtn: "Enregistrer et quitter", unsavedDiscardBtn: "Quitter sans enregistrer",
     settingsShare: "partage",
     exportTitle: "Exporter un groupe d'exercices", exportDesc: "Regroupe les catégories sélectionnées, leurs exercices et les fichiers attachés en un seul fichier à envoyer à quelqu'un d'autre.",
-    exportCategoriesLabel: "Catégories à inclure", exportNamePlaceholder: "Nom du groupe (ex. Hautbois — Débutant)",
+    exportNameLabel: "Nom du groupe (utilisé aussi comme nom de fichier)", exportCategoriesLabel: "Catégories à inclure", exportNamePlaceholder: "Nom du groupe (ex. Hautbois — Débutant)",
     exportBtn: "Exporter", exportingBtn: "Export en cours…", exportError: "L'export a échoué — réessayez.",
     importTitle: "Importer un groupe d'exercices", importDesc: "Choisissez un fichier exporté depuis Practice Prodigy — ses catégories, exercices et fichiers sont ajoutés à votre bibliothèque.",
     importBtn: "+ Choisir un fichier à importer", importingBtn: "Import en cours…",
@@ -2847,6 +2847,8 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
             <div style={{ padding: "14px 16px" }}>
               <label style={{ ...base.label, margin: 0 }}>{T("exportTitle")}</label>
               <div style={{ fontSize: 11, color: C.muted, marginTop: 4, marginBottom: 12 }}>{T("exportDesc")}</div>
+              <label style={base.label}>{T("exportNameLabel")}</label>
+              <input style={{ ...base.input, marginBottom: 14 }} value={exportName} onChange={e => setExportName(e.target.value)} placeholder={T("exportNamePlaceholder")} autoComplete="off" autoCorrect="off" spellCheck={false} />
               <label style={base.label}>{T("exportCategoriesLabel")}</label>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
                 {categories.map(cat => (
@@ -2858,7 +2860,6 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
                   </label>
                 ))}
               </div>
-              <input style={base.input} value={exportName} onChange={e => setExportName(e.target.value)} placeholder={T("exportNamePlaceholder")} autoComplete="off" autoCorrect="off" spellCheck={false} />
               <button
                 style={{ ...base.pillBtn(true), marginTop: 10, opacity: exportSelectedCats.length === 0 || exporting ? 0.5 : 1 }}
                 disabled={exportSelectedCats.length === 0 || exporting}

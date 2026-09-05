@@ -245,6 +245,7 @@ const STRINGS = {
     settingsShare: "share",
     exportTitle: "Export an exercise group",
     exportDesc: "Bundle selected categories, their exercises, and any attached files into a single file you can send to someone else.",
+    exportNameLabel: "Group name (also used as the file name)",
     exportCategoriesLabel: "Categories to include",
     exportNamePlaceholder: "Pack name (e.g. Oboe — Beginner)",
     exportBtn: "Export",
@@ -426,6 +427,7 @@ const STRINGS = {
     settingsShare: "partage",
     exportTitle: "Exporter un groupe d'exercices",
     exportDesc: "Regroupe les catégories sélectionnées, leurs exercices et les fichiers attachés en un seul fichier à envoyer à quelqu'un d'autre.",
+    exportNameLabel: "Nom du groupe (utilisé aussi comme nom de fichier)",
     exportCategoriesLabel: "Catégories à inclure",
     exportNamePlaceholder: "Nom du groupe (ex. Hautbois — Débutant)",
     exportBtn: "Exporter",
@@ -6206,6 +6208,19 @@ function SettingsScreen({
     }
   }, T("exportDesc")), /*#__PURE__*/React.createElement("label", {
     style: base.label
+  }, T("exportNameLabel")), /*#__PURE__*/React.createElement("input", {
+    style: {
+      ...base.input,
+      marginBottom: 14
+    },
+    value: exportName,
+    onChange: e => setExportName(e.target.value),
+    placeholder: T("exportNamePlaceholder"),
+    autoComplete: "off",
+    autoCorrect: "off",
+    spellCheck: false
+  }), /*#__PURE__*/React.createElement("label", {
+    style: base.label
   }, T("exportCategoriesLabel")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -6244,15 +6259,7 @@ function SettingsScreen({
       fontSize: 11,
       color: C.muted
     }
-  }, T("exercisesCount", exercises.filter(e => e.categoryId === cat.id).length))))), /*#__PURE__*/React.createElement("input", {
-    style: base.input,
-    value: exportName,
-    onChange: e => setExportName(e.target.value),
-    placeholder: T("exportNamePlaceholder"),
-    autoComplete: "off",
-    autoCorrect: "off",
-    spellCheck: false
-  }), /*#__PURE__*/React.createElement("button", {
+  }, T("exercisesCount", exercises.filter(e => e.categoryId === cat.id).length))))), /*#__PURE__*/React.createElement("button", {
     style: {
       ...base.pillBtn(true),
       marginTop: 10,
