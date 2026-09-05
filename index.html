@@ -256,7 +256,20 @@ const STRINGS = {
     importBtn: "+ Choose a file to import",
     importingBtn: "Importing…",
     importSuccess: (n, m) => `Imported ${n} exercise${n === 1 ? "" : "s"} across ${m} categor${m === 1 ? "y" : "ies"}.`,
-    importError: "Import failed — the file may not be a valid Practice Prodigy export."
+    importError: "Import failed — the file may not be a valid Practice Prodigy export.",
+    onboardSkip: "Skip",
+    onboardNext: "Next",
+    onboardStart: "Get started",
+    onboardWelcomeTitle: "Welcome to Practice Prodigy!",
+    onboardWelcomeDesc: "A quick tour to get you started in a few seconds.",
+    onboardLibraryTitle: "Library",
+    onboardLibraryDesc: "Browse and add the exercises you want to practice.",
+    onboardSessionTitle: "Session",
+    onboardSessionDesc: "Exercises you've added show up here — start your session when you're ready.",
+    onboardProgressTitle: "Progression",
+    onboardProgressDesc: "Track your level, stats, and the badges you unlock.",
+    onboardSettingsTitle: "Settings",
+    onboardSettingsDesc: "Customize your exercises, categories, and app options."
   },
   fr: {
     navLibrary: "Bibliothèque",
@@ -438,7 +451,20 @@ const STRINGS = {
     importBtn: "+ Choisir un fichier à importer",
     importingBtn: "Import en cours…",
     importSuccess: (n, m) => `${n} exercice${n > 1 ? "s" : ""} importé${n > 1 ? "s" : ""} dans ${m} catégorie${m > 1 ? "s" : ""}.`,
-    importError: "L'import a échoué — le fichier n'est peut-être pas un export Practice Prodigy valide."
+    importError: "L'import a échoué — le fichier n'est peut-être pas un export Practice Prodigy valide.",
+    onboardSkip: "Passer",
+    onboardNext: "Suivant",
+    onboardStart: "Commencer",
+    onboardWelcomeTitle: "Bienvenue dans Practice Prodigy !",
+    onboardWelcomeDesc: "Un tour rapide pour tout comprendre en quelques secondes.",
+    onboardLibraryTitle: "Bibliothèque",
+    onboardLibraryDesc: "Choisis et ajoute les exercices que tu veux pratiquer.",
+    onboardSessionTitle: "Séance",
+    onboardSessionDesc: "Les exercices ajoutés arrivent ici — lance ta séance quand tu es prêt.",
+    onboardProgressTitle: "Progression",
+    onboardProgressDesc: "Suis ton niveau, tes statistiques et les badges débloqués.",
+    onboardSettingsTitle: "Réglages",
+    onboardSettingsDesc: "Personnalise tes exercices, tes catégories et les options de l'appli."
   }
 };
 
@@ -1845,6 +1871,114 @@ function UnsavedChangesModal({
     },
     onClick: onCancel
   }, T("cancelBtn")))));
+}
+
+// First-launch tour: a handful of short cards pointing out the four bottom-nav
+// destinations, shown once (tracked via a persisted flag) so a new user knows
+// where to add exercises, run a session, and check their progress/settings.
+function OnboardingTour({
+  onDone
+}) {
+  const T = useT();
+  const [step, setStep] = useState(0);
+  const steps = [{
+    icon: "👋",
+    title: T("onboardWelcomeTitle"),
+    desc: T("onboardWelcomeDesc")
+  }, {
+    icon: "📚",
+    title: T("onboardLibraryTitle"),
+    desc: T("onboardLibraryDesc")
+  }, {
+    icon: "📋",
+    title: T("onboardSessionTitle"),
+    desc: T("onboardSessionDesc")
+  }, {
+    icon: "📈",
+    title: T("onboardProgressTitle"),
+    desc: T("onboardProgressDesc")
+  }, {
+    icon: "⚙️",
+    title: T("onboardSettingsTitle"),
+    desc: T("onboardSettingsDesc")
+  }];
+  const isLast = step === steps.length - 1;
+  const cur = steps[step];
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "fixed",
+      inset: 0,
+      zIndex: 500,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+      background: "#000000cc"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "#151515",
+      border: `1px solid ${C.border}`,
+      borderRadius: 18,
+      padding: "26px 22px 22px",
+      maxWidth: 320,
+      width: "100%",
+      boxShadow: "0 10px 50px #000b",
+      textAlign: "center",
+      position: "relative"
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onDone,
+    style: {
+      position: "absolute",
+      top: 12,
+      right: 12,
+      background: "none",
+      border: "none",
+      color: C.muted,
+      fontSize: 12,
+      cursor: "pointer",
+      padding: 4
+    }
+  }, T("onboardSkip")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 46,
+      marginBottom: 14
+    }
+  }, cur.icon), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 16,
+      fontWeight: 700,
+      color: C.cream,
+      marginBottom: 8
+    }
+  }, cur.title), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: C.muted,
+      lineHeight: 1.5,
+      marginBottom: 20
+    }
+  }, cur.desc), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "center",
+      gap: 6,
+      marginBottom: 18
+    }
+  }, steps.map((_, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    style: {
+      width: i === step ? 16 : 6,
+      height: 6,
+      borderRadius: 3,
+      background: i === step ? C.amber : "#333",
+      transition: "all 0.2s"
+    }
+  }))), /*#__PURE__*/React.createElement("button", {
+    style: base.pillBtn(true),
+    onClick: () => isLast ? onDone() : setStep(s => s + 1)
+  }, isLast ? T("onboardStart") : T("onboardNext"))));
 }
 function FilesSection({
   files
@@ -6356,6 +6490,8 @@ function App() {
   const audioCtx = useRef(null);
   const masterGainRef = useRef(null);
   const [volume, setVolume, volLoaded] = usePersisted("volume", 0.8);
+  // Shown once on first launch to point out the four bottom-nav destinations.
+  const [onboardingDone, setOnboardingDone, onboardingLoaded] = usePersisted("onboardingDone", false);
 
   // Navigation guard: while the Settings exercise/category editor is open
   // with unsaved changes, any exit (bottom nav, back arrow, phone back
@@ -6877,7 +7013,9 @@ function App() {
     r: "3"
   }), /*#__PURE__*/React.createElement("path", {
     d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
-  })), T("navSettings"))), unsavedPrompt && /*#__PURE__*/React.createElement(UnsavedChangesModal, {
+  })), T("navSettings"))), onboardingLoaded && !onboardingDone && /*#__PURE__*/React.createElement(OnboardingTour, {
+    onDone: () => setOnboardingDone(true)
+  }), unsavedPrompt && /*#__PURE__*/React.createElement(UnsavedChangesModal, {
     canSave: unsavedPrompt.canSave,
     onSave: () => {
       editorGuardRef.current?.save?.();
