@@ -3746,7 +3746,9 @@ function SessionScreen({
   sessionInProgress,
   onReturnToSession,
   presets,
-  setPresets
+  setPresets,
+  minuteBumpMs,
+  minuteBumpPct
 }) {
   const T = useT();
   const lang = useLang();
@@ -3760,6 +3762,22 @@ function SessionScreen({
     minutes: Math.max(1, t.minutes + d)
   } : t));
   const rm = id => setTasks(prev => prev.filter(t => t.id !== id));
+
+  // Brief "bump" (grow then settle) on a task's minute count whenever it's
+  // adjusted, so the change registers visually, not just as a number swap.
+  // Keyed per-task by an incrementing nonce (not just the task id) so
+  // mashing +/- repeatedly restarts the animation from scratch each time —
+  // remounting the span (via `key`) is the reliable way to force a CSS
+  // animation to replay, rather than fighting animation/reflow timing.
+  const [minuteBump, setMinuteBump] = useState({}); // { [taskId]: nonce }
+  const bumpNonceRef = useRef(0);
+  const bumpMinutes = id => {
+    bumpNonceRef.current += 1;
+    setMinuteBump(prev => ({
+      ...prev,
+      [id]: bumpNonceRef.current
+    }));
+  };
 
   // ── Drag-and-drop reordering of the session queue ──────────────────────────
   // Pointer Events (not HTML5 DnD) so this works with touch as well as mouse.
@@ -3838,7 +3856,7 @@ function SessionScreen({
       flexDirection: "column",
       height: "100%"
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("style", null, `@keyframes minuteBump { 0%, 100% { transform: scale(1); } 50% { transform: scale(var(--bump-scale, 1.25)); } }`), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
       minHeight: 0,
@@ -4181,7 +4199,7 @@ function SessionScreen({
     style: {
       display: "flex",
       alignItems: "center",
-      gap: 5,
+      gap: 7,
       flexShrink: 0
     }
   }, /*#__PURE__*/React.createElement("button", {
@@ -4197,17 +4215,27 @@ function SessionScreen({
       alignItems: "center",
       justifyContent: "center",
       cursor: "pointer",
-      padding: 0
+      padding: 0,
+      flexShrink: 0
     },
-    onClick: () => upd(task.id, -1)
+    onClick: () => {
+      upd(task.id, -1);
+      bumpMinutes(task.id);
+    }
   }, "−"), /*#__PURE__*/React.createElement("span", {
+    key: `min-${task.id}-${minuteBump[task.id] || 0}`,
     style: {
       fontSize: 13,
       fontFamily: "monospace",
       color: C.amber,
       width: 34,
       textAlign: "center",
-      fontWeight: 700
+      fontWeight: 700,
+      display: "inline-block",
+      position: "relative",
+      zIndex: minuteBump[task.id] ? 1 : 0,
+      "--bump-scale": 1 + (minuteBumpPct ?? 25) / 100,
+      animation: minuteBump[task.id] ? `minuteBump ${minuteBumpMs ?? 220}ms ease-out` : "none"
     }
   }, task.minutes, "m"), /*#__PURE__*/React.createElement("button", {
     style: {
@@ -4222,9 +4250,13 @@ function SessionScreen({
       alignItems: "center",
       justifyContent: "center",
       cursor: "pointer",
-      padding: 0
+      padding: 0,
+      flexShrink: 0
     },
-    onClick: () => upd(task.id, 1)
+    onClick: () => {
+      upd(task.id, 1);
+      bumpMinutes(task.id);
+    }
   }, "+"))), /*#__PURE__*/React.createElement("button", {
     onClick: () => rm(task.id),
     style: {
@@ -5993,7 +6025,11 @@ function SettingsScreen({
   onDisplaySizeChange,
   onResetBadges,
   editorGuardRef,
-  guardedRun
+  guardedRun,
+  minuteBumpMs,
+  onMinuteBumpMsChange,
+  minuteBumpPct,
+  onMinuteBumpPctChange
 }) {
   const T = useT();
   const [section, setSection] = useState("exercises");
@@ -6099,7 +6135,7 @@ function SettingsScreen({
       padding: 3,
       marginBottom: 8
     }
-  }, [["exercises", T("settingsExercises")], ["categories", T("settingsCategories")], ["share", T("settingsShare")], ["sound", T("settingsSound")], ["language", T("settingsLanguage")], ["display", T("settingsDisplay")], ["badges", T("settingsBadges")]].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+  }, [["exercises", T("settingsExercises")], ["categories", T("settingsCategories")], ["share", T("settingsShare")], ["sound", T("settingsSound")], ["language", T("settingsLanguage")], ["display", T("settingsDisplay")], ["badges", T("settingsBadges")], ["debug", "🔧 debug"]].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
     key: id,
     style: {
       flex: 1,
@@ -6597,7 +6633,154 @@ function SettingsScreen({
       color: importMsg.ok ? "#34D399" : "#F87171",
       marginTop: 8
     }
-  }, importMsg.text)))));
+  }, importMsg.text)))), section === "debug" && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: base.card
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "14px 16px"
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      ...base.label,
+      margin: 0
+    }
+  }, "Durée de l'animation +/- minutes (temporaire)"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: C.muted,
+      marginTop: 4,
+      marginBottom: 12
+    }
+  }, "À retirer une fois la durée idéale trouvée — dis-la moi et je la fige dans le code."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "range",
+    min: "80",
+    max: "600",
+    step: "10",
+    value: minuteBumpMs,
+    onChange: e => onMinuteBumpMsChange(parseInt(e.target.value)),
+    style: {
+      flex: 1,
+      accentColor: C.amber,
+      height: 4,
+      cursor: "pointer"
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13,
+      fontFamily: "monospace",
+      color: C.amber,
+      fontWeight: 700,
+      width: 60,
+      textAlign: "right"
+    }
+  }, minuteBumpMs, " ms")))), /*#__PURE__*/React.createElement("div", {
+    style: base.card
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "14px 16px"
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      ...base.label,
+      margin: 0
+    }
+  }, "Grossissement du texte (temporaire)"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: C.muted,
+      marginTop: 4,
+      marginBottom: 12
+    }
+  }, "Pourcentage par lequel le texte grossit au pic de l'animation."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "range",
+    min: "0",
+    max: "80",
+    step: "1",
+    value: minuteBumpPct,
+    onChange: e => onMinuteBumpPctChange(parseInt(e.target.value)),
+    style: {
+      flex: 1,
+      accentColor: C.amber,
+      height: 4,
+      cursor: "pointer"
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13,
+      fontFamily: "monospace",
+      color: C.amber,
+      fontWeight: 700,
+      width: 60,
+      textAlign: "right"
+    }
+  }, "+", minuteBumpPct, "%")))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...base.card,
+      padding: "18px 16px",
+      textAlign: "center"
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      ...base.label,
+      margin: "0 0 10px"
+    }
+  }, "Aperçu"), /*#__PURE__*/React.createElement(PreviewBump, {
+    minuteBumpMs: minuteBumpMs,
+    minuteBumpPct: minuteBumpPct
+  }))));
+}
+
+// Standalone re-triggerable preview of the minute-bump animation, used only
+// in the temporary debug section above so the effect can be judged without
+// having to jump to Séance and tap +/- for real each time.
+function PreviewBump({
+  minuteBumpMs,
+  minuteBumpPct
+}) {
+  const [nonce, setNonce] = useState(0);
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    key: nonce,
+    style: {
+      fontSize: 22,
+      fontFamily: "monospace",
+      color: C.amber,
+      fontWeight: 700,
+      display: "inline-block",
+      "--bump-scale": 1 + minuteBumpPct / 100,
+      animation: nonce > 0 ? `minuteBump ${minuteBumpMs}ms ease-out` : "none"
+    }
+  }, "12m"), /*#__PURE__*/React.createElement("style", null, `@keyframes minuteBump { 0%, 100% { transform: scale(1); } 50% { transform: scale(var(--bump-scale, 1.25)); } }`), /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...base.pillBtn(false),
+      fontSize: 12
+    },
+    onClick: () => setNonce(n => n + 1)
+  }, "Tester ↻"));
 }
 
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
@@ -6777,6 +6960,14 @@ function App() {
     const t = setTimeout(() => setSessionFlashing(false), 450);
     return () => clearTimeout(t);
   }, [sessionFlash]);
+
+  // TEMPORARY dev controls (Réglages → Debug): tune the Séance minute-count
+  // "bump" animation (see SessionScreen) live instead of guessing values and
+  // re-deploying each time. Remove this state, its Settings section, and the
+  // minuteBumpMs/minuteBumpPct props once final values are picked, hardcoding
+  // them directly where SessionScreen reads them instead.
+  const [minuteBumpMs, setMinuteBumpMs] = usePersisted("minuteBumpMsDebug", 220);
+  const [minuteBumpPct, setMinuteBumpPct] = usePersisted("minuteBumpPctDebug", 25);
 
   // "Fly to Séance" animation: when an exercise is added from the Library, a
   // clone of its icon flies from where it was tapped to the bottom-nav
@@ -7080,7 +7271,9 @@ function App() {
     sessionInProgress: sessionInProgress,
     onReturnToSession: returnToSession,
     presets: presets,
-    setPresets: setPresets
+    setPresets: setPresets,
+    minuteBumpMs: minuteBumpMs,
+    minuteBumpPct: minuteBumpPct
   }), tab === "progress" && /*#__PURE__*/React.createElement(ProgressionScreen, {
     stats: stats,
     exercises: exercises,
@@ -7104,7 +7297,11 @@ function App() {
     onDisplaySizeChange: setDisplaySize,
     onResetBadges: () => setBadges({}),
     editorGuardRef: editorGuardRef,
-    guardedRun: guardedRun
+    guardedRun: guardedRun,
+    minuteBumpMs: minuteBumpMs,
+    onMinuteBumpMsChange: setMinuteBumpMs,
+    minuteBumpPct: minuteBumpPct,
+    onMinuteBumpPctChange: setMinuteBumpPct
   }), tab === "active" && /*#__PURE__*/React.createElement(ActiveSessionScreen, {
     tasks: tasks,
     setTasks: setTasks,

@@ -1693,7 +1693,7 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, onRemove, stats, s
 
 // ─── SESSION SCREEN (task queue + collapsible presets) ────────────────────────
 
-function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnToSession, presets, setPresets }) {
+function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnToSession, presets, setPresets, minuteBumpMs, minuteBumpPct }) {
   const T = useT();
   const lang = useLang();
   const [saveName, setSaveName] = useState("");
@@ -1703,6 +1703,19 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
   const totalSec = tasks.reduce((s, t) => s + t.minutes * 60, 0);
   const upd = (id, d) => setTasks(prev => prev.map(t => t.id === id ? { ...t, minutes: Math.max(1, t.minutes + d) } : t));
   const rm  = (id) => setTasks(prev => prev.filter(t => t.id !== id));
+
+  // Brief "bump" (grow then settle) on a task's minute count whenever it's
+  // adjusted, so the change registers visually, not just as a number swap.
+  // Keyed per-task by an incrementing nonce (not just the task id) so
+  // mashing +/- repeatedly restarts the animation from scratch each time —
+  // remounting the span (via `key`) is the reliable way to force a CSS
+  // animation to replay, rather than fighting animation/reflow timing.
+  const [minuteBump, setMinuteBump] = useState({}); // { [taskId]: nonce }
+  const bumpNonceRef = useRef(0);
+  const bumpMinutes = (id) => {
+    bumpNonceRef.current += 1;
+    setMinuteBump(prev => ({ ...prev, [id]: bumpNonceRef.current }));
+  };
 
   // ── Drag-and-drop reordering of the session queue ──────────────────────────
   // Pointer Events (not HTML5 DnD) so this works with touch as well as mouse.
@@ -1759,6 +1772,7 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
 
   return (
     <div className="pp-narrow" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <style>{`@keyframes minuteBump { 0%, 100% { transform: scale(1); } 50% { transform: scale(var(--bump-scale, 1.25)); } }`}</style>
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "8px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
 
         {/* Collapsible "Mes présélections" section — styled as a prominent,
@@ -1878,10 +1892,18 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
                 <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#2A2A2A", color: "#C9A876", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</div>
                 <span style={{ fontSize: 15, flexShrink: 0 }}>{task.icon}</span>
                 <div style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600 }}>{exerciseName(task, lang)}</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
-                  <button style={{ width: 22, height: 22, borderRadius: "50%", background: "#222", border: `1px solid #333`, color: C.cream, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }} onClick={() => upd(task.id, -1)}>−</button>
-                  <span style={{ fontSize: 13, fontFamily: "monospace", color: C.amber, width: 34, textAlign: "center", fontWeight: 700 }}>{task.minutes}m</span>
-                  <button style={{ width: 22, height: 22, borderRadius: "50%", background: "#222", border: `1px solid #333`, color: C.cream, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }} onClick={() => upd(task.id, 1)}>+</button>
+                <div style={{ display: "flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
+                  <button style={{ width: 22, height: 22, borderRadius: "50%", background: "#222", border: `1px solid #333`, color: C.cream, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, flexShrink: 0 }} onClick={() => { upd(task.id, -1); bumpMinutes(task.id); }}>−</button>
+                  <span
+                    key={`min-${task.id}-${minuteBump[task.id] || 0}`}
+                    style={{
+                      fontSize: 13, fontFamily: "monospace", color: C.amber, width: 34, textAlign: "center", fontWeight: 700,
+                      display: "inline-block", position: "relative", zIndex: minuteBump[task.id] ? 1 : 0,
+                      "--bump-scale": 1 + (minuteBumpPct ?? 25) / 100,
+                      animation: minuteBump[task.id] ? `minuteBump ${minuteBumpMs ?? 220}ms ease-out` : "none",
+                    }}
+                  >{task.minutes}m</span>
+                  <button style={{ width: 22, height: 22, borderRadius: "50%", background: "#222", border: `1px solid #333`, color: C.cream, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, flexShrink: 0 }} onClick={() => { upd(task.id, 1); bumpMinutes(task.id); }}>+</button>
                 </div>
               </div>
               <button
@@ -2776,7 +2798,7 @@ function CategoryEditor({ editCat, setExercises, setCategories, onBack, onReques
   );
 }
 
-function SettingsScreen({ exercises, setExercises, categories, setCategories, volume, onVolumeChange, lang, onLangChange, displaySize, onDisplaySizeChange, onResetBadges, editorGuardRef, guardedRun }) {
+function SettingsScreen({ exercises, setExercises, categories, setCategories, volume, onVolumeChange, lang, onLangChange, displaySize, onDisplaySizeChange, onResetBadges, editorGuardRef, guardedRun, minuteBumpMs, onMinuteBumpMsChange, minuteBumpPct, onMinuteBumpPctChange }) {
   const T = useT();
   const [section, setSection] = useState("exercises");
   const [editEx, setEditEx]   = useState(null);  // null | "new" | exercise object
@@ -2842,7 +2864,7 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
     <div className="pp-narrow" style={base.scrollArea(24)}>
       {/* Sub-tabs */}
       <div style={{ display: "flex", gap: 0, background: "#0A0A0A", borderRadius: 10, padding: 3, marginBottom: 8 }}>
-        {[["exercises", T("settingsExercises")], ["categories", T("settingsCategories")], ["share", T("settingsShare")], ["sound", T("settingsSound")], ["language", T("settingsLanguage")], ["display", T("settingsDisplay")], ["badges", T("settingsBadges")]].map(([id, label]) => (
+        {[["exercises", T("settingsExercises")], ["categories", T("settingsCategories")], ["share", T("settingsShare")], ["sound", T("settingsSound")], ["language", T("settingsLanguage")], ["display", T("settingsDisplay")], ["badges", T("settingsBadges")], ["debug", "🔧 debug"]].map(([id, label]) => (
           <button key={id} style={{ flex: 1, padding: "7px 2px", borderRadius: 8, border: "none", background: section === id ? "#1E1E1E" : "none", color: section === id ? C.amber : C.muted, fontSize: 10, fontWeight: section === id ? 700 : 500, cursor: "pointer", letterSpacing: "0.03em" }} onClick={() => setSection(id)}>
             {label}
           </button>
@@ -3037,6 +3059,81 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
         </div>
       )}
 
+      {/* TEMPORARY — dev-only tuning controls for the Séance minute-count
+          "bump" animation (grow then settle, on +/-), to dial them in by
+          eye instead of guessing values blind. Remove this whole section
+          (and the minuteBumpMs/minuteBumpPct state/props it reads from)
+          once final values are picked. */}
+      {section === "debug" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={base.card}>
+            <div style={{ padding: "14px 16px" }}>
+              <label style={{ ...base.label, margin: 0 }}>Durée de l'animation +/- minutes (temporaire)</label>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 4, marginBottom: 12 }}>
+                À retirer une fois la durée idéale trouvée — dis-la moi et je la fige dans le code.
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <input
+                  type="range" min="80" max="600" step="10"
+                  value={minuteBumpMs}
+                  onChange={e => onMinuteBumpMsChange(parseInt(e.target.value))}
+                  style={{ flex: 1, accentColor: C.amber, height: 4, cursor: "pointer" }}
+                />
+                <span style={{ fontSize: 13, fontFamily: "monospace", color: C.amber, fontWeight: 700, width: 60, textAlign: "right" }}>
+                  {minuteBumpMs} ms
+                </span>
+              </div>
+            </div>
+          </div>
+          <div style={base.card}>
+            <div style={{ padding: "14px 16px" }}>
+              <label style={{ ...base.label, margin: 0 }}>Grossissement du texte (temporaire)</label>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 4, marginBottom: 12 }}>
+                Pourcentage par lequel le texte grossit au pic de l'animation.
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <input
+                  type="range" min="0" max="80" step="1"
+                  value={minuteBumpPct}
+                  onChange={e => onMinuteBumpPctChange(parseInt(e.target.value))}
+                  style={{ flex: 1, accentColor: C.amber, height: 4, cursor: "pointer" }}
+                />
+                <span style={{ fontSize: 13, fontFamily: "monospace", color: C.amber, fontWeight: 700, width: 60, textAlign: "right" }}>
+                  +{minuteBumpPct}%
+                </span>
+              </div>
+            </div>
+          </div>
+          {/* Live preview so the effect can be judged without leaving Réglages */}
+          <div style={{ ...base.card, padding: "18px 16px", textAlign: "center" }}>
+            <label style={{ ...base.label, margin: "0 0 10px" }}>Aperçu</label>
+            <PreviewBump minuteBumpMs={minuteBumpMs} minuteBumpPct={minuteBumpPct} />
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+// Standalone re-triggerable preview of the minute-bump animation, used only
+// in the temporary debug section above so the effect can be judged without
+// having to jump to Séance and tap +/- for real each time.
+function PreviewBump({ minuteBumpMs, minuteBumpPct }) {
+  const [nonce, setNonce] = useState(0);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+      <span
+        key={nonce}
+        style={{
+          fontSize: 22, fontFamily: "monospace", color: C.amber, fontWeight: 700,
+          display: "inline-block",
+          "--bump-scale": 1 + minuteBumpPct / 100,
+          animation: nonce > 0 ? `minuteBump ${minuteBumpMs}ms ease-out` : "none",
+        }}
+      >12m</span>
+      <style>{`@keyframes minuteBump { 0%, 100% { transform: scale(1); } 50% { transform: scale(var(--bump-scale, 1.25)); } }`}</style>
+      <button style={{ ...base.pillBtn(false), fontSize: 12 }} onClick={() => setNonce(n => n + 1)}>Tester ↻</button>
     </div>
   );
 }
@@ -3199,6 +3296,14 @@ export default function App() {
     const t = setTimeout(() => setSessionFlashing(false), 450);
     return () => clearTimeout(t);
   }, [sessionFlash]);
+
+  // TEMPORARY dev controls (Réglages → Debug): tune the Séance minute-count
+  // "bump" animation (see SessionScreen) live instead of guessing values and
+  // re-deploying each time. Remove this state, its Settings section, and the
+  // minuteBumpMs/minuteBumpPct props once final values are picked, hardcoding
+  // them directly where SessionScreen reads them instead.
+  const [minuteBumpMs, setMinuteBumpMs] = usePersisted("minuteBumpMsDebug", 220);
+  const [minuteBumpPct, setMinuteBumpPct] = usePersisted("minuteBumpPctDebug", 25);
 
   // "Fly to Séance" animation: when an exercise is added from the Library, a
   // clone of its icon flies from where it was tapped to the bottom-nav
@@ -3410,9 +3515,9 @@ export default function App() {
           fills it (flex:1, minHeight:0) and owns its own scrolling. */}
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {tab === "library"  && <LibraryScreen exercises={exercises} categories={categories} tasks={tasks} onAdd={addExerciseWithFlight} onRemove={removeExerciseFromSession} stats={stats} subProgress={subProgress} />}
-      {tab === "session"  && <SessionScreen tasks={tasks} setTasks={setTasks} onStart={startSession} sessionInProgress={sessionInProgress} onReturnToSession={returnToSession} presets={presets} setPresets={setPresets} />}
+      {tab === "session"  && <SessionScreen tasks={tasks} setTasks={setTasks} onStart={startSession} sessionInProgress={sessionInProgress} onReturnToSession={returnToSession} presets={presets} setPresets={setPresets} minuteBumpMs={minuteBumpMs} minuteBumpPct={minuteBumpPct} />}
       {tab === "progress" && <ProgressionScreen stats={stats} exercises={exercises} onClearStats={() => setStats({})} badges={badges} subProgress={subProgress} practiceDays={practiceDays} noodleSec={noodleSec} subTab={progressSubTab} setSubTab={setProgressSubTab} />}
-      {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} editorGuardRef={editorGuardRef} guardedRun={guardedRun} />}
+      {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} editorGuardRef={editorGuardRef} guardedRun={guardedRun} minuteBumpMs={minuteBumpMs} onMinuteBumpMsChange={setMinuteBumpMs} minuteBumpPct={minuteBumpPct} onMinuteBumpPctChange={setMinuteBumpPct} />}
       {tab === "active"   && <ActiveSessionScreen
         tasks={tasks} setTasks={setTasks} onFinish={endSession} onBackToMenu={backToMenu}
         audioCtx={audioCtx} masterGainRef={masterGainRef} onCommitStats={commitStats}
