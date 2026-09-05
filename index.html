@@ -3295,7 +3295,7 @@ function LibraryScreen({
     const added = inSession.has(ex.id);
     return /*#__PURE__*/React.createElement("div", {
       key: ex.id,
-      onClick: () => !added && onAdd(ex),
+      onClick: e => !added && onAdd(ex, e.currentTarget.getBoundingClientRect()),
       style: {
         display: "flex",
         alignItems: "center",
@@ -3475,7 +3475,7 @@ function LibraryScreen({
             ...base.exCard(col),
             opacity: added ? 0.5 : 1
           },
-          onClick: () => !added && onAdd(ex)
+          onClick: e => !added && onAdd(ex, e.currentTarget.getBoundingClientRect())
         }, /*#__PURE__*/React.createElement("span", {
           style: {
             fontSize: 20,
@@ -4227,6 +4227,53 @@ function SessionScreen({
     onClick: onStart,
     disabled: tasks.length === 0
   }, T("startSession")))));
+}
+
+// Flies a clone of an exercise's icon from where it was tapped in the
+// Library to the bottom-nav Séance button, shrinking and fading out along
+// the way — a concrete "it went there" cue for adding to the session,
+// stronger than the nav tab's own red flash alone. Purely decorative
+// (pointer-events: none); the actual add already happened by the time this
+// renders. Renders at its start position first, then flips to the end
+// position one frame later so the CSS transition actually animates the move.
+function FlyingExerciseIcon({
+  icon,
+  from,
+  to
+}) {
+  const [flown, setFlown] = useState(false);
+  useEffect(() => {
+    // A plain timeout rather than requestAnimationFrame: rAF callbacks are
+    // suspended entirely while the tab isn't actually being painted (e.g.
+    // backgrounded), which would leave this stuck at its start position.
+    const t = setTimeout(() => setFlown(true), 20);
+    return () => clearTimeout(t);
+  }, []);
+  const startX = from.left + from.width / 2;
+  const startY = from.top + from.height / 2;
+  const endX = to.left + to.width / 2;
+  const endY = to.top + to.height / 2;
+  return /*#__PURE__*/React.createElement("div", {
+    "data-flying": "1",
+    style: {
+      position: "fixed",
+      left: startX,
+      top: startY,
+      zIndex: 600,
+      width: 30,
+      height: 30,
+      marginLeft: -15,
+      marginTop: -15,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: 20,
+      pointerEvents: "none",
+      transform: flown ? `translate(${endX - startX}px, ${endY - startY}px) scale(0.25)` : "translate(0,0) scale(1)",
+      opacity: flown ? 0 : 1,
+      transition: "transform 0.55s cubic-bezier(0.3,0,0.6,1), opacity 0.55s ease-in 0.15s"
+    }
+  }, icon);
 }
 
 // ─── ACTIVE SESSION ───────────────────────────────────────────────────────────
@@ -6572,6 +6619,27 @@ function App() {
     return () => clearTimeout(t);
   }, [sessionFlash]);
 
+  // "Fly to Séance" animation: when an exercise is added from the Library, a
+  // clone of its icon flies from where it was tapped to the bottom-nav
+  // Séance button and shrinks away — makes it visually obvious the exercise
+  // actually went somewhere, which the red flash alone didn't convey.
+  const sessionNavRef = useRef(null);
+  const [flyingItems, setFlyingItems] = useState([]);
+  const addExerciseWithFlight = (ex, fromRect) => {
+    addExercise(ex);
+    if (fromRect && sessionNavRef.current) {
+      const toRect = sessionNavRef.current.getBoundingClientRect();
+      const id = uid();
+      setFlyingItems(f => [...f, {
+        id,
+        icon: ex.icon,
+        fromRect,
+        toRect
+      }]);
+      setTimeout(() => setFlyingItems(f => f.filter(i => i.id !== id)), 750);
+    }
+  };
+
   // Check every badge's unlock condition whenever the stats it depends on
   // change. Newly-met goals are persisted immediately and queued for a
   // celebration; already-unlocked badges are never re-evaluated (a badge
@@ -6811,7 +6879,7 @@ function App() {
     exercises: exercises,
     categories: categories,
     tasks: tasks,
-    onAdd: addExercise,
+    onAdd: addExerciseWithFlight,
     onRemove: removeExerciseFromSession,
     stats: stats,
     subProgress: subProgress
@@ -6891,6 +6959,7 @@ function App() {
   }), /*#__PURE__*/React.createElement("polyline", {
     points: "9 22 9 12 15 12 15 22"
   })), T("navLibrary")), /*#__PURE__*/React.createElement("button", {
+    ref: sessionNavRef,
     key: sessionFlash,
     style: {
       ...base.bottomNavBtn(sessionTabActive || sessionFlashing, sessionFlashing ? "#F87171" : sessionInProgress ? "#34D399" : C.amber),
@@ -6977,7 +7046,12 @@ function App() {
     r: "3"
   }), /*#__PURE__*/React.createElement("path", {
     d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
-  })), T("navSettings"))), onboardingLoaded && !onboardingDone && /*#__PURE__*/React.createElement(OnboardingTour, {
+  })), T("navSettings"))), flyingItems.map(item => /*#__PURE__*/React.createElement(FlyingExerciseIcon, {
+    key: item.id,
+    icon: item.icon,
+    from: item.fromRect,
+    to: item.toRect
+  })), onboardingLoaded && !onboardingDone && /*#__PURE__*/React.createElement(OnboardingTour, {
     onDone: () => setOnboardingDone(true)
   }), unsavedPrompt && /*#__PURE__*/React.createElement(UnsavedChangesModal, {
     canSave: unsavedPrompt.canSave,

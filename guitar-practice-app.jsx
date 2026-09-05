@@ -1529,7 +1529,7 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, onRemove, stats, s
                 const added = inSession.has(ex.id);
                 return (
                   <div key={ex.id}
-                    onClick={() => !added && onAdd(ex)}
+                    onClick={e => !added && onAdd(ex, e.currentTarget.getBoundingClientRect())}
                     style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px",
                       background: added ? "#111" : "#0F0F0F", borderRadius: 8,
                       border: `1px solid ${rank === 0 ? C.amber + "44" : "#222"}`,
@@ -1603,7 +1603,7 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, onRemove, stats, s
               const col = cat?.color || "#AEB0C0";
               const added = inSession.has(ex.id);
               return (
-                <div key={ex.id} style={{ ...base.exCard(col), opacity: added ? 0.5 : 1 }} onClick={() => !added && onAdd(ex)}>
+                <div key={ex.id} style={{ ...base.exCard(col), opacity: added ? 0.5 : 1 }} onClick={e => !added && onAdd(ex, e.currentTarget.getBoundingClientRect())}>
                   <span style={{ fontSize: 20, width: 28, textAlign: "center", flexShrink: 0 }}>{ex.icon}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: C.cream }}>{exerciseName(ex, lang)}</div>
@@ -1893,6 +1893,39 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
         </div>
       </div>
     </div>
+  );
+}
+
+// Flies a clone of an exercise's icon from where it was tapped in the
+// Library to the bottom-nav Séance button, shrinking and fading out along
+// the way — a concrete "it went there" cue for adding to the session,
+// stronger than the nav tab's own red flash alone. Purely decorative
+// (pointer-events: none); the actual add already happened by the time this
+// renders. Renders at its start position first, then flips to the end
+// position one frame later so the CSS transition actually animates the move.
+function FlyingExerciseIcon({ icon, from, to }) {
+  const [flown, setFlown] = useState(false);
+  useEffect(() => {
+    // A plain timeout rather than requestAnimationFrame: rAF callbacks are
+    // suspended entirely while the tab isn't actually being painted (e.g.
+    // backgrounded), which would leave this stuck at its start position.
+    const t = setTimeout(() => setFlown(true), 20);
+    return () => clearTimeout(t);
+  }, []);
+  const startX = from.left + from.width / 2;
+  const startY = from.top + from.height / 2;
+  const endX = to.left + to.width / 2;
+  const endY = to.top + to.height / 2;
+  return (
+    <div data-flying="1" style={{
+      position: "fixed", left: startX, top: startY, zIndex: 600,
+      width: 30, height: 30, marginLeft: -15, marginTop: -15,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontSize: 20, pointerEvents: "none",
+      transform: flown ? `translate(${endX - startX}px, ${endY - startY}px) scale(0.25)` : "translate(0,0) scale(1)",
+      opacity: flown ? 0 : 1,
+      transition: "transform 0.55s cubic-bezier(0.3,0,0.6,1), opacity 0.55s ease-in 0.15s",
+    }}>{icon}</div>
   );
 }
 
@@ -3088,6 +3121,22 @@ export default function App() {
     return () => clearTimeout(t);
   }, [sessionFlash]);
 
+  // "Fly to Séance" animation: when an exercise is added from the Library, a
+  // clone of its icon flies from where it was tapped to the bottom-nav
+  // Séance button and shrinks away — makes it visually obvious the exercise
+  // actually went somewhere, which the red flash alone didn't convey.
+  const sessionNavRef = useRef(null);
+  const [flyingItems, setFlyingItems] = useState([]);
+  const addExerciseWithFlight = (ex, fromRect) => {
+    addExercise(ex);
+    if (fromRect && sessionNavRef.current) {
+      const toRect = sessionNavRef.current.getBoundingClientRect();
+      const id = uid();
+      setFlyingItems(f => [...f, { id, icon: ex.icon, fromRect, toRect }]);
+      setTimeout(() => setFlyingItems(f => f.filter(i => i.id !== id)), 750);
+    }
+  };
+
   // Check every badge's unlock condition whenever the stats it depends on
   // change. Newly-met goals are persisted immediately and queued for a
   // celebration; already-unlocked badges are never re-evaluated (a badge
@@ -3251,7 +3300,7 @@ export default function App() {
       {/* Content — the single sizing box for the active screen; each screen
           fills it (flex:1, minHeight:0) and owns its own scrolling. */}
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      {tab === "library"  && <LibraryScreen exercises={exercises} categories={categories} tasks={tasks} onAdd={addExercise} onRemove={removeExerciseFromSession} stats={stats} subProgress={subProgress} />}
+      {tab === "library"  && <LibraryScreen exercises={exercises} categories={categories} tasks={tasks} onAdd={addExerciseWithFlight} onRemove={removeExerciseFromSession} stats={stats} subProgress={subProgress} />}
       {tab === "session"  && <SessionScreen tasks={tasks} setTasks={setTasks} onStart={startSession} sessionInProgress={sessionInProgress} onReturnToSession={returnToSession} presets={presets} setPresets={setPresets} />}
       {tab === "progress" && <ProgressionScreen stats={stats} exercises={exercises} onClearStats={() => setStats({})} badges={badges} subProgress={subProgress} practiceDays={practiceDays} noodleSec={noodleSec} subTab={progressSubTab} setSubTab={setProgressSubTab} />}
       {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} editorGuardRef={editorGuardRef} guardedRun={guardedRun} />}
@@ -3280,6 +3329,7 @@ export default function App() {
           {T("navLibrary")}
         </button>
         <button
+          ref={sessionNavRef}
           key={sessionFlash}
           style={{
             ...base.bottomNavBtn(sessionTabActive || sessionFlashing, sessionFlashing ? "#F87171" : (sessionInProgress ? "#34D399" : C.amber)),
@@ -3310,6 +3360,10 @@ export default function App() {
           {T("navSettings")}
         </button>
       </div>
+
+      {flyingItems.map(item => (
+        <FlyingExerciseIcon key={item.id} icon={item.icon} from={item.fromRect} to={item.toRect} />
+      ))}
 
       {onboardingLoaded && !onboardingDone && (
         <OnboardingTour onDone={() => setOnboardingDone(true)} />
