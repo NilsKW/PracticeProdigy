@@ -1435,7 +1435,7 @@ function ProgressionScreen({ stats, exercises, onClearStats, badges, subProgress
     { id: "badges", label: T("progressTabBadges") },
   ];
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div className="pp-narrow" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <div style={{ display: "flex", gap: 6, padding: "10px 16px 4px", flexShrink: 0 }}>
         {TABS.map(t => (
           <button
@@ -1589,11 +1589,13 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, onRemove, stats, s
               groups.push({ type: "header", cat: null });
               orphanExs.forEach(ex => groups.push({ type: "ex", ex }));
             }
-            return groups.map((item, idx) => {
+            return (
+            <div className="pp-grid" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {groups.map((item, idx) => {
               if (item.type === "header") {
                 const cat = item.cat;
                 return (
-                  <div key={"h-" + (cat?.id || idx)} style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: idx === 0 ? 4 : 12, paddingBottom: 4 }}>
+                  <div key={"h-" + (cat?.id || idx)} style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: idx === 0 ? 4 : 12, paddingBottom: 4, gridColumn: "1 / -1" }}>
                     <div style={{ width: 8, height: 8, borderRadius: "50%", background: cat?.color || "#AEB0C0", flexShrink: 0 }} />
                     <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", color: cat?.color || "#AEB0C0" }}>{cat ? categoryName(cat, lang) : T("unknownCategory")}</span>
                     <div style={{ flex: 1, height: 1, background: (cat?.color || "#AEB0C0") + "33" }} />
@@ -1634,10 +1636,14 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, onRemove, stats, s
                   )}
                 </div>
               );
-            });
+            })}
+            </div>
+            );
           }
           // Single category — flat list (category already obvious from filter)
-          return filtered.map(ex => {
+          return (
+          <div className="pp-grid" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {filtered.map(ex => {
             const cat = categories.find(c => c.id === ex.categoryId);
             const col = cat?.color || "#AEB0C0";
             const added = inSession.has(ex.id);
@@ -1671,7 +1677,9 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, onRemove, stats, s
                 )}
               </div>
             );
-          });
+          })}
+          </div>
+          );
         })()}
       </div>
     </>
@@ -1747,7 +1755,7 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
   const deletePreset = (id) => { setPresets(prev => prev.filter(p => p.id !== id)); setDeletePresetId(null); };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div className="pp-narrow" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "8px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
 
         {/* Collapsible "Mes présélections" section — styled as a prominent,
@@ -2270,7 +2278,8 @@ function ActiveSessionScreen({
         @keyframes gaugeBump{0%{box-shadow:0 0 0 #C8873A00}40%{box-shadow:0 0 14px 4px #C8873Aaa}100%{box-shadow:0 0 0 #C8873A00}}
       `}</style>
       <FlashOverlay show={flash} color="#4FC3F7" />
-      <div style={{ flex: 1, minHeight: 0, padding: "14px 16px 24px", display: "flex", flexDirection: "row", gap: 10 }}>
+      <div style={{ flex: 1, minHeight: 0, padding: "14px 16px 24px", display: "flex", justifyContent: "center", overflow: "hidden" }}>
+      <div style={{ flex: 1, minWidth: 0, maxWidth: 520, display: "flex", flexDirection: "row", gap: 10 }}>
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 14, overflowY: "auto" }}>
         {/* Timer card */}
         <div style={{ background: "#151208", border: "1px solid #2A1E08", borderRadius: 16, padding: "22px 18px", textAlign: "center", flexShrink: 0 }}>
@@ -2421,6 +2430,7 @@ function ActiveSessionScreen({
       </div>
       <SessionProgressGauge pct={overallPct} current={current} total={tasks.length} />
       </div>
+      </div>
     </>
   );
 }
@@ -2496,7 +2506,7 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBac
   useEffect(() => () => { if (guardRef) guardRef.current = null; }, []);
 
   return (
-    <div style={base.scrollArea(24)}>
+    <div className="pp-narrow" style={base.scrollArea(24)}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
         <button style={base.iconBtn(C.amber)} onClick={onRequestBack || onBack}>←</button>
         <span style={{ fontSize: 14, fontWeight: 700, color: C.cream }}>{isNew ? T("newExerciseTitle") : T("editExercise")}</span>
@@ -2706,7 +2716,7 @@ function CategoryEditor({ editCat, setExercises, setCategories, onBack, onReques
   useEffect(() => () => { if (guardRef) guardRef.current = null; }, []);
 
   return (
-    <div style={base.scrollArea(24)}>
+    <div className="pp-narrow" style={base.scrollArea(24)}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
         <button style={base.iconBtn(C.amber)} onClick={onRequestBack || onBack}>←</button>
         <span style={{ fontSize: 14, fontWeight: 700, color: C.cream }}>{isNew ? T("newCategoryTitle") : T("editCategory")}</span>
@@ -2802,7 +2812,7 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
 
   // ── SETTINGS MAIN ──
   return (
-    <div style={base.scrollArea(24)}>
+    <div className="pp-narrow" style={base.scrollArea(24)}>
       {/* Sub-tabs */}
       <div style={{ display: "flex", gap: 0, background: "#0A0A0A", borderRadius: 10, padding: 3, marginBottom: 8 }}>
         {[["exercises", T("settingsExercises")], ["categories", T("settingsCategories")], ["share", T("settingsShare")], ["sound", T("settingsSound")], ["language", T("settingsLanguage")], ["display", T("settingsDisplay")], ["badges", T("settingsBadges")]].map(([id, label]) => (
@@ -3280,8 +3290,34 @@ export default function App() {
 
   return (
     <LangContext.Provider value={lang}>
-    <div style={{ ...base.app, zoom: zoomFactor, height: `calc(100dvh / ${zoomFactor})`, maxWidth: `calc(430px / ${zoomFactor})` }} onClick={ensureAudio}>
+    <div className="pp-app" style={{ ...base.app, zoom: zoomFactor, height: `calc(100dvh / ${zoomFactor})`, "--zoom": zoomFactor }} onClick={ensureAudio}>
       <style>{`
+        /* Phone stays exactly as before (430px column). Tablet/desktop widen
+           the app shell so screens can use the extra horizontal space
+           instead of sitting as a narrow column with empty margins — see
+           .pp-grid below for the screens that actually reflow into columns
+           at these widths; everything else just centers with more room. */
+        .pp-app { max-width: calc(430px / var(--zoom)); }
+        @media (min-width: 700px) {
+          .pp-app { max-width: calc(700px / var(--zoom)); }
+        }
+        @media (min-width: 1100px) {
+          .pp-app { max-width: calc(960px / var(--zoom)); }
+        }
+        /* Library exercise list: stays a single column on phone (unchanged),
+           reflows into 2/3 columns once there's room, so browsing doesn't
+           mean one long vertical scroll on tablet/desktop. */
+        @media (min-width: 700px) {
+          .pp-grid { display: grid !important; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+          .pp-grid > * { margin-bottom: 0 !important; }
+        }
+        @media (min-width: 1100px) {
+          .pp-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        /* Focused single-task content (forms, the active-session timer) stays
+           a comfortable reading width and centers itself instead of
+           stretching edge-to-edge on a wide shell. */
+        .pp-narrow { max-width: 480px; margin-left: auto; margin-right: auto; width: 100%; }
         * { box-sizing: border-box; }
         ::-webkit-scrollbar { display: none; }
         input, textarea {

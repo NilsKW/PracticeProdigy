@@ -3138,6 +3138,7 @@ function ProgressionScreen({
     label: T("progressTabBadges")
   }];
   return /*#__PURE__*/React.createElement("div", {
+    className: "pp-narrow",
     style: {
       display: "flex",
       flexDirection: "column",
@@ -3433,7 +3434,14 @@ function LibraryScreen({
           ex
         }));
       }
-      return groups.map((item, idx) => {
+      return /*#__PURE__*/React.createElement("div", {
+        className: "pp-grid",
+        style: {
+          display: "flex",
+          flexDirection: "column",
+          gap: 8
+        }
+      }, groups.map((item, idx) => {
         if (item.type === "header") {
           const cat = item.cat;
           return /*#__PURE__*/React.createElement("div", {
@@ -3443,7 +3451,8 @@ function LibraryScreen({
               alignItems: "center",
               gap: 8,
               paddingTop: idx === 0 ? 4 : 12,
-              paddingBottom: 4
+              paddingBottom: 4,
+              gridColumn: "1 / -1"
             }
           }, /*#__PURE__*/React.createElement("div", {
             style: {
@@ -3576,10 +3585,17 @@ function LibraryScreen({
             flexShrink: 0
           }
         }, "+"));
-      });
+      }));
     }
     // Single category — flat list (category already obvious from filter)
-    return filtered.map(ex => {
+    return /*#__PURE__*/React.createElement("div", {
+      className: "pp-grid",
+      style: {
+        display: "flex",
+        flexDirection: "column",
+        gap: 8
+      }
+    }, filtered.map(ex => {
       const cat = categories.find(c => c.id === ex.categoryId);
       const col = cat?.color || "#AEB0C0";
       const added = inSession.has(ex.id);
@@ -3686,7 +3702,7 @@ function LibraryScreen({
           flexShrink: 0
         }
       }, "+"));
-    });
+    }));
   })()));
 }
 
@@ -3787,6 +3803,7 @@ function SessionScreen({
     setDeletePresetId(null);
   };
   return /*#__PURE__*/React.createElement("div", {
+    className: "pp-narrow",
     style: {
       display: "flex",
       flexDirection: "column",
@@ -4788,6 +4805,15 @@ function ActiveSessionScreen({
       minHeight: 0,
       padding: "14px 16px 24px",
       display: "flex",
+      justifyContent: "center",
+      overflow: "hidden"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0,
+      maxWidth: 520,
+      display: "flex",
       flexDirection: "row",
       gap: 10
     }
@@ -5190,7 +5216,7 @@ function ActiveSessionScreen({
     pct: overallPct,
     current: current,
     total: tasks.length
-  })));
+  }))));
 }
 
 // ─── SETTINGS SCREEN ─────────────────────────────────────────────────────────
@@ -5316,6 +5342,7 @@ function ExerciseEditor({
     if (guardRef) guardRef.current = null;
   }, []);
   return /*#__PURE__*/React.createElement("div", {
+    className: "pp-narrow",
     style: base.scrollArea(24)
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -5805,6 +5832,7 @@ function CategoryEditor({
     if (guardRef) guardRef.current = null;
   }, []);
   return /*#__PURE__*/React.createElement("div", {
+    className: "pp-narrow",
     style: base.scrollArea(24)
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -6001,6 +6029,7 @@ function SettingsScreen({
 
   // ── SETTINGS MAIN ──
   return /*#__PURE__*/React.createElement("div", {
+    className: "pp-narrow",
     style: base.scrollArea(24)
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -6831,14 +6860,41 @@ function App() {
   return /*#__PURE__*/React.createElement(LangContext.Provider, {
     value: lang
   }, /*#__PURE__*/React.createElement("div", {
+    className: "pp-app",
     style: {
       ...base.app,
       zoom: zoomFactor,
       height: `calc(100dvh / ${zoomFactor})`,
-      maxWidth: `calc(430px / ${zoomFactor})`
+      "--zoom": zoomFactor
     },
     onClick: ensureAudio
   }, /*#__PURE__*/React.createElement("style", null, `
+        /* Phone stays exactly as before (430px column). Tablet/desktop widen
+           the app shell so screens can use the extra horizontal space
+           instead of sitting as a narrow column with empty margins — see
+           .pp-grid below for the screens that actually reflow into columns
+           at these widths; everything else just centers with more room. */
+        .pp-app { max-width: calc(430px / var(--zoom)); }
+        @media (min-width: 700px) {
+          .pp-app { max-width: calc(700px / var(--zoom)); }
+        }
+        @media (min-width: 1100px) {
+          .pp-app { max-width: calc(960px / var(--zoom)); }
+        }
+        /* Library exercise list: stays a single column on phone (unchanged),
+           reflows into 2/3 columns once there's room, so browsing doesn't
+           mean one long vertical scroll on tablet/desktop. */
+        @media (min-width: 700px) {
+          .pp-grid { display: grid !important; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+          .pp-grid > * { margin-bottom: 0 !important; }
+        }
+        @media (min-width: 1100px) {
+          .pp-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        /* Focused single-task content (forms, the active-session timer) stays
+           a comfortable reading width and centers itself instead of
+           stretching edge-to-edge on a wide shell. */
+        .pp-narrow { max-width: 480px; margin-left: auto; margin-right: auto; width: 100%; }
         * { box-sizing: border-box; }
         ::-webkit-scrollbar { display: none; }
         input, textarea {
