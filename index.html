@@ -7556,6 +7556,21 @@ const TREE_DEFAULT_BRANCH_PCT = 65;
 // debug sliders — nodes beyond the cap are silently skipped.
 const TREE_MAX_NODES = 3000;
 
+// Deterministic pseudo-random in [0,1) from a string seed (FNV-1a-ish hash).
+// Using each node's own key path (e.g. "b2-1-0") as the seed means the same
+// tree config always renders identically — no flicker on re-render — while
+// still varying naturally from one branch/sub-branch to the next, unlike
+// Math.random() (different every render) or a fixed formula (identical
+// pattern repeated at every branch).
+function seededRandom(seed) {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0) % 100000 / 100000;
+}
+
 // Builds one branch/sub-branch node and recurses into its own children.
 // `dirAngle` is the signed angle from vertical (radians) the segment points
 // in; children spread around their *parent's* direction rather than around
@@ -7592,11 +7607,30 @@ function buildBranchNode({
     // tip, which avoids the too-regular look of everything branching from
     // exactly the same point.
     const spread = clamp01(opts.originSpreadPct / 100);
-    for (let j = 0; j < opts.subCount && opts.counter.n < TREE_MAX_NODES; j++) {
+    const n = opts.subCount;
+    // The n "slots" (evenly spread positions/angles that keep siblings from
+    // overlapping each other) get handed out to children in a per-parent
+    // shuffled order instead of always slot 0 → child 0, slot 1 → child 1,
+    // etc. — that fixed mapping made the very first child of every branch
+    // swing the same way, which is what turned the whole tree into a
+    // repeating spiral. Each child's slot also gets its own small random
+    // jitter on top, so even same-slot siblings across different branches
+    // don't look identical.
+    const order = Array.from({
+      length: n
+    }, (_, s) => s).map(s => ({
+      s,
+      r: seededRandom(`${key}|order|${s}`)
+    })).sort((a, b) => a.r - b.r).map(o => o.s);
+    for (let j = 0; j < n && opts.counter.n < TREE_MAX_NODES; j++) {
       opts.counter.n++;
-      const offset = opts.subCount > 1 ? -maxSubAngle + 2 * maxSubAngle * (j / (opts.subCount - 1)) : 0;
-      const baseT = opts.subCount > 1 ? j / (opts.subCount - 1) : 0.5;
-      const originT = baseT + (1 - baseT) * spread;
+      const slot = order[j];
+      const baseOffset = n > 1 ? -maxSubAngle + 2 * maxSubAngle * (slot / (n - 1)) : 0;
+      const baseT = n > 1 ? slot / (n - 1) : 0.5;
+      const angleJitter = (seededRandom(`${key}|${j}|a`) - 0.5) * maxSubAngle * 0.7;
+      const tJitter = (seededRandom(`${key}|${j}|t`) - 0.5) * 0.3;
+      const offset = baseOffset + angleJitter;
+      const originT = clamp01(baseT + (1 - baseT) * spread + tJitter);
       const originX = attachX + (endX - attachX) * originT;
       const originY = attachY + (endY - attachY) * originT;
       const child = buildBranchNode({
