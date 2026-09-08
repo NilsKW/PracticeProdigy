@@ -7630,6 +7630,19 @@ function buildBranchNode({
     // still means no lean) — some branches skew left as bias rises, others
     // right, so the tree actually reshapes instead of just resizing.
     const skew = (seededRandom(`${key}|skew`) - 0.5) * maxSubAngle * 1.2;
+    // Every rotation term above is directly proportional to the bias slider
+    // with no independent baseline, and each level adds its own on top of
+    // whatever its parent already accumulated. For a node whose own random
+    // lean happens to point the same way as its parent's, that compounds
+    // — 2 levels deep it's already the sum of 2 full-strength turns, 4 levels
+    // deep the sum of 4 — so raising the bias visibly "winds up" the branches
+    // near the tip like a spring, while the base (a single, undamped turn)
+    // barely seems to move by comparison. Damping each level's contribution
+    // by how deep it already is keeps that compounding bounded: the first
+    // split still turns at full strength, but each further nested split
+    // adds progressively less to the running total, so cranking bias up
+    // reshapes the tree instead of coiling its tips.
+    const depthDamp = Math.pow(0.55, depth);
     for (let j = 0; j < n && opts.counter.n < TREE_MAX_NODES; j++) {
       opts.counter.n++;
       const slot = order[j];
@@ -7637,7 +7650,7 @@ function buildBranchNode({
       const baseT = n > 1 ? slot / (n - 1) : 0.5;
       const angleJitter = (seededRandom(`${key}|${j}|a`) - 0.5) * maxSubAngle * 0.7;
       const tJitter = (seededRandom(`${key}|${j}|t`) - 0.5) * 0.3;
-      const offset = skew + baseOffset + angleJitter;
+      const offset = (skew + baseOffset + angleJitter) * depthDamp;
       const originT = clamp01(baseT + (1 - baseT) * spread + tJitter);
       const originX = attachX + (endX - attachX) * originT;
       const originY = attachY + (endY - attachY) * originT;
