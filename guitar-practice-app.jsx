@@ -2485,9 +2485,14 @@ function ActiveSessionScreen({
           <div style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: "#A8926A", marginBottom: 3 }}>
             {T("exerciseOf2")} {current + 1} {T("of2")} {tasks.length}
           </div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: C.cream, marginBottom: 18, textTransform: "uppercase", letterSpacing: "0.02em", lineHeight: 1.25 }}>
+          <div style={{ fontSize: 24, fontWeight: 800, color: C.cream, marginBottom: currentTask?.description ? 8 : 18, textTransform: "uppercase", letterSpacing: "0.02em", lineHeight: 1.25 }}>
             {currentTask?.icon} {exerciseName(currentTask, lang)}
           </div>
+          {currentTask?.description && (
+            <div style={{ fontSize: 12, color: "#C9A876", lineHeight: 1.5, marginBottom: 18, textTransform: "none", letterSpacing: "normal" }}>
+              {exerciseDesc(currentTask, lang)}
+            </div>
+          )}
           <div style={{ fontSize: 58, fontFamily: "monospace", fontWeight: 700, lineHeight: 1, marginBottom: 6, animation: urgent ? "urgentPulse 0.7s ease-in-out infinite" : "none", color: C.amber }}>
             {formatTime(secondsLeft)}
           </div>
@@ -3637,7 +3642,7 @@ export default function App() {
 
   const addExercise = (ex) => {
     ensureAudio();
-    setTasks(prev => [...prev, { id: uid(), exerciseId: ex.id, name: ex.name, icon: ex.icon, minutes: ex.defaultMin, categoryId: ex.categoryId, youtubeUrl: ex.youtubeUrl || "", bpm: ex.bpm || 0, beatsPerBar: ex.beatsPerBar || 4, subExercises: ex.subExercises || [], files: ex.files || [] }]);
+    setTasks(prev => [...prev, { id: uid(), exerciseId: ex.id, name: ex.name, icon: ex.icon, description: ex.description || "", minutes: ex.defaultMin, categoryId: ex.categoryId, youtubeUrl: ex.youtubeUrl || "", bpm: ex.bpm || 0, beatsPerBar: ex.beatsPerBar || 4, subExercises: ex.subExercises || [], files: ex.files || [] }]);
   };
 
   const removeExerciseFromSession = (exerciseId) => {

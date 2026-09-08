@@ -5241,12 +5241,21 @@ function ActiveSessionScreen({
       fontSize: 24,
       fontWeight: 800,
       color: C.cream,
-      marginBottom: 18,
+      marginBottom: currentTask?.description ? 8 : 18,
       textTransform: "uppercase",
       letterSpacing: "0.02em",
       lineHeight: 1.25
     }
-  }, currentTask?.icon, " ", exerciseName(currentTask, lang)), /*#__PURE__*/React.createElement("div", {
+  }, currentTask?.icon, " ", exerciseName(currentTask, lang)), currentTask?.description && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: "#C9A876",
+      lineHeight: 1.5,
+      marginBottom: 18,
+      textTransform: "none",
+      letterSpacing: "normal"
+    }
+  }, exerciseDesc(currentTask, lang)), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 58,
       fontFamily: "monospace",
@@ -7544,6 +7553,7 @@ function App() {
       exerciseId: ex.id,
       name: ex.name,
       icon: ex.icon,
+      description: ex.description || "",
       minutes: ex.defaultMin,
       categoryId: ex.categoryId,
       youtubeUrl: ex.youtubeUrl || "",
