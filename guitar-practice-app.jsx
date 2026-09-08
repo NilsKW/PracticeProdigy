@@ -13,13 +13,13 @@ const STRINGS = {
     needsPractice: "Needs Practice", leastWorkedOn: "· least worked on",
     neverPractised: "never practised", mPractised: "m practised", hPractised: "h", mPractisedUnit: "m practised",
     allCat: "All",
-    emptySession: "Your session queue is empty.", emptySessionSub: "Library → tap + to add exercises, or Presets to load a saved session.",
+    emptySession: "Your session queue is empty.", emptySessionSub: "Library → tap + to add exercises, or Favorites to load a saved session.",
     totalSessionTime: "Total Session Time", exercises: "exercises", exercise: "exercise",
     returnToSession: "▶ Return to Session", startSession: "▶ Start Session",
     saveAsPreset: "💾", savePresetTitle: "Save as preset", cancelBtn: "Cancel", savePresetBtn: "💾 Save Preset",
-    noPresetsTitle: "No presets yet.", noPresetsSub: "Build a session in the Session tab, then come back here to save it.",
-    saveCurrentPreset: "💾 Save Current Session as Preset", saveCurrentEmpty: " (queue is empty)",
-    presetName: "Preset name", saveBtn: "💾 Save", loadBtn: "Load ▶", keepBtn: "Keep", deleteBtn: "Delete",
+    noPresetsTitle: "No favorites yet.", noPresetsSub: "Build a session in the Session tab, then come back here to save it.",
+    saveCurrentPreset: "💾 Save Current Session as Favorite", saveCurrentEmpty: " (queue is empty)",
+    presetName: "Favorite name", saveBtn: "💾 Save", loadBtn: "Load ▶", keepBtn: "Keep", deleteBtn: "Delete",
     nowPlaying: "Now Playing", exerciseOf: "of", remaining: "remaining",
     skipBtn: "Skip", previousBtn: "Previous", pauseBtn: "⏸ Pause", resumePlayBtn: "▶ Resume", playBtn: "▶ Play",
     refVideo: "Reference Video", opensYoutube: "Opens YouTube ↗",
@@ -78,6 +78,8 @@ const STRINGS = {
     downloadFile: "Download", fileMissing: "file missing on this device",
     unsavedTitle: "Unsaved changes", unsavedMsg: "You have unsaved changes on this exercise. Save them before leaving?",
     unsavedSaveBtn: "Save and leave", unsavedDiscardBtn: "Discard changes",
+    quitSessionTitle: "Quit the session?", quitSessionMsg: "You'll go back to Session to organize your exercise queue. Your progress on the current session ends.",
+    quitSessionConfirmBtn: "Quit the session", quitSessionCancelBtn: "Keep going",
     settingsShare: "share",
     exportTitle: "Export an exercise group", exportDesc: "Bundle selected categories, their exercises, and any attached files into a single file you can send to someone else.",
     exportNameLabel: "Group name (also used as the file name)", exportCategoriesLabel: "Categories to include", exportNamePlaceholder: "Pack name (e.g. Oboe — Beginner)",
@@ -113,13 +115,13 @@ const STRINGS = {
     needsPractice: "À travailler", leastWorkedOn: "· les moins pratiqués",
     neverPractised: "jamais pratiqué", mPractised: "min pratiqué", hPractised: "h", mPractisedUnit: "min pratiqué",
     allCat: "Tout",
-    emptySession: "Votre file d'exercices est vide.", emptySessionSub: "Bibliothèque → appuyez sur + pour ajouter des exercices, ou Modèles pour charger une séance.",
+    emptySession: "Votre file d'exercices est vide.", emptySessionSub: "Bibliothèque → appuyez sur + pour ajouter des exercices, ou Favoris pour charger une séance.",
     totalSessionTime: "Durée totale", exercises: "exercices", exercise: "exercice",
     returnToSession: "▶ Reprendre la séance", startSession: "▶ Démarrer",
     saveAsPreset: "💾", savePresetTitle: "Enregistrer comme modèle", cancelBtn: "Annuler", savePresetBtn: "💾 Enregistrer",
-    noPresetsTitle: "Aucun modèle.", noPresetsSub: "Construisez une séance dans l'onglet Séance, puis revenez ici pour l'enregistrer.",
-    saveCurrentPreset: "💾 Enregistrer la séance comme modèle", saveCurrentEmpty: " (file vide)",
-    presetName: "Nom du modèle", saveBtn: "💾 Enregistrer", loadBtn: "Charger ▶", keepBtn: "Garder", deleteBtn: "Supprimer",
+    noPresetsTitle: "Aucun favori.", noPresetsSub: "Construisez une séance dans l'onglet Séance, puis revenez ici pour l'enregistrer.",
+    saveCurrentPreset: "💾 Enregistrer la séance comme favori", saveCurrentEmpty: " (file vide)",
+    presetName: "Nom du favori", saveBtn: "💾 Enregistrer", loadBtn: "Charger ▶", keepBtn: "Garder", deleteBtn: "Supprimer",
     nowPlaying: "En cours", exerciseOf: "sur", remaining: "restant",
     skipBtn: "Passer", previousBtn: "Précédent", pauseBtn: "⏸ Pause", resumePlayBtn: "▶ Reprendre", playBtn: "▶ Démarrer",
     refVideo: "Vidéo de référence", opensYoutube: "Ouvrir YouTube ↗",
@@ -178,6 +180,8 @@ const STRINGS = {
     downloadFile: "Télécharger", fileMissing: "fichier introuvable sur cet appareil",
     unsavedTitle: "Modifications non enregistrées", unsavedMsg: "Vous avez des modifications non enregistrées sur cet exercice. Les enregistrer avant de quitter ?",
     unsavedSaveBtn: "Enregistrer et quitter", unsavedDiscardBtn: "Quitter sans enregistrer",
+    quitSessionTitle: "Quitter la séance ?", quitSessionMsg: "Vous reviendrez dans l'onglet Séance pour organiser votre file d'exercices. La progression de la séance en cours s'arrête.",
+    quitSessionConfirmBtn: "Quitter la séance", quitSessionCancelBtn: "Continuer",
     settingsShare: "partage",
     exportTitle: "Exporter un groupe d'exercices", exportDesc: "Regroupe les catégories sélectionnées, leurs exercices et les fichiers attachés en un seul fichier à envoyer à quelqu'un d'autre.",
     exportNameLabel: "Nom du groupe (utilisé aussi comme nom de fichier)", exportCategoriesLabel: "Catégories à inclure", exportNamePlaceholder: "Nom du groupe (ex. Hautbois — Débutant)",
@@ -1016,6 +1020,25 @@ function UnsavedChangesModal({ canSave, onSave, onDiscard, onCancel }) {
           <button disabled={!canSave} style={{ ...base.pillBtn(true), opacity: canSave ? 1 : 0.5, cursor: canSave ? "pointer" : "not-allowed" }} onClick={onSave}>{T("unsavedSaveBtn")}</button>
           <button style={{ ...base.pillBtn(false), textAlign: "center", color: "#F87171", border: "1px solid #3A1A1A" }} onClick={onDiscard}>{T("unsavedDiscardBtn")}</button>
           <button style={{ ...base.pillBtn(false), textAlign: "center" }} onClick={onCancel}>{T("cancelBtn")}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Confirmation shown when the phone's physical/gesture back button is
+// pressed while a session is active — without this, that back press would
+// otherwise leave the app entirely instead of just backing out of Séance.
+function QuitSessionModal({ onConfirm, onCancel }) {
+  const T = useT();
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: "#000000aa" }} onClick={onCancel}>
+      <div style={{ background: "#151515", border: `1px solid ${C.border}`, borderRadius: 16, padding: "22px 20px", maxWidth: 320, width: "100%", boxShadow: "0 10px 50px #000b" }} onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.cream, marginBottom: 8 }}>{T("quitSessionTitle")}</div>
+        <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.5, marginBottom: 18 }}>{T("quitSessionMsg")}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <button style={{ ...base.pillBtn(false), textAlign: "center", color: "#F87171", border: "1px solid #3A1A1A" }} onClick={onConfirm}>{T("quitSessionConfirmBtn")}</button>
+          <button style={{ ...base.pillBtn(true), textAlign: "center" }} onClick={onCancel}>{T("quitSessionCancelBtn")}</button>
         </div>
       </div>
     </div>
@@ -3562,6 +3585,26 @@ export default function App() {
 
   const returnToSession = () => setTab("active");
 
+  // Trap the phone's physical/gesture back button while a session is active
+  // (launched via "Démarrer", even if its first countdown hasn't actually
+  // been started yet) so it asks for confirmation instead of leaving the
+  // app outright. Re-arms the guard history entry immediately in the
+  // handler itself (rather than relying on a dependency change, since
+  // answering "Continuer" doesn't change `tab`) so a second back-press
+  // before the modal is answered still gets caught instead of slipping
+  // past to whatever's behind the app.
+  const [showQuitSessionConfirm, setShowQuitSessionConfirm] = useState(false);
+  useEffect(() => {
+    if (tab !== "active") return;
+    history.pushState({ practiceProdigyActiveSession: true }, "");
+    const onPopState = () => {
+      history.pushState({ practiceProdigyActiveSession: true }, "");
+      setShowQuitSessionConfirm(true);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [tab]);
+
   // App renders the LangContext.Provider itself, so it can't read its own
   // language via useT()/useContext (that would only see the ambient/default
   // value from an ancestor, since a component never consumes the Provider it
@@ -3729,6 +3772,13 @@ export default function App() {
           setOnboardingHiddenThisLaunch(true);
           if (hideForever) setOnboardingDone(true);
         }} />
+      )}
+
+      {showQuitSessionConfirm && (
+        <QuitSessionModal
+          onConfirm={() => { setShowQuitSessionConfirm(false); endSession(); }}
+          onCancel={() => setShowQuitSessionConfirm(false)}
+        />
       )}
 
       {unsavedPrompt && (
