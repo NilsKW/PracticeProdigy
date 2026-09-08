@@ -3560,6 +3560,14 @@ function buildBranchNode({ attachX, attachY, dirAngle, len, color, depth, key },
       .map(s => ({ s, r: seededRandom(`${key}|order|${s}`) }))
       .sort((a, b) => a.r - b.r)
       .map(o => o.s);
+    // Every node used to fan out symmetrically around its own direction, so
+    // moving "biais des sous-ramifications" just scaled that same symmetric
+    // fan up or down identically everywhere — bigger or smaller, but the
+    // same shape at every branch. Each node now leans its whole fan by a
+    // random, node-specific amount (scaled with the bias itself, so bias 0
+    // still means no lean) — some branches skew left as bias rises, others
+    // right, so the tree actually reshapes instead of just resizing.
+    const skew = (seededRandom(`${key}|skew`) - 0.5) * maxSubAngle * 1.2;
     for (let j = 0; j < n && opts.counter.n < TREE_MAX_NODES; j++) {
       opts.counter.n++;
       const slot = order[j];
@@ -3567,7 +3575,7 @@ function buildBranchNode({ attachX, attachY, dirAngle, len, color, depth, key },
       const baseT = n > 1 ? slot / (n - 1) : 0.5;
       const angleJitter = (seededRandom(`${key}|${j}|a`) - 0.5) * maxSubAngle * 0.7;
       const tJitter = (seededRandom(`${key}|${j}|t`) - 0.5) * 0.3;
-      const offset = baseOffset + angleJitter;
+      const offset = skew + baseOffset + angleJitter;
       const originT = clamp01(baseT + (1 - baseT) * spread + tJitter);
       const originX = attachX + (endX - attachX) * originT;
       const originY = attachY + (endY - attachY) * originT;
