@@ -13,6 +13,10 @@
 // antérieure.
 
 window.CHANGELOG_DATA = [
+  { version: 28, date: "2026-09-08", changes: [
+    "Réglages réorganisés : les rubriques liées au développement de l'appli (Bugs & idées, Historique des versions, Debug) sont maintenant séparées visuellement du reste.",
+    "Renommage de « Partage » en « Importer / exporter des groupes d'exercices », et de « Retours » en « Bugs & idées ».",
+  ] },
   { version: 27, date: "2026-09-08", changes: [
     "Dans la Séance, les boutons − et + sont plus grands et séparés par des traits verticaux, comme la croix de suppression.",
     "Correction : avec beaucoup d'exercices dans la séance, la liste devenait illisible au lieu de défiler — elle défile maintenant normalement.",

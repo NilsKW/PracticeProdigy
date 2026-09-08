@@ -87,7 +87,7 @@ const STRINGS = {
     changelogTitle: "What's new", changelogSubtitle: "Here's what changed since you last opened the app.",
     changelogContinueBtn: "Continue", settingsChangelog: "version history", changelogHistoryTitle: "Update history",
     changelogHistoryEmpty: "No updates recorded yet.",
-    settingsShare: "share",
+    settingsShare: "import / export exercise groups",
     exportTitle: "Export an exercise group", exportDesc: "Bundle selected categories, their exercises, and any attached files into a single file you can send to someone else.",
     exportNameLabel: "Group name (also used as the file name)", exportCategoriesLabel: "Categories to include", exportNamePlaceholder: "Pack name (e.g. Oboe — Beginner)",
     exportBtn: "Export", exportingBtn: "Exporting…", exportError: "Export failed — please try again.",
@@ -103,7 +103,8 @@ const STRINGS = {
     onboardProgressTitle: "Progression", onboardProgressDesc: "Track your level, stats, and the badges you unlock.",
     onboardSettingsTitle: "Settings", onboardSettingsDesc: "Customize your exercises, categories, and app options.",
     addedToSessionToast: "Added to session",
-    settingsFeedback: "feedback",
+    settingsFeedback: "bugs & ideas",
+    settingsDevGroupLabel: "About this app",
     feedbackTitle: "Report a bug or suggest an idea",
     feedbackDesc: "Opens your email app with the message ready to send to the developer.",
     feedbackBug: "Bug", feedbackIdea: "Idea",
@@ -196,7 +197,7 @@ const STRINGS = {
     changelogTitle: "Quoi de neuf", changelogSubtitle: "Voici ce qui a changé depuis votre dernière visite.",
     changelogContinueBtn: "Continuer", settingsChangelog: "historique des versions", changelogHistoryTitle: "Historique des mises à jour",
     changelogHistoryEmpty: "Aucune mise à jour enregistrée pour l'instant.",
-    settingsShare: "partage",
+    settingsShare: "importer / exporter des groupes d'exercices",
     exportTitle: "Exporter un groupe d'exercices", exportDesc: "Regroupe les catégories sélectionnées, leurs exercices et les fichiers attachés en un seul fichier à envoyer à quelqu'un d'autre.",
     exportNameLabel: "Nom du groupe (utilisé aussi comme nom de fichier)", exportCategoriesLabel: "Catégories à inclure", exportNamePlaceholder: "Nom du groupe (ex. Hautbois — Débutant)",
     exportBtn: "Exporter", exportingBtn: "Export en cours…", exportError: "L'export a échoué — réessayez.",
@@ -212,7 +213,8 @@ const STRINGS = {
     onboardProgressTitle: "Progression", onboardProgressDesc: "Suis ton niveau, tes statistiques et les badges débloqués.",
     onboardSettingsTitle: "Réglages", onboardSettingsDesc: "Personnalise tes exercices, tes catégories et les options de l'appli.",
     addedToSessionToast: "Ajouté à la séance",
-    settingsFeedback: "retours",
+    settingsFeedback: "bugs & idées",
+    settingsDevGroupLabel: "À propos de l'appli",
     feedbackTitle: "Signaler un bug ou proposer une idée",
     feedbackDesc: "Ouvre votre application mail avec le message prêt à envoyer au développeur.",
     feedbackBug: "Bug", feedbackIdea: "Idée",
@@ -3019,17 +3021,21 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
   // than inventing a separate multi-level breadcrumb for what's really just
   // one level of nesting.
   const [section, setSection] = useState(null);
+  // `group` splits the menu into the app's own settings vs. the
+  // meta/development section (feedback, version history, the temporary
+  // debug tools) — rendered with a small label divider between them so the
+  // two are visually distinct at a glance.
   const SETTINGS_MENU = [
-    { id: "exercises",  icon: "📝", label: T("settingsExercises") },
-    { id: "categories", icon: "🏷️", label: T("settingsCategories") },
-    { id: "share",      icon: "📤", label: T("settingsShare") },
-    { id: "sound",      icon: "🔊", label: T("settingsSound") },
-    { id: "language",   icon: "🌐", label: T("settingsLanguage") },
-    { id: "display",    icon: "🔠", label: T("settingsDisplay") },
-    { id: "badges",     icon: "🏅", label: T("settingsBadges") },
-    { id: "feedback",   icon: "💬", label: T("settingsFeedback") },
-    { id: "changelog",  icon: "🆕", label: T("settingsChangelog") },
-    { id: "debug",      icon: "🔧", label: "debug" },
+    { id: "exercises",  icon: "📝", label: T("settingsExercises"), group: "app" },
+    { id: "categories", icon: "🏷️", label: T("settingsCategories"), group: "app" },
+    { id: "share",      icon: "📤", label: T("settingsShare"), group: "app" },
+    { id: "sound",      icon: "🔊", label: T("settingsSound"), group: "app" },
+    { id: "language",   icon: "🌐", label: T("settingsLanguage"), group: "app" },
+    { id: "display",    icon: "🔠", label: T("settingsDisplay"), group: "app" },
+    { id: "badges",     icon: "🏅", label: T("settingsBadges"), group: "app" },
+    { id: "feedback",   icon: "💬", label: T("settingsFeedback"), group: "dev" },
+    { id: "changelog",  icon: "🆕", label: T("settingsChangelog"), group: "dev" },
+    { id: "debug",      icon: "🔧", label: "debug", group: "dev" },
   ];
   const [editEx, setEditEx]   = useState(null);  // null | "new" | exercise object
   const [editCat, setEditCat] = useState(null);  // null | "new" | category object
@@ -3122,19 +3128,35 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
   return (
     <div className="pp-narrow" style={base.scrollArea(24)}>
       {section === null ? (
-        <div style={base.card}>
-          {SETTINGS_MENU.map((item, idx) => (
-            <div
-              key={item.id}
-              style={{ ...base.row, borderBottom: idx < SETTINGS_MENU.length - 1 ? `1px solid ${C.faint}` : "none", cursor: "pointer" }}
-              onClick={() => setSection(item.id)}
-            >
-              <span style={{ fontSize: 17, flexShrink: 0 }}>{item.icon}</span>
-              <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.cream, textTransform: "capitalize" }}>{item.label}</span>
-              <span style={{ color: C.muted, fontSize: 14 }}>›</span>
-            </div>
-          ))}
-        </div>
+        <>
+          <div style={base.card}>
+            {SETTINGS_MENU.filter(item => item.group === "app").map((item, idx, arr) => (
+              <div
+                key={item.id}
+                style={{ ...base.row, borderBottom: idx < arr.length - 1 ? `1px solid ${C.faint}` : "none", cursor: "pointer" }}
+                onClick={() => setSection(item.id)}
+              >
+                <span style={{ fontSize: 17, flexShrink: 0 }}>{item.icon}</span>
+                <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.cream, textTransform: "capitalize" }}>{item.label}</span>
+                <span style={{ color: C.muted, fontSize: 14 }}>›</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ ...base.sectionTitle, padding: "8px 4px 4px" }}>{T("settingsDevGroupLabel")}</div>
+          <div style={base.card}>
+            {SETTINGS_MENU.filter(item => item.group === "dev").map((item, idx, arr) => (
+              <div
+                key={item.id}
+                style={{ ...base.row, borderBottom: idx < arr.length - 1 ? `1px solid ${C.faint}` : "none", cursor: "pointer" }}
+                onClick={() => setSection(item.id)}
+              >
+                <span style={{ fontSize: 17, flexShrink: 0 }}>{item.icon}</span>
+                <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.cream, textTransform: "capitalize" }}>{item.label}</span>
+                <span style={{ color: C.muted, fontSize: 14 }}>›</span>
+              </div>
+            ))}
+          </div>
+        </>
       ) : (
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
           <button style={base.backBtn} onClick={() => setSection(null)}>←</button>
