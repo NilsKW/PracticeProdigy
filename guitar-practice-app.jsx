@@ -3539,8 +3539,8 @@ function buildBranchNode({ attachX, attachY, dirAngle, len, color, depth, key },
   const node = { attachX, attachY, endX, endY, len, dirAngle, color, depth, key };
   const children = [];
   if (depth < opts.maxDepth && opts.subCount > 0 && opts.counter.n < TREE_MAX_NODES) {
-    const maxSubAngle = (clamp01(opts.subBiasPct / 100) * 70 * Math.PI) / 180;
-    const subLen = Math.max(2, len * clamp01(opts.subLenPct / 100));
+    const baseMaxSubAngle = (clamp01(opts.subBiasPct / 100) * 70 * Math.PI) / 180;
+    const baseSubLen = Math.max(2, len * clamp01(opts.subLenPct / 100));
     // "Répartition des départs de ramification": at 100 every child starts
     // right at the tip (t=1), like before; at 0 the children's start points
     // are spread evenly along the whole parent instead, from its base to its
@@ -3548,14 +3548,25 @@ function buildBranchNode({ attachX, attachY, dirAngle, len, color, depth, key },
     // exactly the same point.
     const spread = clamp01(opts.originSpreadPct / 100);
     const n = opts.subCount;
+    // Giving every node the exact same fan width/length and only jittering
+    // each child a little still reads as "every branch looks the same",
+    // since the overall silhouette (how wide the fan opens, how long it
+    // reaches, which way it leans) was identical everywhere — only the fine
+    // detail inside it varied. So each *node* first rolls its own "personality":
+    // how wide its fan opens (angleScale), how far it reaches (lenScale),
+    // and which way the whole fan leans (skew) — then children are placed
+    // within that node-specific fan instead of the same one every time.
+    const angleScale = 0.55 + seededRandom(`${key}|angleScale`) * 0.9; // 0.55–1.45×
+    const lenScale = 0.7 + seededRandom(`${key}|lenScale`) * 0.6; // 0.7–1.3×
+    const skew = (seededRandom(`${key}|skew`) - 0.5) * baseMaxSubAngle * 1.4;
+    const maxSubAngle = baseMaxSubAngle * angleScale;
+    const subLen = Math.max(2, baseSubLen * lenScale);
     // The n "slots" (evenly spread positions/angles that keep siblings from
     // overlapping each other) get handed out to children in a per-parent
     // shuffled order instead of always slot 0 → child 0, slot 1 → child 1,
     // etc. — that fixed mapping made the very first child of every branch
     // swing the same way, which is what turned the whole tree into a
-    // repeating spiral. Each child's slot also gets its own small random
-    // jitter on top, so even same-slot siblings across different branches
-    // don't look identical.
+    // repeating spiral.
     const order = Array.from({ length: n }, (_, s) => s)
       .map(s => ({ s, r: seededRandom(`${key}|order|${s}`) }))
       .sort((a, b) => a.r - b.r)
@@ -3565,14 +3576,15 @@ function buildBranchNode({ attachX, attachY, dirAngle, len, color, depth, key },
       const slot = order[j];
       const baseOffset = n > 1 ? -maxSubAngle + (2 * maxSubAngle) * (slot / (n - 1)) : 0;
       const baseT = n > 1 ? slot / (n - 1) : 0.5;
-      const angleJitter = (seededRandom(`${key}|${j}|a`) - 0.5) * maxSubAngle * 0.7;
-      const tJitter = (seededRandom(`${key}|${j}|t`) - 0.5) * 0.3;
-      const offset = baseOffset + angleJitter;
+      const angleJitter = (seededRandom(`${key}|${j}|a`) - 0.5) * maxSubAngle;
+      const tJitter = (seededRandom(`${key}|${j}|t`) - 0.5) * 0.4;
+      const lenJitter = 0.8 + seededRandom(`${key}|${j}|l`) * 0.4; // 0.8–1.2× on top of the node's own lenScale
+      const offset = skew + baseOffset + angleJitter;
       const originT = clamp01(baseT + (1 - baseT) * spread + tJitter);
       const originX = attachX + (endX - attachX) * originT;
       const originY = attachY + (endY - attachY) * originT;
       const child = buildBranchNode({
-        attachX: originX, attachY: originY, dirAngle: dirAngle + offset, len: subLen,
+        attachX: originX, attachY: originY, dirAngle: dirAngle + offset, len: subLen * lenJitter,
         color, depth: depth + 1, key: `${key}-${j}`,
       }, opts);
       children.push(child);
@@ -3606,7 +3618,7 @@ function leavesForNode(b, perBranchLeaves) {
 }
 
 function GrowthTree({
-  trunkPct, branchCount, leafCount, firstBranchPct = 50,
+  trunkPct, branchCount, leafCount, firstBranchPct = 50, leafSizePct = 50,
   subDepth = 0, subCount = 3, subLenPct = 65, subBiasPct = 50, originSpreadPct = 50,
 }) {
   const W = 300, H = 300;
@@ -3670,6 +3682,9 @@ function GrowthTree({
   const perBranchLeaves = Math.max(0, Math.round(leafCount));
   const leaves = allNodes.flatMap(b => leavesForNode(b, perBranchLeaves));
 
+  const leafMin = 2.5, leafMax = 10;
+  const leafR = leafMin + (leafMax - leafMin) * clamp01(leafSizePct / 100);
+
   return (
     <svg viewBox={`-40 -60 ${W + 80} ${H + 90}`} width="100%" style={{ maxWidth: 320, display: "block", margin: "0 auto", overflow: "visible" }}>
       <ellipse cx={baseX} cy={baseY + 6} rx="70" ry="8" fill="#00000033" />
@@ -3678,7 +3693,7 @@ function GrowthTree({
         <line key={b.key} x1={b.attachX} y1={b.attachY} x2={b.endX} y2={b.endY} stroke="#8B5E3C" strokeWidth={Math.max(1.5, trunkW * 0.4 * Math.pow(0.7, b.depth))} strokeLinecap="round" />
       ))}
       {leaves.map(l => (
-        <circle key={l.key} cx={l.x} cy={l.y} r="5.5" fill={l.color} opacity="0.9" />
+        <circle key={l.key} cx={l.x} cy={l.y} r={leafR} fill={l.color} opacity="0.9" />
       ))}
     </svg>
   );
@@ -3696,6 +3711,7 @@ function GrowthTreeDebugPreview() {
   const [subLenPct, setSubLenPct] = useState(60);
   const [subBiasPct, setSubBiasPct] = useState(45);
   const [originSpreadPct, setOriginSpreadPct] = useState(50);
+  const [leafSizePct, setLeafSizePct] = useState(50);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -3706,7 +3722,7 @@ function GrowthTreeDebugPreview() {
           of letting it stick against the Réglages scroll area. */}
       <div style={{ ...base.card, overflow: "visible", padding: "18px 16px", position: "sticky", top: 0, zIndex: 5, boxShadow: "0 10px 18px -10px #000000cc" }}>
         <GrowthTree
-          trunkPct={trunkPct} branchCount={branchCount} leafCount={leafCount} firstBranchPct={firstBranchPct}
+          trunkPct={trunkPct} branchCount={branchCount} leafCount={leafCount} firstBranchPct={firstBranchPct} leafSizePct={leafSizePct}
           subDepth={subDepth} subCount={subCount} subLenPct={subLenPct} subBiasPct={subBiasPct} originSpreadPct={originSpreadPct}
         />
       </div>
@@ -3761,6 +3777,15 @@ function GrowthTreeDebugPreview() {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <input type="range" min="0" max="100" step="1" value={originSpreadPct} onChange={e => setOriginSpreadPct(parseInt(e.target.value))} style={{ flex: 1, accentColor: "#B06BBF", height: 4, cursor: "pointer" }} />
             <span style={{ fontSize: 13, fontFamily: "monospace", color: "#B06BBF", fontWeight: 700, width: 34, textAlign: "right" }}>{originSpreadPct}</span>
+          </div>
+        </div>
+      </div>
+      <div style={base.card}>
+        <div style={{ padding: "14px 16px" }}>
+          <label style={{ ...base.label, margin: 0 }}>Taille des feuilles</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+            <input type="range" min="0" max="100" step="1" value={leafSizePct} onChange={e => setLeafSizePct(parseInt(e.target.value))} style={{ flex: 1, accentColor: "#8FBF6B", height: 4, cursor: "pointer" }} />
+            <span style={{ fontSize: 13, fontFamily: "monospace", color: "#8FBF6B", fontWeight: 700, width: 34, textAlign: "right" }}>{leafSizePct}</span>
           </div>
         </div>
       </div>
