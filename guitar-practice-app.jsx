@@ -3581,15 +3581,34 @@ function buildBranchNode({ attachX, attachY, dirAngle, len, color, depth, key },
     // adds progressively less to the running total, so cranking bias up
     // reshapes the tree instead of coiling its tips.
     const depthDamp = Math.pow(0.55, depth);
+    // At originSpreadPct 0, the lowest slot used to land at t=0 — literally
+    // the same point where this branch itself attaches to ITS OWN parent.
+    // A child sprouting from there is indistinguishable from just another
+    // branch off that same joint, and since it starts before this branch
+    // has visually diverged from its parent, it tends to run alongside and
+    // cross back over this branch's own remaining length — reading as extra
+    // tangle rather than a sub-branch. A small floor keeps every origin at
+    // least a bit past the base, so children still read as growing out of
+    // this specific branch instead of its joint.
+    const originFloor = 0.15;
     for (let j = 0; j < n && opts.counter.n < TREE_MAX_NODES; j++) {
       opts.counter.n++;
       const slot = order[j];
       const baseOffset = n > 1 ? -maxSubAngle + (2 * maxSubAngle) * (slot / (n - 1)) : 0;
-      const baseT = n > 1 ? slot / (n - 1) : 0.5;
+      const baseT = n > 1 ? originFloor + (1 - originFloor) * (slot / (n - 1)) : 0.5;
       const angleJitter = (seededRandom(`${key}|${j}|a`) - 0.5) * maxSubAngle * 0.7;
       const tJitter = (seededRandom(`${key}|${j}|t`) - 0.5) * 0.3;
-      const offset = (skew + baseOffset + angleJitter) * depthDamp;
       const originT = clamp01(baseT + (1 - baseT) * spread + tJitter);
+      // A child starting near the base of its parent hasn't got much of that
+      // parent's own length behind it yet, so swinging it at the same full
+      // angle as a tip-anchored child makes it cross straight back over the
+      // parent's remaining length — which is exactly what made low
+      // "répartition" values still look tangled even after damping the
+      // depth compounding above. Easing the angle in along with the origin
+      // position (from 40% strength near the base up to full strength at
+      // the tip) keeps a base-anchored child pointed closer to its parent's
+      // own direction at first, so it clears the parent before swinging out.
+      const offset = (skew + baseOffset + angleJitter) * depthDamp * (0.4 + 0.6 * originT);
       const originX = attachX + (endX - attachX) * originT;
       const originY = attachY + (endY - attachY) * originT;
       const child = buildBranchNode({
