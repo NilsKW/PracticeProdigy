@@ -3606,7 +3606,7 @@ function leavesForNode(b, perBranchLeaves) {
 }
 
 function GrowthTree({
-  trunkPct, branchCount, leafCount, firstBranchPct = 50,
+  trunkPct, branchCount, leafCount, firstBranchPct = 50, leafSizePct = 50,
   subDepth = 0, subCount = 3, subLenPct = 65, subBiasPct = 50, originSpreadPct = 50,
 }) {
   const W = 300, H = 300;
@@ -3670,6 +3670,9 @@ function GrowthTree({
   const perBranchLeaves = Math.max(0, Math.round(leafCount));
   const leaves = allNodes.flatMap(b => leavesForNode(b, perBranchLeaves));
 
+  const leafMin = 2.5, leafMax = 10;
+  const leafR = leafMin + (leafMax - leafMin) * clamp01(leafSizePct / 100);
+
   return (
     <svg viewBox={`-40 -60 ${W + 80} ${H + 90}`} width="100%" style={{ maxWidth: 320, display: "block", margin: "0 auto", overflow: "visible" }}>
       <ellipse cx={baseX} cy={baseY + 6} rx="70" ry="8" fill="#00000033" />
@@ -3678,7 +3681,7 @@ function GrowthTree({
         <line key={b.key} x1={b.attachX} y1={b.attachY} x2={b.endX} y2={b.endY} stroke="#8B5E3C" strokeWidth={Math.max(1.5, trunkW * 0.4 * Math.pow(0.7, b.depth))} strokeLinecap="round" />
       ))}
       {leaves.map(l => (
-        <circle key={l.key} cx={l.x} cy={l.y} r="5.5" fill={l.color} opacity="0.9" />
+        <circle key={l.key} cx={l.x} cy={l.y} r={leafR} fill={l.color} opacity="0.9" />
       ))}
     </svg>
   );
@@ -3696,6 +3699,7 @@ function GrowthTreeDebugPreview() {
   const [subLenPct, setSubLenPct] = useState(60);
   const [subBiasPct, setSubBiasPct] = useState(45);
   const [originSpreadPct, setOriginSpreadPct] = useState(50);
+  const [leafSizePct, setLeafSizePct] = useState(50);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -3706,7 +3710,7 @@ function GrowthTreeDebugPreview() {
           of letting it stick against the Réglages scroll area. */}
       <div style={{ ...base.card, overflow: "visible", padding: "18px 16px", position: "sticky", top: 0, zIndex: 5, boxShadow: "0 10px 18px -10px #000000cc" }}>
         <GrowthTree
-          trunkPct={trunkPct} branchCount={branchCount} leafCount={leafCount} firstBranchPct={firstBranchPct}
+          trunkPct={trunkPct} branchCount={branchCount} leafCount={leafCount} firstBranchPct={firstBranchPct} leafSizePct={leafSizePct}
           subDepth={subDepth} subCount={subCount} subLenPct={subLenPct} subBiasPct={subBiasPct} originSpreadPct={originSpreadPct}
         />
       </div>
@@ -3761,6 +3765,15 @@ function GrowthTreeDebugPreview() {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <input type="range" min="0" max="100" step="1" value={originSpreadPct} onChange={e => setOriginSpreadPct(parseInt(e.target.value))} style={{ flex: 1, accentColor: "#B06BBF", height: 4, cursor: "pointer" }} />
             <span style={{ fontSize: 13, fontFamily: "monospace", color: "#B06BBF", fontWeight: 700, width: 34, textAlign: "right" }}>{originSpreadPct}</span>
+          </div>
+        </div>
+      </div>
+      <div style={base.card}>
+        <div style={{ padding: "14px 16px" }}>
+          <label style={{ ...base.label, margin: 0 }}>Taille des feuilles</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+            <input type="range" min="0" max="100" step="1" value={leafSizePct} onChange={e => setLeafSizePct(parseInt(e.target.value))} style={{ flex: 1, accentColor: "#8FBF6B", height: 4, cursor: "pointer" }} />
+            <span style={{ fontSize: 13, fontFamily: "monospace", color: "#8FBF6B", fontWeight: 700, width: 34, textAlign: "right" }}>{leafSizePct}</span>
           </div>
         </div>
       </div>

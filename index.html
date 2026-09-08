@@ -7677,6 +7677,7 @@ function GrowthTree({
   branchCount,
   leafCount,
   firstBranchPct = 50,
+  leafSizePct = 50,
   subDepth = 0,
   subCount = 3,
   subLenPct = 65,
@@ -7758,6 +7759,9 @@ function GrowthTree({
   // sub-branch at every depth), not a total split across them.
   const perBranchLeaves = Math.max(0, Math.round(leafCount));
   const leaves = allNodes.flatMap(b => leavesForNode(b, perBranchLeaves));
+  const leafMin = 2.5,
+    leafMax = 10;
+  const leafR = leafMin + (leafMax - leafMin) * clamp01(leafSizePct / 100);
   return /*#__PURE__*/React.createElement("svg", {
     viewBox: `-40 -60 ${W + 80} ${H + 90}`,
     width: "100%",
@@ -7794,7 +7798,7 @@ function GrowthTree({
     key: l.key,
     cx: l.x,
     cy: l.y,
-    r: "5.5",
+    r: leafR,
     fill: l.color,
     opacity: "0.9"
   })));
@@ -7812,6 +7816,7 @@ function GrowthTreeDebugPreview() {
   const [subLenPct, setSubLenPct] = useState(60);
   const [subBiasPct, setSubBiasPct] = useState(45);
   const [originSpreadPct, setOriginSpreadPct] = useState(50);
+  const [leafSizePct, setLeafSizePct] = useState(50);
   return /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -7833,6 +7838,7 @@ function GrowthTreeDebugPreview() {
     branchCount: branchCount,
     leafCount: leafCount,
     firstBranchPct: firstBranchPct,
+    leafSizePct: leafSizePct,
     subDepth: subDepth,
     subCount: subCount,
     subLenPct: subLenPct,
@@ -8057,6 +8063,46 @@ function GrowthTreeDebugPreview() {
       textAlign: "right"
     }
   }, originSpreadPct)))), /*#__PURE__*/React.createElement("div", {
+    style: base.card
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "14px 16px"
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      ...base.label,
+      margin: 0
+    }
+  }, "Taille des feuilles"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      marginTop: 10
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "range",
+    min: "0",
+    max: "100",
+    step: "1",
+    value: leafSizePct,
+    onChange: e => setLeafSizePct(parseInt(e.target.value)),
+    style: {
+      flex: 1,
+      accentColor: "#8FBF6B",
+      height: 4,
+      cursor: "pointer"
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13,
+      fontFamily: "monospace",
+      color: "#8FBF6B",
+      fontWeight: 700,
+      width: 34,
+      textAlign: "right"
+    }
+  }, leafSizePct)))), /*#__PURE__*/React.createElement("div", {
     style: base.card
   }, /*#__PURE__*/React.createElement("div", {
     style: {
