@@ -3514,15 +3514,25 @@ function GrowthTree({ trunkPct, branchPcts, leafCount }) {
 
   const branchMin = 28, branchMax = 120;
   const n = branchPcts.length;
-  const angles = [58, 40, 40, 58]; // degrees from vertical — outer branches splay wider
-  const sides  = [-1, -1, 1, 1];
-
+  // Angle (from vertical) and attach height are both spread across the full
+  // range and, crucially, alternate left/right as the index increases — so
+  // two branches that are close together on the trunk (adjacent index) are
+  // always on opposite sides, and two branches on the same side are always
+  // several slots apart in both height and angle. That keeps branches (and
+  // the leaves clustered at their tips) from pointing in near-identical
+  // directions and overlapping, which a naive "outer branches wider" fixed
+  // layout doesn't guarantee once collisions are checked, and which also
+  // needs to keep working reasonably as the number of categories grows.
+  const maxAngle = 72, minAngle = 22;
   const branches = branchPcts.map((pct, i) => {
     const len = branchMin + (branchMax - branchMin) * clamp01(pct / 100);
-    const t = 0.32 + 0.58 * (i / Math.max(n - 1, 1)); // attach point along the trunk, low → high
+    const t = 0.22 + 0.7 * (i / Math.max(n - 1, 1)); // attach point along the trunk, low → high
     const attachY = baseY - trunkH * t;
-    const angleRad = (angles[i % angles.length] * Math.PI) / 180;
-    const side = sides[i % sides.length];
+    // Real branches also get more upright higher up the trunk, so shrink the
+    // swing angle as the attach point rises.
+    const magnitude = n > 1 ? maxAngle - (maxAngle - minAngle) * (i / (n - 1)) : (maxAngle + minAngle) / 2;
+    const side = i % 2 === 0 ? -1 : 1;
+    const angleRad = (magnitude * Math.PI) / 180;
     const endX = baseX + side * Math.sin(angleRad) * len;
     const endY = attachY - Math.cos(angleRad) * len;
     return { attachX: baseX, attachY, endX, endY, len, color: TREE_BRANCH_COLORS[i % TREE_BRANCH_COLORS.length] };
@@ -3551,7 +3561,7 @@ function GrowthTree({ trunkPct, branchPcts, leafCount }) {
   });
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxWidth: 320, display: "block", margin: "0 auto" }}>
+    <svg viewBox={`-40 -60 ${W + 80} ${H + 90}`} width="100%" style={{ maxWidth: 320, display: "block", margin: "0 auto", overflow: "visible" }}>
       <ellipse cx={baseX} cy={baseY + 6} rx="70" ry="8" fill="#00000033" />
       <line x1={baseX} y1={baseY} x2={baseX} y2={trunkTopY} stroke="#8B5E3C" strokeWidth={trunkW} strokeLinecap="round" />
       {branches.map((b, i) => (
