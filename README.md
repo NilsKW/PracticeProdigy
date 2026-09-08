@@ -35,7 +35,7 @@ Practice Prodigy est une application web progressive (PWA) conçue pour organise
 - Navigation entre les onglets pendant une séance : la séance se met en pause automatiquement, un bandeau vert permet de reprendre d'un tap
 - Métronome intégré pendant la séance : premier clic aigu (temps fort), clics suivants graves (temps faibles)
 - Checklist des sous-exercices repliable, avec réinitialisation de la progression
-- **🍜 Mode Noodling** : bouton pour faire une pause libre pendant une séance (jouer autre chose que ce qui est prévu). Le minuteur de l'exercice en cours se met en pause ; l'expérience continue d'être gagnée mais à moitié du taux normal. Le temps passé à noodler est suivi comme statistique à part (visible dans Progression et en fin de séance)
+- **🛝 Mode Récré** : bouton pour faire une pause libre pendant une séance (jouer autre chose que ce qui est prévu). Le minuteur de l'exercice en cours se met en pause ; l'expérience continue d'être gagnée mais à moitié du taux normal. Le temps passé en récré est suivi comme statistique à part (visible dans Progression et en fin de séance)
 - Sons de fin d'exercice (cloche) et de fin de séance (accord de Rhodes Bb sus4)
 - Effets visuels : flash bleu entre exercices, feux d'artifice et trophée en fin de séance
 

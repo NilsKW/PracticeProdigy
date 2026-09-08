@@ -35,6 +35,7 @@ window.CHANGELOG_DATA = [
     "Réglages réorganisés : les rubriques liées au développement de l'appli (Bugs & idées, Historique des versions, Debug) sont maintenant séparées visuellement du reste.",
     "Renommage de « Partage » en « Importer / exporter des groupes d'exercices », et de « Retours » en « Bugs & idées ».",
     "Nouveau : une rubrique « À propos » dans les Réglages, qui explique à quoi sert l'application, qui la développe, comment contacter le développeur, et comment vos données sont utilisées.",
+    "Renommage du mode « Noodling » en « Récré » (avec un nouvel emoji 🛝).",
   ] },
   { version: 4, date: "2026-09-07", changes: [
     "Nouvelle jauge de progression compacte pendant une séance, à la place de la liste complète des exercices.",

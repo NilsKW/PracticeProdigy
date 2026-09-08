@@ -35,7 +35,7 @@ Practice Prodigy is a progressive web app (PWA) designed to organize and optimiz
 - Switching tabs mid-session: the session automatically pauses, with a green banner to resume with one tap
 - Built-in metronome during a session: sharp click on the first beat, lower clicks on the others
 - Collapsible sub-exercise checklist, with a progress reset option
-- **🍜 Noodling mode**: a button for a free-play break during a session (playing something other than what's planned). The current exercise's timer pauses; you keep earning XP, but at half the normal rate. Time spent noodling is tracked as its own statistic (visible in Progression and at the end of a session)
+- **🛝 Recess mode**: a button for a free-play break during a session (playing something other than what's planned). The current exercise's timer pauses; you keep earning XP, but at half the normal rate. Time spent on recess is tracked as its own statistic (visible in Progression and at the end of a session)
 - End-of-exercise (bell) and end-of-session (Rhodes Bb sus4 chord) sounds
 - Visual effects: blue flash between exercises, fireworks and a trophy at the end of a session
 

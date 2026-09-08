@@ -238,12 +238,12 @@ const STRINGS = {
     levelIntro: "Every minute you practice fills your experience gauge — level up as you go.",
     timeToNext: (h, m) => h > 0 ? `${h}h ${m}m until level ` : `${m}m until level `,
     xpGained: n => `+${n} min`,
-    noodleBtn: "🍜 Noodling",
-    noodleTitle: "Time to noodle!",
-    noodleDesc: "Relax and play whatever you want, then head back to your session whenever you feel like it. You keep earning XP, just at half rate!",
+    noodleBtn: "🛝 Recess",
+    noodleTitle: "Recess time!",
+    noodleDesc: "Take a break and play whatever you want, then head back to your session whenever you feel like it. You keep earning XP, just at half rate!",
     noodleBackBtn: "↩ Back to session",
-    noodleSessionSuffix: m => ` (incl. ${m}m noodling)`,
-    noodleStatsLabel: "Time spent noodling",
+    noodleSessionSuffix: m => ` (incl. ${m}m recess)`,
+    noodleStatsLabel: "Time spent on recess",
     filesLabel: "Teaching files (audio, video, image, PDF)",
     addFileBtn: "+ Add a file",
     uploadingFile: "Adding…",
@@ -475,12 +475,12 @@ const STRINGS = {
     levelIntro: "Chaque minute de pratique remplit votre jauge d'expérience — montez de niveau au fil du temps.",
     timeToNext: (h, m) => h > 0 ? `${h} h ${m} min avant le niveau ` : `${m} min avant le niveau `,
     xpGained: n => `+${n} min`,
-    noodleBtn: "🍜 Noodling",
-    noodleTitle: "Time to noodle !",
-    noodleDesc: "Détends-toi en jouant ce que tu veux, puis retourne à la séance dès que tu le sens. Tu continues de gagner de l'expérience, mais seulement la moitié !",
+    noodleBtn: "🛝 Récré",
+    noodleTitle: "C'est la récré !",
+    noodleDesc: "Fais une pause et joue ce que tu veux, puis retourne à la séance dès que tu le sens. Tu continues de gagner de l'expérience, mais seulement la moitié !",
     noodleBackBtn: "↩ Retour à la séance",
-    noodleSessionSuffix: m => ` dont ${m}m à noodler`,
-    noodleStatsLabel: "Temps passé à noodler",
+    noodleSessionSuffix: m => ` dont ${m}m de récré`,
+    noodleStatsLabel: "Temps passé en récré",
     filesLabel: "Fichiers pédagogiques (audio, vidéo, image, PDF)",
     addFileBtn: "+ Ajouter un fichier",
     uploadingFile: "Ajout en cours…",
@@ -798,7 +798,7 @@ function StatsScreen({
       fontSize: 12,
       color: "#FBBF24"
     }
-  }, "🍜 ", T("noodleStatsLabel"), " : ", fmtSec(noodleSec)))));
+  }, "🛝 ", T("noodleStatsLabel"), " : ", fmtSec(noodleSec)))));
   const totalSessionSec = entries.reduce((s, e) => s + e.totalSec, 0);
   const totalSessions = Math.max(...entries.map(e => e.sessions));
   const maxSec = entries[0]?.totalSec || 1;
@@ -862,7 +862,7 @@ function StatsScreen({
     style: {
       fontSize: 16
     }
-  }, "🍜"), /*#__PURE__*/React.createElement("span", {
+  }, "🛝"), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 12,
       color: "#FBBF24",
@@ -5333,7 +5333,7 @@ function ActiveSessionScreen({
     style: {
       fontSize: 72
     }
-  }, "🍜"), /*#__PURE__*/React.createElement("div", {
+  }, "🛝"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 19,
       fontWeight: 800,

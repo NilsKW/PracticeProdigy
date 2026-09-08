@@ -71,12 +71,12 @@ const STRINGS = {
     levelIntro: "Every minute you practice fills your experience gauge — level up as you go.",
     timeToNext: (h, m) => h > 0 ? `${h}h ${m}m until level ` : `${m}m until level `,
     xpGained: (n) => `+${n} min`,
-    noodleBtn: "🍜 Noodling",
-    noodleTitle: "Time to noodle!",
-    noodleDesc: "Relax and play whatever you want, then head back to your session whenever you feel like it. You keep earning XP, just at half rate!",
+    noodleBtn: "🛝 Recess",
+    noodleTitle: "Recess time!",
+    noodleDesc: "Take a break and play whatever you want, then head back to your session whenever you feel like it. You keep earning XP, just at half rate!",
     noodleBackBtn: "↩ Back to session",
-    noodleSessionSuffix: (m) => ` (incl. ${m}m noodling)`,
-    noodleStatsLabel: "Time spent noodling",
+    noodleSessionSuffix: (m) => ` (incl. ${m}m recess)`,
+    noodleStatsLabel: "Time spent on recess",
     filesLabel: "Teaching files (audio, video, image, PDF)", addFileBtn: "+ Add a file", uploadingFile: "Adding…",
     filesHint: "Files are stored on this device only and work fully offline once added.",
     downloadFile: "Download", fileMissing: "file missing on this device",
@@ -195,12 +195,12 @@ const STRINGS = {
     levelIntro: "Chaque minute de pratique remplit votre jauge d'expérience — montez de niveau au fil du temps.",
     timeToNext: (h, m) => h > 0 ? `${h} h ${m} min avant le niveau ` : `${m} min avant le niveau `,
     xpGained: (n) => `+${n} min`,
-    noodleBtn: "🍜 Noodling",
-    noodleTitle: "Time to noodle !",
-    noodleDesc: "Détends-toi en jouant ce que tu veux, puis retourne à la séance dès que tu le sens. Tu continues de gagner de l'expérience, mais seulement la moitié !",
+    noodleBtn: "🛝 Récré",
+    noodleTitle: "C'est la récré !",
+    noodleDesc: "Fais une pause et joue ce que tu veux, puis retourne à la séance dès que tu le sens. Tu continues de gagner de l'expérience, mais seulement la moitié !",
     noodleBackBtn: "↩ Retour à la séance",
-    noodleSessionSuffix: (m) => ` dont ${m}m à noodler`,
-    noodleStatsLabel: "Temps passé à noodler",
+    noodleSessionSuffix: (m) => ` dont ${m}m de récré`,
+    noodleStatsLabel: "Temps passé en récré",
     filesLabel: "Fichiers pédagogiques (audio, vidéo, image, PDF)", addFileBtn: "+ Ajouter un fichier", uploadingFile: "Ajout en cours…",
     filesHint: "Les fichiers sont stockés uniquement sur cet appareil et restent disponibles hors ligne une fois ajoutés.",
     downloadFile: "Télécharger", fileMissing: "fichier introuvable sur cet appareil",
@@ -404,7 +404,7 @@ function StatsScreen({ stats, exercises, onClear, noodleSec, dailyStats, dailyNo
         </div>
         {!usingPeriod && noodleSec > 0 && (
           <div style={{ marginTop: 20, background: "#2A2408", border: "1px solid #FBBF2444", borderRadius: 10, padding: "10px 14px", display: "inline-block" }}>
-            <span style={{ fontSize: 12, color: "#FBBF24" }}>🍜 {T("noodleStatsLabel")} : {fmtSec(noodleSec)}</span>
+            <span style={{ fontSize: 12, color: "#FBBF24" }}>🛝 {T("noodleStatsLabel")} : {fmtSec(noodleSec)}</span>
           </div>
         )}
       </div>
@@ -434,7 +434,7 @@ function StatsScreen({ stats, exercises, onClear, noodleSec, dailyStats, dailyNo
 
       {periodNoodleSec > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#2A2408", border: "1px solid #FBBF2444", borderRadius: 10, padding: "8px 12px" }}>
-          <span style={{ fontSize: 16 }}>🍜</span>
+          <span style={{ fontSize: 16 }}>🛝</span>
           <span style={{ fontSize: 12, color: "#FBBF24", flex: 1 }}>{T("noodleStatsLabel")}</span>
           <span style={{ fontSize: 13, fontFamily: "monospace", fontWeight: 700, color: "#FBBF24" }}>{fmtSec(periodNoodleSec)}</span>
         </div>
@@ -2545,7 +2545,7 @@ function ActiveSessionScreen({
     <div style={{ flex: 1, minHeight: 0, padding: "14px 16px 24px", display: "flex", flexDirection: "column" }}>
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14,
         background: "linear-gradient(135deg,#2A2408,#1A1608)", border: "2px solid #FBBF2466", borderRadius: 20, padding: "32px 24px", textAlign: "center" }}>
-        <div style={{ fontSize: 72 }}>🍜</div>
+        <div style={{ fontSize: 72 }}>🛝</div>
         <div style={{ fontSize: 19, fontWeight: 800, color: "#FBBF24", letterSpacing: "0.02em" }}>{T("noodleTitle")}</div>
         <div style={{ fontSize: 13, color: C.cream, lineHeight: 1.7, maxWidth: 300 }}>{T("noodleDesc")}</div>
         <div style={{ fontSize: 40, fontFamily: "monospace", fontWeight: 700, color: "#FBBF24" }}>{formatTime(noodleElapsed)}</div>
