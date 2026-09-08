@@ -33,6 +33,10 @@ const STRINGS = {
     statsMostPractised: "Most Practised", statsReset: "Reset Statistics",
     statsConfirmTitle: "Reset all statistics?", statsConfirmMsg: "This will permanently delete all your practice history. This cannot be undone.",
     statsConfirmYes: "Yes, reset", statsEmpty: "No stats yet.", statsEmptySub: "Complete at least one exercise to start tracking.",
+    statsPeriodToggle: "Filter by date range", statsPeriodStart: "Start date", statsPeriodEnd: "End date",
+    statsPeriodLimitedData: (d) => `Date-range stats are only available from ${d} onward — older activity is still counted in your lifetime totals above, just not in this range.`,
+    statsPeriodNoDataYet: "No date-range data recorded yet — it starts building up from today.",
+    statsEmptyPeriod: "No activity in this date range.",
     settingsExercises: "exercises", settingsCategories: "categories", settingsSound: "sound", settingsLanguage: "language", settingsDisplay: "display", settingsBadges: "badges",
     newExercise: "+ New Exercise", editExercise: "Edit Exercise", newExerciseTitle: "New Exercise",
     iconLabel: "Icon", nameLabel: "Name", descLabel: "Description", youtubeLabel: "YouTube Reference Video (optional)",
@@ -135,6 +139,10 @@ const STRINGS = {
     statsMostPractised: "Les plus pratiqués", statsReset: "Réinitialiser les statistiques",
     statsConfirmTitle: "Réinitialiser les statistiques ?", statsConfirmMsg: "Ceci supprimera définitivement tout votre historique de pratique. Cette action est irréversible.",
     statsConfirmYes: "Oui, réinitialiser", statsEmpty: "Pas encore de statistiques.", statsEmptySub: "Terminez au moins un exercice pour commencer le suivi.",
+    statsPeriodToggle: "Filtrer par période", statsPeriodStart: "Date de début", statsPeriodEnd: "Date de fin",
+    statsPeriodLimitedData: (d) => `Les statistiques par période ne sont disponibles qu'à partir du ${d} — l'activité antérieure reste comptée dans le total général ci-dessus, mais pas dans cette période.`,
+    statsPeriodNoDataYet: "Aucune donnée par période enregistrée pour l'instant — le suivi commence à partir d'aujourd'hui.",
+    statsEmptyPeriod: "Aucune activité sur cette période.",
     settingsExercises: "exercices", settingsCategories: "catégories", settingsSound: "son", settingsLanguage: "langue", settingsDisplay: "affichage", settingsBadges: "badges",
     newExercise: "+ Nouvel exercice", editExercise: "Modifier l'exercice", newExerciseTitle: "Nouvel exercice",
     iconLabel: "Icône", nameLabel: "Nom", descLabel: "Description", youtubeLabel: "Vidéo YouTube de référence (optionnel)",
@@ -271,15 +279,19 @@ function usePersisted(key, defaultValue) {
 // ─── STATS SCREEN ─────────────────────────────────────────────────────────────
 // stats shape: { [exerciseId]: { name, icon, totalSec, sessions } }
 
-function StatsScreen({ stats, exercises, onClear, noodleSec }) {
+function StatsScreen({ stats, exercises, onClear, noodleSec, dailyStats, dailyNoodleSec }) {
   const T = useT();
   const lang = useLang();
   const [confirmClear, setConfirmClear] = useState(false);
-  const entries = Object.values(stats)
-    .filter(s => s.totalSec > 0)
-    .sort((a, b) => b.totalSec - a.totalSec);
-
-  const maxSec = entries[0]?.totalSec || 1;
+  // Date-range filter: backed by `dailyStats`/`dailyNoodleSec`, which only
+  // started accumulating once this feature shipped (see their declarations
+  // in App). The lifetime `stats`/`noodleSec` totals above are untouched by
+  // any of this and keep showing everything, including activity from
+  // before this existed.
+  const [periodOpen, setPeriodOpen] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState(todayStr());
+  const usingPeriod = periodOpen && !!startDate;
 
   function fmtSec(s) {
     if (s < 60) return `${s}s`;
@@ -289,25 +301,87 @@ function StatsScreen({ stats, exercises, onClear, noodleSec }) {
     return `${m}m ${s % 60}s`;
   }
 
-  if (entries.length === 0) return (
-    <div style={{ textAlign: "center", padding: "60px 24px", color: "#8D8D9C" }}>
-      <div style={{ fontSize: 46, marginBottom: 12 }}>📊</div>
-      <div style={{ fontSize: 14, lineHeight: 1.6 }}>
-        {T("statsEmpty")}<br />{T("statsEmptySub")}
+  let entries, periodNoodleSec;
+  if (usingPeriod) {
+    const agg = {};
+    Object.keys(dailyStats || {}).forEach(day => {
+      if (day < startDate || day > endDate) return;
+      Object.entries(dailyStats[day]).forEach(([key, val]) => {
+        const ex = agg[key] || { totalSec: 0, sessions: 0 };
+        agg[key] = { totalSec: ex.totalSec + val.totalSec, sessions: ex.sessions + val.sessions };
+      });
+    });
+    entries = Object.entries(agg)
+      .map(([key, val]) => ({
+        exerciseId: key,
+        name: stats[key]?.name || key,
+        icon: stats[key]?.icon || "🎵",
+        totalSec: val.totalSec,
+        sessions: val.sessions,
+      }))
+      .filter(e => e.totalSec > 0)
+      .sort((a, b) => b.totalSec - a.totalSec);
+    periodNoodleSec = Object.keys(dailyNoodleSec || {}).reduce((sum, day) => (day < startDate || day > endDate) ? sum : sum + dailyNoodleSec[day], 0);
+  } else {
+    entries = Object.values(stats).filter(s => s.totalSec > 0).sort((a, b) => b.totalSec - a.totalSec);
+    periodNoodleSec = noodleSec;
+  }
+
+  const earliestDay = Object.keys(dailyStats || {}).sort()[0] || null;
+
+  const periodPanel = (
+    <div style={{ background: "#151208", border: "1px solid #2A1E08", borderRadius: 10, padding: "10px 12px" }}>
+      <div onClick={() => setPeriodOpen(o => !o)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: C.amber }}>📅 {T("statsPeriodToggle")}</span>
+        <span style={{ fontSize: 10, color: C.muted, display: "inline-block", transition: "transform 0.2s", transform: periodOpen ? "rotate(180deg)" : "none" }}>▼</span>
       </div>
-      {noodleSec > 0 && (
-        <div style={{ marginTop: 20, background: "#2A2408", border: "1px solid #FBBF2444", borderRadius: 10, padding: "10px 14px", display: "inline-block" }}>
-          <span style={{ fontSize: 12, color: "#FBBF24" }}>🍜 {T("noodleStatsLabel")} : {fmtSec(noodleSec)}</span>
+      {periodOpen && (
+        <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ flex: 1 }}>
+              <label style={base.label}>{T("statsPeriodStart")}</label>
+              <input type="date" value={startDate} max={endDate} onChange={e => setStartDate(e.target.value)} style={base.input} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={base.label}>{T("statsPeriodEnd")}</label>
+              <input type="date" value={endDate} min={startDate || undefined} max={todayStr()} onChange={e => setEndDate(e.target.value)} style={base.input} />
+            </div>
+          </div>
+          {startDate && earliestDay && startDate < earliestDay && (
+            <div style={{ fontSize: 10, color: "#FBBF24", lineHeight: 1.5 }}>{T("statsPeriodLimitedData", earliestDay)}</div>
+          )}
+          {startDate && !earliestDay && (
+            <div style={{ fontSize: 10, color: C.muted }}>{T("statsPeriodNoDataYet")}</div>
+          )}
         </div>
       )}
     </div>
   );
 
+  if (entries.length === 0) return (
+    <div style={{ padding: "12px 16px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
+      {periodPanel}
+      <div style={{ textAlign: "center", padding: "40px 24px", color: "#8D8D9C" }}>
+        <div style={{ fontSize: 46, marginBottom: 12 }}>📊</div>
+        <div style={{ fontSize: 14, lineHeight: 1.6 }}>
+          {usingPeriod ? T("statsEmptyPeriod") : (<>{T("statsEmpty")}<br />{T("statsEmptySub")}</>)}
+        </div>
+        {!usingPeriod && noodleSec > 0 && (
+          <div style={{ marginTop: 20, background: "#2A2408", border: "1px solid #FBBF2444", borderRadius: 10, padding: "10px 14px", display: "inline-block" }}>
+            <span style={{ fontSize: 12, color: "#FBBF24" }}>🍜 {T("noodleStatsLabel")} : {fmtSec(noodleSec)}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   const totalSessionSec = entries.reduce((s, e) => s + e.totalSec, 0);
   const totalSessions   = Math.max(...entries.map(e => e.sessions));
+  const maxSec = entries[0]?.totalSec || 1;
 
   return (
     <div style={{ padding: "12px 16px 40px", display: "flex", flexDirection: "column", gap: 12 }}>
+      {periodPanel}
       {/* Summary row */}
       <div style={{ display: "flex", gap: 8 }}>
         {[
@@ -322,11 +396,11 @@ function StatsScreen({ stats, exercises, onClear, noodleSec }) {
         ))}
       </div>
 
-      {noodleSec > 0 && (
+      {periodNoodleSec > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#2A2408", border: "1px solid #FBBF2444", borderRadius: 10, padding: "8px 12px" }}>
           <span style={{ fontSize: 16 }}>🍜</span>
           <span style={{ fontSize: 12, color: "#FBBF24", flex: 1 }}>{T("noodleStatsLabel")}</span>
-          <span style={{ fontSize: 13, fontFamily: "monospace", fontWeight: 700, color: "#FBBF24" }}>{fmtSec(noodleSec)}</span>
+          <span style={{ fontSize: 13, fontFamily: "monospace", fontWeight: 700, color: "#FBBF24" }}>{fmtSec(periodNoodleSec)}</span>
         </div>
       )}
 
@@ -350,7 +424,10 @@ function StatsScreen({ stats, exercises, onClear, noodleSec }) {
         ))}
       </div>
 
-      {!confirmClear ? (
+      {/* Reset wipes everything (lifetime + date-range history), so it only
+          makes sense from the lifetime view — hidden while filtering by a
+          date range to avoid it reading as "reset just this period". */}
+      {!usingPeriod && (!confirmClear ? (
         <button
           onClick={() => setConfirmClear(true)}
           style={{ background: "none", border: "1px solid #3A1A1A", borderRadius: 8, padding: "9px", color: "#F87171", fontSize: 12, cursor: "pointer", textAlign: "center" }}
@@ -376,7 +453,7 @@ function StatsScreen({ stats, exercises, onClear, noodleSec }) {
             </button>
           </div>
         </div>
-      )}
+      ))}
     </div>
   );
 }
@@ -1490,7 +1567,7 @@ function LevelScreen({ stats, noodleSec }) {
 
 // ─── PROGRESSION SCREEN (Niveau / Stats / Badges, merged under sub-tabs) ──────
 
-function ProgressionScreen({ stats, exercises, onClearStats, badges, subProgress, practiceDays, noodleSec, subTab, setSubTab }) {
+function ProgressionScreen({ stats, exercises, onClearStats, badges, subProgress, practiceDays, noodleSec, dailyStats, dailyNoodleSec, subTab, setSubTab }) {
   const T = useT();
   const TABS = [
     { id: "level",  label: T("progressTabLevel") },
@@ -1519,7 +1596,7 @@ function ProgressionScreen({ stats, exercises, onClearStats, badges, subProgress
       </div>
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
         {subTab === "level"  && <LevelScreen stats={stats} noodleSec={noodleSec} />}
-        {subTab === "stats"  && <StatsScreen stats={stats} exercises={exercises} onClear={onClearStats} noodleSec={noodleSec} />}
+        {subTab === "stats"  && <StatsScreen stats={stats} exercises={exercises} onClear={onClearStats} noodleSec={noodleSec} dailyStats={dailyStats} dailyNoodleSec={dailyNoodleSec} />}
         {subTab === "badges" && <BadgesScreen badges={badges} stats={stats} subProgress={subProgress} exercises={exercises} practiceDays={practiceDays} />}
       </div>
     </div>
@@ -3324,6 +3401,16 @@ export default function App() {
   // Calendar days (YYYY-MM-DD, deduped) on which at least one exercise was
   // practiced, used for the "3-day streak" badge.
   const [practiceDays, setPracticeDays] = usePersisted("practiceDays", []);
+  // Per-day breakdown backing the Stats screen's date-range filter, shaped
+  // like `stats` but bucketed by day: { "YYYY-MM-DD": { [exerciseKey]: {
+  // totalSec, sessions } } }. Introduced alongside the period-filter feature
+  // itself, so it only starts accumulating from whenever a device updates to
+  // this version onward — `stats` (the lifetime aggregate) is untouched and
+  // keeps showing everything from before, it's only a *date-range* query
+  // that can't see further back than this field's own history.
+  const [dailyStats, setDailyStats] = usePersisted("dailyStats", {});
+  // Same idea for noodle time, mirroring `noodleSec` (the lifetime total).
+  const [dailyNoodleSec, setDailyNoodleSec] = usePersisted("dailyNoodleSec", {});
   // Lifetime total seconds spent "noodling" (free playing during a session,
   // outside the planned exercises). Counted in full for the stat shown in
   // Progression/session-end, but only at half rate towards XP/level.
@@ -3396,8 +3483,8 @@ export default function App() {
     if (afterLevel > beforeLevel) {
       setLevelUpQueue(q => [...q, afterLevel]);
     }
+    const key = task.exerciseId || task.id;
     setStats(prev => {
-      const key = task.exerciseId || task.id;
       const existing = prev[key] || { exerciseId: key, name: task.name, icon: task.icon, totalSec: 0, sessions: 0 };
       return {
         ...prev,
@@ -3412,7 +3499,18 @@ export default function App() {
     });
     const today = todayStr();
     setPracticeDays(prev => (prev.includes(today) ? prev : [...prev, today]));
-  }, [stats, noodleSec, setStats, setPracticeDays]);
+    setDailyStats(prev => {
+      const day = prev[today] || {};
+      const existing = day[key] || { totalSec: 0, sessions: 0 };
+      return {
+        ...prev,
+        [today]: {
+          ...day,
+          [key]: { totalSec: existing.totalSec + Math.round(elapsedSec), sessions: existing.sessions + 1 },
+        },
+      };
+    });
+  }, [stats, noodleSec, setStats, setPracticeDays, setDailyStats]);
 
   // Noodling: free playing during a session, tracked separately from any
   // exercise. Time is counted in full towards the noodle stat, but only at
@@ -3429,7 +3527,9 @@ export default function App() {
     }
     setNoodleSec(prev => prev + Math.round(sec));
     setSessionNoodleSec(prev => prev + Math.round(sec));
-  }, [stats, noodleSec, setNoodleSec]);
+    const today = todayStr();
+    setDailyNoodleSec(prev => ({ ...prev, [today]: (prev[today] || 0) + Math.round(sec) }));
+  }, [stats, noodleSec, setNoodleSec, setDailyNoodleSec]);
 
   // Briefly flash the bottom-nav "Séance" tab red whenever the session's
   // exercise count changes (added or removed, from the Library or the
@@ -3704,7 +3804,7 @@ export default function App() {
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {tab === "library"  && <LibraryScreen exercises={exercises} categories={categories} tasks={tasks} onAdd={addExerciseWithFlight} onRemove={removeExerciseFromSession} stats={stats} subProgress={subProgress} />}
       {tab === "session"  && <SessionScreen tasks={tasks} setTasks={setTasks} onStart={startSession} sessionInProgress={sessionInProgress} onReturnToSession={returnToSession} presets={presets} setPresets={setPresets} minuteBumpMs={minuteBumpMs} minuteBumpPct={minuteBumpPct} />}
-      {tab === "progress" && <ProgressionScreen stats={stats} exercises={exercises} onClearStats={() => setStats({})} badges={badges} subProgress={subProgress} practiceDays={practiceDays} noodleSec={noodleSec} subTab={progressSubTab} setSubTab={setProgressSubTab} />}
+      {tab === "progress" && <ProgressionScreen stats={stats} exercises={exercises} onClearStats={() => { setStats({}); setDailyStats({}); setDailyNoodleSec({}); }} badges={badges} subProgress={subProgress} practiceDays={practiceDays} noodleSec={noodleSec} dailyStats={dailyStats} dailyNoodleSec={dailyNoodleSec} subTab={progressSubTab} setSubTab={setProgressSubTab} />}
       {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} editorGuardRef={editorGuardRef} guardedRun={guardedRun} minuteBumpMs={minuteBumpMs} onMinuteBumpMsChange={setMinuteBumpMs} minuteBumpPct={minuteBumpPct} onMinuteBumpPctChange={setMinuteBumpPct} />}
       {tab === "active"   && <ActiveSessionScreen
         tasks={tasks} setTasks={setTasks} onFinish={endSession} onBackToMenu={backToMenu}
