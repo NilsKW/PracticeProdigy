@@ -3503,7 +3503,7 @@ const TREE_BRANCH_COLORS = ["#8FBF6B", "#6BA5BF", "#C99A4A", "#B06BBF"];
 
 function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
-function GrowthTree({ trunkPct, branchPcts, leafCount }) {
+function GrowthTree({ trunkPct, branchPcts, leafCount, biasPct = 50 }) {
   const W = 300, H = 300;
   const baseX = W / 2, baseY = H - 16;
 
@@ -3523,14 +3523,21 @@ function GrowthTree({ trunkPct, branchPcts, leafCount }) {
   // directions and overlapping, which a naive "outer branches wider" fixed
   // layout doesn't guarantee once collisions are checked, and which also
   // needs to keep working reasonably as the number of categories grows.
-  const maxAngle = 72, minAngle = 22;
+  // "Biais" slider: the bottom-most branch is always horizontal (90° from
+  // vertical) at every setting. At bias 0 every other branch stays close to
+  // horizontal too, just spread by a small fixed variation so they're still
+  // visually distinct; sliding towards 100 progressively tips the top-most
+  // branch all the way to vertical (0°), with branches in between
+  // interpolating smoothly, like a young tree that hasn't yet developed the
+  // more horizontal, drooping lower branches of a mature one.
+  const bottomAngle = 90;
+  const idleTopVariation = 8;
+  const topAngle = (bottomAngle - idleTopVariation) * (1 - clamp01(biasPct / 100));
   const branches = branchPcts.map((pct, i) => {
     const len = branchMin + (branchMax - branchMin) * clamp01(pct / 100);
     const t = 0.22 + 0.7 * (i / Math.max(n - 1, 1)); // attach point along the trunk, low → high
     const attachY = baseY - trunkH * t;
-    // Real branches also get more upright higher up the trunk, so shrink the
-    // swing angle as the attach point rises.
-    const magnitude = n > 1 ? maxAngle - (maxAngle - minAngle) * (i / (n - 1)) : (maxAngle + minAngle) / 2;
+    const magnitude = n > 1 ? bottomAngle - (bottomAngle - topAngle) * (i / (n - 1)) : (bottomAngle + topAngle) / 2;
     const side = i % 2 === 0 ? -1 : 1;
     const angleRad = (magnitude * Math.PI) / 180;
     const endX = baseX + side * Math.sin(angleRad) * len;
@@ -3580,12 +3587,25 @@ function GrowthTreeDebugPreview() {
   const [trunkPct, setTrunkPct] = useState(50);
   const [branchPcts, setBranchPcts] = useState([50, 50, 50, 50]);
   const [leafCount, setLeafCount] = useState(10);
+  const [biasPct, setBiasPct] = useState(50);
   const setBranchAt = (i, v) => setBranchPcts(prev => prev.map((p, idx) => (idx === i ? v : p)));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ ...base.card, padding: "18px 16px" }}>
-        <GrowthTree trunkPct={trunkPct} branchPcts={branchPcts} leafCount={leafCount} />
+        <GrowthTree trunkPct={trunkPct} branchPcts={branchPcts} leafCount={leafCount} biasPct={biasPct} />
+      </div>
+      <div style={base.card}>
+        <div style={{ padding: "14px 16px" }}>
+          <label style={{ ...base.label, margin: 0 }}>Biais des branches</label>
+          <div style={{ fontSize: 11, color: C.muted, marginTop: 4, marginBottom: 10 }}>
+            Au minimum, toutes les branches sont horizontales. Au maximum, les branches du haut deviennent verticales tandis que celles du bas restent horizontales.
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <input type="range" min="0" max="100" step="1" value={biasPct} onChange={e => setBiasPct(parseInt(e.target.value))} style={{ flex: 1, accentColor: C.amber, height: 4, cursor: "pointer" }} />
+            <span style={{ fontSize: 13, fontFamily: "monospace", color: C.amber, fontWeight: 700, width: 34, textAlign: "right" }}>{biasPct}</span>
+          </div>
+        </div>
       </div>
       <div style={base.card}>
         <div style={{ padding: "14px 16px" }}>
