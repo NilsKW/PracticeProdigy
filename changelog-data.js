@@ -13,6 +13,9 @@
 // antérieure.
 
 window.CHANGELOG_DATA = [
+  { version: 29, date: "2026-09-08", changes: [
+    "Nouveau : une rubrique « À propos » dans les Réglages, qui explique à quoi sert l'application, qui la développe, comment contacter le développeur, et comment vos données sont utilisées.",
+  ] },
   { version: 28, date: "2026-09-08", changes: [
     "Réglages réorganisés : les rubriques liées au développement de l'appli (Bugs & idées, Historique des versions, Debug) sont maintenant séparées visuellement du reste.",
     "Renommage de « Partage » en « Importer / exporter des groupes d'exercices », et de « Retours » en « Bugs & idées ».",

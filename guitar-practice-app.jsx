@@ -105,6 +105,19 @@ const STRINGS = {
     addedToSessionToast: "Added to session",
     settingsFeedback: "bugs & ideas",
     settingsDevGroupLabel: "About this app",
+    settingsAbout: "about",
+    aboutWhatTitle: "What this app is for",
+    aboutWhatText: "Practice Prodigy is an app for organizing your instrumental practice sessions: exercise library, timer, metronome, progress tracking, and gamification (levels, badges) — for any instrument.",
+    aboutDevTitle: "Development",
+    aboutDevText: "Practice Prodigy is developed by Nils Kwiatowski, with the help of the Claude Code AI (Anthropic) for writing the code.",
+    aboutContactTitle: "Contact",
+    aboutContactText: "For any question, comment, or issue, you can write directly to",
+    aboutGoToFeedbackBtn: "💬 Go to Bugs & Ideas",
+    aboutPrivacyTitle: "⚠️ Security & data",
+    aboutPrivacyData: "No account creation, no server: all your data (exercises, statistics, added files) is stored only on your device, in your browser.",
+    aboutPrivacyNoServer: "Nothing is sent anywhere automatically. The only actions that send data off your device are ones you choose to take: sending an email via \"Bugs & Ideas\", or exporting a file via \"Import / export exercise groups\".",
+    aboutPrivacyBackup: "This data isn't backed up elsewhere: if you clear your browser data, uninstall the app, or switch devices, it can be permanently lost unless you've exported it beforehand.",
+    aboutPrivacyDisclaimer: "This project is developed independently, without a formal security audit or uptime guarantee. Avoid storing sensitive information in it (other people's personal data, confidential documents), especially in the teaching files attached to exercises.",
     feedbackTitle: "Report a bug or suggest an idea",
     feedbackDesc: "Opens your email app with the message ready to send to the developer.",
     feedbackBug: "Bug", feedbackIdea: "Idea",
@@ -215,6 +228,19 @@ const STRINGS = {
     addedToSessionToast: "Ajouté à la séance",
     settingsFeedback: "bugs & idées",
     settingsDevGroupLabel: "À propos de l'appli",
+    settingsAbout: "à propos",
+    aboutWhatTitle: "À quoi sert cette application",
+    aboutWhatText: "Practice Prodigy est une application pour organiser vos séances de pratique instrumentale : bibliothèque d'exercices, minuteur, métronome, suivi de progression et gamification (niveaux, badges) — quel que soit l'instrument.",
+    aboutDevTitle: "Développement",
+    aboutDevText: "Practice Prodigy est développée par Nils Kwiatowski, avec l'aide de l'IA Claude Code (Anthropic) pour l'écriture du code.",
+    aboutContactTitle: "Contact",
+    aboutContactText: "Pour toute question, remarque ou problème, vous pouvez écrire directement à",
+    aboutGoToFeedbackBtn: "💬 Aller à Bugs & idées",
+    aboutPrivacyTitle: "⚠️ Sécurité et données",
+    aboutPrivacyData: "Aucune création de compte, aucun serveur : toutes vos données (exercices, statistiques, fichiers ajoutés) restent stockées uniquement sur votre appareil, dans votre navigateur.",
+    aboutPrivacyNoServer: "Rien n'est envoyé automatiquement nulle part. Les seules actions qui font sortir des données de votre appareil sont volontaires : l'envoi d'un email via « Bugs & idées », ou l'export d'un fichier via « Importer / exporter des groupes d'exercices ».",
+    aboutPrivacyBackup: "Ces données ne sont pas sauvegardées ailleurs : si vous videz les données du navigateur, désinstallez l'appli ou changez d'appareil, elles peuvent être définitivement perdues si vous ne les avez pas exportées au préalable.",
+    aboutPrivacyDisclaimer: "Ce projet est développé de façon indépendante, sans audit de sécurité formel ni garantie de disponibilité. Évitez d'y stocker des informations sensibles (données personnelles de tiers, documents confidentiels), notamment dans les fichiers pédagogiques attachés aux exercices.",
     feedbackTitle: "Signaler un bug ou proposer une idée",
     feedbackDesc: "Ouvre votre application mail avec le message prêt à envoyer au développeur.",
     feedbackBug: "Bug", feedbackIdea: "Idée",
@@ -3033,6 +3059,7 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
     { id: "language",   icon: "🌐", label: T("settingsLanguage"), group: "app" },
     { id: "display",    icon: "🔠", label: T("settingsDisplay"), group: "app" },
     { id: "badges",     icon: "🏅", label: T("settingsBadges"), group: "app" },
+    { id: "about",      icon: "ℹ️", label: T("settingsAbout"), group: "dev" },
     { id: "feedback",   icon: "💬", label: T("settingsFeedback"), group: "dev" },
     { id: "changelog",  icon: "🆕", label: T("settingsChangelog"), group: "dev" },
     { id: "debug",      icon: "🔧", label: "debug", group: "dev" },
@@ -3352,8 +3379,45 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
         </div>
       )}
 
+      {section === "about" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, flexShrink: 0 }}>
+          <div style={{ ...base.card, flexShrink: 0 }}>
+            <div style={{ padding: "14px 16px" }}>
+              <label style={{ ...base.label, margin: 0 }}>{T("aboutWhatTitle")}</label>
+              <div style={{ fontSize: 12.5, color: C.cream, lineHeight: 1.6, marginTop: 8 }}>{T("aboutWhatText")}</div>
+            </div>
+          </div>
+          <div style={{ ...base.card, flexShrink: 0 }}>
+            <div style={{ padding: "14px 16px" }}>
+              <label style={{ ...base.label, margin: 0 }}>{T("aboutDevTitle")}</label>
+              <div style={{ fontSize: 12.5, color: C.cream, lineHeight: 1.6, marginTop: 8 }}>{T("aboutDevText")}</div>
+            </div>
+          </div>
+          <div style={{ ...base.card, flexShrink: 0 }}>
+            <div style={{ padding: "14px 16px" }}>
+              <label style={{ ...base.label, margin: 0 }}>{T("aboutContactTitle")}</label>
+              <div style={{ fontSize: 12.5, color: C.cream, lineHeight: 1.6, marginTop: 8, marginBottom: 12 }}>
+                {T("aboutContactText")} <a href="mailto:kwiatowski.nils@gmail.com" style={{ color: C.amber }}>kwiatowski.nils@gmail.com</a>
+              </div>
+              <button style={{ ...base.pillBtn(false), textAlign: "center" }} onClick={() => setSection("feedback")}>{T("aboutGoToFeedbackBtn")}</button>
+            </div>
+          </div>
+          <div style={{ ...base.card, flexShrink: 0, border: "1px solid #3A2E08" }}>
+            <div style={{ padding: "14px 16px" }}>
+              <label style={{ ...base.label, margin: 0, color: "#FBBF24" }}>{T("aboutPrivacyTitle")}</label>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+                <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.6 }}>{T("aboutPrivacyData")}</div>
+                <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.6 }}>{T("aboutPrivacyNoServer")}</div>
+                <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.6 }}>{T("aboutPrivacyBackup")}</div>
+                <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.6 }}>{T("aboutPrivacyDisclaimer")}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {section === "feedback" && (
-        <div style={base.card}>
+        <div style={{ ...base.card, flexShrink: 0 }}>
           <div style={{ padding: "14px 16px" }}>
             <label style={{ ...base.label, margin: 0 }}>{T("feedbackTitle")}</label>
             <div style={{ fontSize: 11, color: C.muted, marginTop: 4, marginBottom: 12 }}>{T("feedbackDesc")}</div>
