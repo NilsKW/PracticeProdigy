@@ -3507,7 +3507,7 @@ function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 // real version will derive this per category from actual practice time.
 const TREE_DEFAULT_BRANCH_PCT = 65;
 
-function GrowthTree({ trunkPct, branchCount, leafCount, biasPct = 50 }) {
+function GrowthTree({ trunkPct, branchCount, leafCount, biasPct = 80, firstBranchPct = 22 }) {
   const W = 300, H = 300;
   const baseX = W / 2, baseY = H - 16;
 
@@ -3537,9 +3537,16 @@ function GrowthTree({ trunkPct, branchCount, leafCount, biasPct = 50 }) {
   const bottomAngle = 90;
   const idleTopVariation = 8;
   const topAngle = (bottomAngle - idleTopVariation) * (1 - clamp01(biasPct / 100));
+  // "Position verticale de la première branche" sets where the lowest branch
+  // attaches; the rest distribute evenly above it up to near the top, so a
+  // tree with few branches doesn't get stuck with one branch low down and a
+  // long bare trunk above it — raising this slider brings that first branch
+  // (and, with it, all the others bunched naturally above it) further up.
+  const topT = 0.92;
+  const startT = Math.min(clamp01(firstBranchPct / 100), topT - 0.02);
   const branches = Array.from({ length: n }, (_, i) => {
     const len = branchMin + (branchMax - branchMin) * clamp01(TREE_DEFAULT_BRANCH_PCT / 100);
-    const t = 0.22 + 0.7 * (i / Math.max(n - 1, 1)); // attach point along the trunk, low → high
+    const t = n > 1 ? startT + (topT - startT) * (i / (n - 1)) : startT;
     const attachY = baseY - trunkH * t;
     const magnitude = n > 1 ? bottomAngle - (bottomAngle - topAngle) * (i / (n - 1)) : (bottomAngle + topAngle) / 2;
     const side = i % 2 === 0 ? -1 : 1;
@@ -3589,12 +3596,13 @@ function GrowthTreeDebugPreview() {
   const [trunkPct, setTrunkPct] = useState(50);
   const [branchCount, setBranchCount] = useState(4);
   const [leafCount, setLeafCount] = useState(10);
-  const [biasPct, setBiasPct] = useState(50);
+  const [biasPct, setBiasPct] = useState(80);
+  const [firstBranchPct, setFirstBranchPct] = useState(22);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ ...base.card, padding: "18px 16px" }}>
-        <GrowthTree trunkPct={trunkPct} branchCount={branchCount} leafCount={leafCount} biasPct={biasPct} />
+        <GrowthTree trunkPct={trunkPct} branchCount={branchCount} leafCount={leafCount} biasPct={biasPct} firstBranchPct={firstBranchPct} />
       </div>
       <div style={base.card}>
         <div style={{ padding: "14px 16px" }}>
@@ -3623,6 +3631,18 @@ function GrowthTreeDebugPreview() {
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
             <input type="range" min="1" max="16" step="1" value={branchCount} onChange={e => setBranchCount(parseInt(e.target.value))} style={{ flex: 1, accentColor: C.amber, height: 4, cursor: "pointer" }} />
             <span style={{ fontSize: 13, fontFamily: "monospace", color: C.amber, fontWeight: 700, width: 34, textAlign: "right" }}>{branchCount}</span>
+          </div>
+        </div>
+      </div>
+      <div style={base.card}>
+        <div style={{ padding: "14px 16px" }}>
+          <label style={{ ...base.label, margin: 0 }}>Position verticale de la première branche</label>
+          <div style={{ fontSize: 11, color: C.muted, marginTop: 4, marginBottom: 10 }}>
+            Définit où s'accroche la branche la plus basse ; les autres se répartissent naturellement au-dessus.
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <input type="range" min="0" max="100" step="1" value={firstBranchPct} onChange={e => setFirstBranchPct(parseInt(e.target.value))} style={{ flex: 1, accentColor: C.amber, height: 4, cursor: "pointer" }} />
+            <span style={{ fontSize: 13, fontFamily: "monospace", color: C.amber, fontWeight: 700, width: 34, textAlign: "right" }}>{firstBranchPct}</span>
           </div>
         </div>
       </div>
