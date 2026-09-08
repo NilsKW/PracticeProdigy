@@ -7544,9 +7544,13 @@ const TREE_BRANCH_COLORS = ["#8FBF6B", "#6BA5BF", "#C99A4A", "#B06BBF"];
 function clamp01(v) {
   return Math.max(0, Math.min(1, v));
 }
+
+// Fixed placeholder branch length while there's no per-branch slider — the
+// real version will derive this per category from actual practice time.
+const TREE_DEFAULT_BRANCH_PCT = 65;
 function GrowthTree({
   trunkPct,
-  branchPcts,
+  branchCount,
   leafCount,
   biasPct = 50
 }) {
@@ -7561,7 +7565,7 @@ function GrowthTree({
   const trunkTopY = baseY - trunkH;
   const branchMin = 28,
     branchMax = 120;
-  const n = branchPcts.length;
+  const n = Math.max(1, Math.round(branchCount));
   // Angle (from vertical) and attach height are both spread across the full
   // range and, crucially, alternate left/right as the index increases — so
   // two branches that are close together on the trunk (adjacent index) are
@@ -7581,8 +7585,10 @@ function GrowthTree({
   const bottomAngle = 90;
   const idleTopVariation = 8;
   const topAngle = (bottomAngle - idleTopVariation) * (1 - clamp01(biasPct / 100));
-  const branches = branchPcts.map((pct, i) => {
-    const len = branchMin + (branchMax - branchMin) * clamp01(pct / 100);
+  const branches = Array.from({
+    length: n
+  }, (_, i) => {
+    const len = branchMin + (branchMax - branchMin) * clamp01(TREE_DEFAULT_BRANCH_PCT / 100);
     const t = 0.22 + 0.7 * (i / Math.max(n - 1, 1)); // attach point along the trunk, low → high
     const attachY = baseY - trunkH * t;
     const magnitude = n > 1 ? bottomAngle - (bottomAngle - topAngle) * (i / (n - 1)) : (bottomAngle + topAngle) / 2;
@@ -7599,15 +7605,14 @@ function GrowthTree({
       color: TREE_BRANCH_COLORS[i % TREE_BRANCH_COLORS.length]
     };
   });
-  const totalLen = branches.reduce((s, b) => s + b.len, 0) || 1;
-  let remaining = Math.max(0, Math.round(leafCount));
+
+  // Leaf count is per branch (applies identically to every branch), not a
+  // total split across them.
+  const perBranchLeaves = Math.max(0, Math.round(leafCount));
   const leaves = [];
   branches.forEach((b, i) => {
-    const isLast = i === branches.length - 1;
-    const share = isLast ? remaining : Math.min(remaining, Math.round(leafCount * (b.len / totalLen)));
-    remaining -= share;
-    for (let j = 0; j < share; j++) {
-      const t = 0.35 + 0.6 * ((j + 1) / (share + 1));
+    for (let j = 0; j < perBranchLeaves; j++) {
+      const t = 0.35 + 0.6 * ((j + 1) / (perBranchLeaves + 1));
       const jitter = (j % 2 === 0 ? 1 : -1) * (5 + j % 3 * 3);
       const px = b.attachX + (b.endX - b.attachX) * t;
       const py = b.attachY + (b.endY - b.attachY) * t;
@@ -7666,10 +7671,9 @@ function GrowthTree({
 // with arbitrary values instead of real stats.
 function GrowthTreeDebugPreview() {
   const [trunkPct, setTrunkPct] = useState(50);
-  const [branchPcts, setBranchPcts] = useState([50, 50, 50, 50]);
+  const [branchCount, setBranchCount] = useState(4);
   const [leafCount, setLeafCount] = useState(10);
   const [biasPct, setBiasPct] = useState(50);
-  const setBranchAt = (i, v) => setBranchPcts(prev => prev.map((p, idx) => idx === i ? v : p));
   return /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -7683,7 +7687,7 @@ function GrowthTreeDebugPreview() {
     }
   }, /*#__PURE__*/React.createElement(GrowthTree, {
     trunkPct: trunkPct,
-    branchPcts: branchPcts,
+    branchCount: branchCount,
     leafCount: leafCount,
     biasPct: biasPct
   })), /*#__PURE__*/React.createElement("div", {
@@ -7772,48 +7776,7 @@ function GrowthTreeDebugPreview() {
       width: 34,
       textAlign: "right"
     }
-  }, trunkPct)))), branchPcts.map((v, i) => /*#__PURE__*/React.createElement("div", {
-    style: base.card,
-    key: i
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: "14px 16px"
-    }
-  }, /*#__PURE__*/React.createElement("label", {
-    style: {
-      ...base.label,
-      margin: 0
-    }
-  }, "Branche — catégorie ", i + 1), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 10,
-      marginTop: 10
-    }
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "range",
-    min: "0",
-    max: "100",
-    step: "1",
-    value: v,
-    onChange: e => setBranchAt(i, parseInt(e.target.value)),
-    style: {
-      flex: 1,
-      accentColor: TREE_BRANCH_COLORS[i],
-      height: 4,
-      cursor: "pointer"
-    }
-  }), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 13,
-      fontFamily: "monospace",
-      color: TREE_BRANCH_COLORS[i],
-      fontWeight: 700,
-      width: 34,
-      textAlign: "right"
-    }
-  }, v))))), /*#__PURE__*/React.createElement("div", {
+  }, trunkPct)))), /*#__PURE__*/React.createElement("div", {
     style: base.card
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -7824,7 +7787,47 @@ function GrowthTreeDebugPreview() {
       ...base.label,
       margin: 0
     }
-  }, "Nombre de feuilles"), /*#__PURE__*/React.createElement("div", {
+  }, "Nombre de branches"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      marginTop: 10
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "range",
+    min: "1",
+    max: "16",
+    step: "1",
+    value: branchCount,
+    onChange: e => setBranchCount(parseInt(e.target.value)),
+    style: {
+      flex: 1,
+      accentColor: C.amber,
+      height: 4,
+      cursor: "pointer"
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13,
+      fontFamily: "monospace",
+      color: C.amber,
+      fontWeight: 700,
+      width: 34,
+      textAlign: "right"
+    }
+  }, branchCount)))), /*#__PURE__*/React.createElement("div", {
+    style: base.card
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "14px 16px"
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      ...base.label,
+      margin: 0
+    }
+  }, "Nombre de feuilles par branche"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       alignItems: "center",

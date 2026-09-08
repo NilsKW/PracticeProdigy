@@ -3503,7 +3503,11 @@ const TREE_BRANCH_COLORS = ["#8FBF6B", "#6BA5BF", "#C99A4A", "#B06BBF"];
 
 function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
-function GrowthTree({ trunkPct, branchPcts, leafCount, biasPct = 50 }) {
+// Fixed placeholder branch length while there's no per-branch slider — the
+// real version will derive this per category from actual practice time.
+const TREE_DEFAULT_BRANCH_PCT = 65;
+
+function GrowthTree({ trunkPct, branchCount, leafCount, biasPct = 50 }) {
   const W = 300, H = 300;
   const baseX = W / 2, baseY = H - 16;
 
@@ -3513,7 +3517,7 @@ function GrowthTree({ trunkPct, branchPcts, leafCount, biasPct = 50 }) {
   const trunkTopY = baseY - trunkH;
 
   const branchMin = 28, branchMax = 120;
-  const n = branchPcts.length;
+  const n = Math.max(1, Math.round(branchCount));
   // Angle (from vertical) and attach height are both spread across the full
   // range and, crucially, alternate left/right as the index increases — so
   // two branches that are close together on the trunk (adjacent index) are
@@ -3533,8 +3537,8 @@ function GrowthTree({ trunkPct, branchPcts, leafCount, biasPct = 50 }) {
   const bottomAngle = 90;
   const idleTopVariation = 8;
   const topAngle = (bottomAngle - idleTopVariation) * (1 - clamp01(biasPct / 100));
-  const branches = branchPcts.map((pct, i) => {
-    const len = branchMin + (branchMax - branchMin) * clamp01(pct / 100);
+  const branches = Array.from({ length: n }, (_, i) => {
+    const len = branchMin + (branchMax - branchMin) * clamp01(TREE_DEFAULT_BRANCH_PCT / 100);
     const t = 0.22 + 0.7 * (i / Math.max(n - 1, 1)); // attach point along the trunk, low → high
     const attachY = baseY - trunkH * t;
     const magnitude = n > 1 ? bottomAngle - (bottomAngle - topAngle) * (i / (n - 1)) : (bottomAngle + topAngle) / 2;
@@ -3545,15 +3549,13 @@ function GrowthTree({ trunkPct, branchPcts, leafCount, biasPct = 50 }) {
     return { attachX: baseX, attachY, endX, endY, len, color: TREE_BRANCH_COLORS[i % TREE_BRANCH_COLORS.length] };
   });
 
-  const totalLen = branches.reduce((s, b) => s + b.len, 0) || 1;
-  let remaining = Math.max(0, Math.round(leafCount));
+  // Leaf count is per branch (applies identically to every branch), not a
+  // total split across them.
+  const perBranchLeaves = Math.max(0, Math.round(leafCount));
   const leaves = [];
   branches.forEach((b, i) => {
-    const isLast = i === branches.length - 1;
-    const share = isLast ? remaining : Math.min(remaining, Math.round(leafCount * (b.len / totalLen)));
-    remaining -= share;
-    for (let j = 0; j < share; j++) {
-      const t = 0.35 + 0.6 * ((j + 1) / (share + 1));
+    for (let j = 0; j < perBranchLeaves; j++) {
+      const t = 0.35 + 0.6 * ((j + 1) / (perBranchLeaves + 1));
       const jitter = (j % 2 === 0 ? 1 : -1) * (5 + (j % 3) * 3);
       const px = b.attachX + (b.endX - b.attachX) * t;
       const py = b.attachY + (b.endY - b.attachY) * t;
@@ -3585,15 +3587,14 @@ function GrowthTree({ trunkPct, branchPcts, leafCount, biasPct = 50 }) {
 // with arbitrary values instead of real stats.
 function GrowthTreeDebugPreview() {
   const [trunkPct, setTrunkPct] = useState(50);
-  const [branchPcts, setBranchPcts] = useState([50, 50, 50, 50]);
+  const [branchCount, setBranchCount] = useState(4);
   const [leafCount, setLeafCount] = useState(10);
   const [biasPct, setBiasPct] = useState(50);
-  const setBranchAt = (i, v) => setBranchPcts(prev => prev.map((p, idx) => (idx === i ? v : p)));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ ...base.card, padding: "18px 16px" }}>
-        <GrowthTree trunkPct={trunkPct} branchPcts={branchPcts} leafCount={leafCount} biasPct={biasPct} />
+        <GrowthTree trunkPct={trunkPct} branchCount={branchCount} leafCount={leafCount} biasPct={biasPct} />
       </div>
       <div style={base.card}>
         <div style={{ padding: "14px 16px" }}>
@@ -3616,20 +3617,18 @@ function GrowthTreeDebugPreview() {
           </div>
         </div>
       </div>
-      {branchPcts.map((v, i) => (
-        <div style={base.card} key={i}>
-          <div style={{ padding: "14px 16px" }}>
-            <label style={{ ...base.label, margin: 0 }}>Branche — catégorie {i + 1}</label>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
-              <input type="range" min="0" max="100" step="1" value={v} onChange={e => setBranchAt(i, parseInt(e.target.value))} style={{ flex: 1, accentColor: TREE_BRANCH_COLORS[i], height: 4, cursor: "pointer" }} />
-              <span style={{ fontSize: 13, fontFamily: "monospace", color: TREE_BRANCH_COLORS[i], fontWeight: 700, width: 34, textAlign: "right" }}>{v}</span>
-            </div>
-          </div>
-        </div>
-      ))}
       <div style={base.card}>
         <div style={{ padding: "14px 16px" }}>
-          <label style={{ ...base.label, margin: 0 }}>Nombre de feuilles</label>
+          <label style={{ ...base.label, margin: 0 }}>Nombre de branches</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+            <input type="range" min="1" max="16" step="1" value={branchCount} onChange={e => setBranchCount(parseInt(e.target.value))} style={{ flex: 1, accentColor: C.amber, height: 4, cursor: "pointer" }} />
+            <span style={{ fontSize: 13, fontFamily: "monospace", color: C.amber, fontWeight: 700, width: 34, textAlign: "right" }}>{branchCount}</span>
+          </div>
+        </div>
+      </div>
+      <div style={base.card}>
+        <div style={{ padding: "14px 16px" }}>
+          <label style={{ ...base.label, margin: 0 }}>Nombre de feuilles par branche</label>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
             <input type="range" min="0" max="40" step="1" value={leafCount} onChange={e => setLeafCount(parseInt(e.target.value))} style={{ flex: 1, accentColor: "#8FBF6B", height: 4, cursor: "pointer" }} />
             <span style={{ fontSize: 13, fontFamily: "monospace", color: "#8FBF6B", fontWeight: 700, width: 34, textAlign: "right" }}>{leafCount}</span>
