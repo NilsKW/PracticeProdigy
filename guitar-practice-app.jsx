@@ -3507,7 +3507,66 @@ function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 // real version will derive this per category from actual practice time.
 const TREE_DEFAULT_BRANCH_PCT = 65;
 
-function GrowthTree({ trunkPct, branchCount, leafCount, firstBranchPct = 50 }) {
+// Recursive sub-branch generation is uncapped by the sliders themselves (max
+// depth 4 × max 10 per branch × up to 16 top branches could in theory reach
+// tens of thousands of segments), so this hard-caps the total node count to
+// keep the preview from freezing the browser at the extreme end of the
+// debug sliders — nodes beyond the cap are silently skipped.
+const TREE_MAX_NODES = 3000;
+
+// Builds one branch/sub-branch node and recurses into its own children.
+// `dirAngle` is the signed angle from vertical (radians) the segment points
+// in; children spread around their *parent's* direction rather than around
+// vertical, so a sub-branch tree naturally follows the way its parent leans.
+function buildBranchNode({ attachX, attachY, dirAngle, len, color, depth, key }, opts) {
+  const endX = attachX + Math.sin(dirAngle) * len;
+  const endY = attachY - Math.cos(dirAngle) * len;
+  const node = { attachX, attachY, endX, endY, len, dirAngle, color, depth, key };
+  const children = [];
+  if (depth < opts.maxDepth && opts.subCount > 0 && opts.counter.n < TREE_MAX_NODES) {
+    const maxSubAngle = (clamp01(opts.subBiasPct / 100) * 70 * Math.PI) / 180;
+    const subLen = Math.max(2, len * clamp01(opts.subLenPct / 100));
+    for (let j = 0; j < opts.subCount && opts.counter.n < TREE_MAX_NODES; j++) {
+      opts.counter.n++;
+      const offset = opts.subCount > 1 ? -maxSubAngle + (2 * maxSubAngle) * (j / (opts.subCount - 1)) : 0;
+      const child = buildBranchNode({
+        attachX: endX, attachY: endY, dirAngle: dirAngle + offset, len: subLen,
+        color, depth: depth + 1, key: `${key}-${j}`,
+      }, opts);
+      children.push(child);
+    }
+  }
+  return { node, children };
+}
+
+function flattenBranchTree(built, out = []) {
+  out.push(built.node);
+  built.children.forEach(c => flattenBranchTree(c, out));
+  return out;
+}
+
+function leavesForNode(b, perBranchLeaves) {
+  const leaves = [];
+  for (let j = 0; j < perBranchLeaves; j++) {
+    const t = 0.35 + 0.6 * ((j + 1) / (perBranchLeaves + 1));
+    const jitter = (j % 2 === 0 ? 1 : -1) * (5 + (j % 3) * 3);
+    const px = b.attachX + (b.endX - b.attachX) * t;
+    const py = b.attachY + (b.endY - b.attachY) * t;
+    const perpAngle = Math.atan2(b.endY - b.attachY, b.endX - b.attachX) + Math.PI / 2;
+    leaves.push({
+      x: px + Math.cos(perpAngle) * jitter,
+      y: py + Math.sin(perpAngle) * jitter,
+      color: b.color,
+      key: `${b.key}-leaf${j}`,
+    });
+  }
+  return leaves;
+}
+
+function GrowthTree({
+  trunkPct, branchCount, leafCount, firstBranchPct = 50,
+  subDepth = 0, subCount = 3, subLenPct = 65, subBiasPct = 50,
+}) {
   const W = 300, H = 300;
   const baseX = W / 2, baseY = H - 16;
 
@@ -3546,44 +3605,35 @@ function GrowthTree({ trunkPct, branchCount, leafCount, firstBranchPct = 50 }) {
   // (and, with it, all the others bunched naturally above it) further up.
   const topT = 0.92;
   const startT = Math.min(clamp01(firstBranchPct / 100), topT - 0.02);
-  const branches = Array.from({ length: n }, (_, i) => {
+
+  const counter = { n: 0 };
+  const subOpts = { maxDepth: Math.round(subDepth), subCount: Math.round(subCount), subLenPct, subBiasPct, counter };
+  const allNodes = [];
+  for (let i = 0; i < n; i++) {
     const len = branchMin + (branchMax - branchMin) * clamp01(TREE_DEFAULT_BRANCH_PCT / 100);
     const t = n > 1 ? startT + (topT - startT) * (i / (n - 1)) : startT;
     const attachY = baseY - trunkH * t;
     const magnitude = n > 1 ? bottomAngle - (bottomAngle - topAngle) * (i / (n - 1)) : (bottomAngle + topAngle) / 2;
     const side = i % 2 === 0 ? -1 : 1;
-    const angleRad = (magnitude * Math.PI) / 180;
-    const endX = baseX + side * Math.sin(angleRad) * len;
-    const endY = attachY - Math.cos(angleRad) * len;
-    return { attachX: baseX, attachY, endX, endY, len, color: TREE_BRANCH_COLORS[i % TREE_BRANCH_COLORS.length] };
-  });
+    const dirAngle = side * (magnitude * Math.PI) / 180;
+    const built = buildBranchNode({
+      attachX: baseX, attachY, dirAngle, len,
+      color: TREE_BRANCH_COLORS[i % TREE_BRANCH_COLORS.length], depth: 0, key: `b${i}`,
+    }, subOpts);
+    flattenBranchTree(built, allNodes);
+  }
 
-  // Leaf count is per branch (applies identically to every branch), not a
-  // total split across them.
+  // Leaf count is per branch (applies identically to every branch and
+  // sub-branch at every depth), not a total split across them.
   const perBranchLeaves = Math.max(0, Math.round(leafCount));
-  const leaves = [];
-  branches.forEach((b, i) => {
-    for (let j = 0; j < perBranchLeaves; j++) {
-      const t = 0.35 + 0.6 * ((j + 1) / (perBranchLeaves + 1));
-      const jitter = (j % 2 === 0 ? 1 : -1) * (5 + (j % 3) * 3);
-      const px = b.attachX + (b.endX - b.attachX) * t;
-      const py = b.attachY + (b.endY - b.attachY) * t;
-      const perpAngle = Math.atan2(b.endY - b.attachY, b.endX - b.attachX) + Math.PI / 2;
-      leaves.push({
-        x: px + Math.cos(perpAngle) * jitter,
-        y: py + Math.sin(perpAngle) * jitter,
-        color: b.color,
-        key: `${i}-${j}`,
-      });
-    }
-  });
+  const leaves = allNodes.flatMap(b => leavesForNode(b, perBranchLeaves));
 
   return (
     <svg viewBox={`-40 -60 ${W + 80} ${H + 90}`} width="100%" style={{ maxWidth: 320, display: "block", margin: "0 auto", overflow: "visible" }}>
       <ellipse cx={baseX} cy={baseY + 6} rx="70" ry="8" fill="#00000033" />
       <line x1={baseX} y1={baseY} x2={baseX} y2={trunkTopY} stroke="#8B5E3C" strokeWidth={trunkW} strokeLinecap="round" />
-      {branches.map((b, i) => (
-        <line key={i} x1={b.attachX} y1={b.attachY} x2={b.endX} y2={b.endY} stroke="#8B5E3C" strokeWidth={Math.max(3, trunkW * 0.4)} strokeLinecap="round" />
+      {allNodes.map(b => (
+        <line key={b.key} x1={b.attachX} y1={b.attachY} x2={b.endX} y2={b.endY} stroke="#8B5E3C" strokeWidth={Math.max(1.5, trunkW * 0.4 * Math.pow(0.7, b.depth))} strokeLinecap="round" />
       ))}
       {leaves.map(l => (
         <circle key={l.key} cx={l.x} cy={l.y} r="5.5" fill={l.color} opacity="0.9" />
@@ -3599,11 +3649,60 @@ function GrowthTreeDebugPreview() {
   const [branchCount, setBranchCount] = useState(4);
   const [leafCount, setLeafCount] = useState(10);
   const [firstBranchPct, setFirstBranchPct] = useState(50);
+  const [subDepth, setSubDepth] = useState(2);
+  const [subCount, setSubCount] = useState(3);
+  const [subLenPct, setSubLenPct] = useState(60);
+  const [subBiasPct, setSubBiasPct] = useState(45);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ ...base.card, padding: "18px 16px" }}>
-        <GrowthTree trunkPct={trunkPct} branchCount={branchCount} leafCount={leafCount} firstBranchPct={firstBranchPct} />
+        <GrowthTree
+          trunkPct={trunkPct} branchCount={branchCount} leafCount={leafCount} firstBranchPct={firstBranchPct}
+          subDepth={subDepth} subCount={subCount} subLenPct={subLenPct} subBiasPct={subBiasPct}
+        />
+      </div>
+      <div style={base.card}>
+        <div style={{ padding: "14px 16px" }}>
+          <label style={{ ...base.label, margin: 0 }}>Nombre de sous-ramifications imbriquées maximum</label>
+          <div style={{ fontSize: 11, color: C.muted, marginTop: 4, marginBottom: 10 }}>
+            À 4, une branche se redécoupe en branches, qui se redécoupent à nouveau, quatre fois de suite.
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <input type="range" min="0" max="4" step="1" value={subDepth} onChange={e => setSubDepth(parseInt(e.target.value))} style={{ flex: 1, accentColor: "#B06BBF", height: 4, cursor: "pointer" }} />
+            <span style={{ fontSize: 13, fontFamily: "monospace", color: "#B06BBF", fontWeight: 700, width: 34, textAlign: "right" }}>{subDepth}</span>
+          </div>
+        </div>
+      </div>
+      <div style={base.card}>
+        <div style={{ padding: "14px 16px" }}>
+          <label style={{ ...base.label, margin: 0 }}>Nombre de ramifications par branche maximum</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+            <input type="range" min="0" max="10" step="1" value={subCount} onChange={e => setSubCount(parseInt(e.target.value))} style={{ flex: 1, accentColor: "#B06BBF", height: 4, cursor: "pointer" }} />
+            <span style={{ fontSize: 13, fontFamily: "monospace", color: "#B06BBF", fontWeight: 700, width: 34, textAlign: "right" }}>{subCount}</span>
+          </div>
+        </div>
+      </div>
+      <div style={base.card}>
+        <div style={{ padding: "14px 16px" }}>
+          <label style={{ ...base.label, margin: 0 }}>Longueur de chaque ramification</label>
+          <div style={{ fontSize: 11, color: C.muted, marginTop: 4, marginBottom: 10 }}>
+            Proportionnelle à la taille de la branche dont elle part.
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <input type="range" min="0" max="100" step="1" value={subLenPct} onChange={e => setSubLenPct(parseInt(e.target.value))} style={{ flex: 1, accentColor: "#B06BBF", height: 4, cursor: "pointer" }} />
+            <span style={{ fontSize: 13, fontFamily: "monospace", color: "#B06BBF", fontWeight: 700, width: 34, textAlign: "right" }}>{subLenPct}%</span>
+          </div>
+        </div>
+      </div>
+      <div style={base.card}>
+        <div style={{ padding: "14px 16px" }}>
+          <label style={{ ...base.label, margin: 0 }}>Biais des sous-ramifications</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+            <input type="range" min="0" max="100" step="1" value={subBiasPct} onChange={e => setSubBiasPct(parseInt(e.target.value))} style={{ flex: 1, accentColor: "#B06BBF", height: 4, cursor: "pointer" }} />
+            <span style={{ fontSize: 13, fontFamily: "monospace", color: "#B06BBF", fontWeight: 700, width: 34, textAlign: "right" }}>{subBiasPct}</span>
+          </div>
+        </div>
       </div>
       <div style={base.card}>
         <div style={{ padding: "14px 16px" }}>
