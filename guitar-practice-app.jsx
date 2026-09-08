@@ -3404,7 +3404,13 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
           (and the minuteBumpMs/minuteBumpPct state/props it reads from)
           once final values are picked. */}
       {section === "debug" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, flexShrink: 0 }}>
+          <div style={{ background: "#1A1A1A", border: `1px solid ${C.border}`, borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "flex-start", gap: 8 }}>
+            <span style={{ fontSize: 14, flexShrink: 0 }}>🔧</span>
+            <span style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.5 }}>
+              Cette section sert au développement de l'application — elle n'a aucune utilité pour votre usage de l'appli.
+            </span>
+          </div>
           <div style={base.card}>
             <div style={{ padding: "14px 16px" }}>
               <label style={{ ...base.label, margin: 0 }}>Durée de l'animation +/- minutes (temporaire)</label>
