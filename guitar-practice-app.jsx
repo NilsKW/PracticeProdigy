@@ -3507,7 +3507,7 @@ function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 // real version will derive this per category from actual practice time.
 const TREE_DEFAULT_BRANCH_PCT = 65;
 
-function GrowthTree({ trunkPct, branchCount, leafCount, biasPct = 80, firstBranchPct = 22 }) {
+function GrowthTree({ trunkPct, branchCount, leafCount, firstBranchPct = 50 }) {
   const W = 300, H = 300;
   const baseX = W / 2, baseY = H - 16;
 
@@ -3527,16 +3527,18 @@ function GrowthTree({ trunkPct, branchCount, leafCount, biasPct = 80, firstBranc
   // directions and overlapping, which a naive "outer branches wider" fixed
   // layout doesn't guarantee once collisions are checked, and which also
   // needs to keep working reasonably as the number of categories grows.
-  // "Biais" slider: the bottom-most branch is always horizontal (90° from
-  // vertical) at every setting. At bias 0 every other branch stays close to
-  // horizontal too, just spread by a small fixed variation so they're still
-  // visually distinct; sliding towards 100 progressively tips the top-most
-  // branch all the way to vertical (0°), with branches in between
-  // interpolating smoothly, like a young tree that hasn't yet developed the
-  // more horizontal, drooping lower branches of a mature one.
+  // Angle "bias" (the bottom-most branch is always horizontal, 90° from
+  // vertical; higher branches tip progressively closer to vertical) used to
+  // be a manual slider, but that let a tester's chosen value fight with what
+  // actually looks natural: a tree with only one or two branches shouldn't
+  // have one tipped nearly vertical, while a busy many-branched tree needs
+  // that spread to keep branches from converging on the same direction. So
+  // it's now derived straight from the branch count instead: bias 50 at a
+  // single branch, rising to 90 at 10 branches, then holding at 90 beyond.
+  const bias = branchCount <= 1 ? 50 : 50 + Math.min(1, (branchCount - 1) / 9) * 40;
   const bottomAngle = 90;
   const idleTopVariation = 8;
-  const topAngle = (bottomAngle - idleTopVariation) * (1 - clamp01(biasPct / 100));
+  const topAngle = (bottomAngle - idleTopVariation) * (1 - clamp01(bias / 100));
   // "Position verticale de la première branche" sets where the lowest branch
   // attaches; the rest distribute evenly above it up to near the top, so a
   // tree with few branches doesn't get stuck with one branch low down and a
@@ -3596,25 +3598,12 @@ function GrowthTreeDebugPreview() {
   const [trunkPct, setTrunkPct] = useState(50);
   const [branchCount, setBranchCount] = useState(4);
   const [leafCount, setLeafCount] = useState(10);
-  const [biasPct, setBiasPct] = useState(80);
-  const [firstBranchPct, setFirstBranchPct] = useState(22);
+  const [firstBranchPct, setFirstBranchPct] = useState(50);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ ...base.card, padding: "18px 16px" }}>
-        <GrowthTree trunkPct={trunkPct} branchCount={branchCount} leafCount={leafCount} biasPct={biasPct} firstBranchPct={firstBranchPct} />
-      </div>
-      <div style={base.card}>
-        <div style={{ padding: "14px 16px" }}>
-          <label style={{ ...base.label, margin: 0 }}>Biais des branches</label>
-          <div style={{ fontSize: 11, color: C.muted, marginTop: 4, marginBottom: 10 }}>
-            Au minimum, toutes les branches sont horizontales. Au maximum, les branches du haut deviennent verticales tandis que celles du bas restent horizontales.
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <input type="range" min="0" max="100" step="1" value={biasPct} onChange={e => setBiasPct(parseInt(e.target.value))} style={{ flex: 1, accentColor: C.amber, height: 4, cursor: "pointer" }} />
-            <span style={{ fontSize: 13, fontFamily: "monospace", color: C.amber, fontWeight: 700, width: 34, textAlign: "right" }}>{biasPct}</span>
-          </div>
-        </div>
+        <GrowthTree trunkPct={trunkPct} branchCount={branchCount} leafCount={leafCount} firstBranchPct={firstBranchPct} />
       </div>
       <div style={base.card}>
         <div style={{ padding: "14px 16px" }}>
