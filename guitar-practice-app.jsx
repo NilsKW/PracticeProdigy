@@ -1910,7 +1910,7 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, onRemove, stats, s
 
 // ─── SESSION SCREEN (task queue + collapsible presets) ────────────────────────
 
-function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnToSession, presets, setPresets, minuteBumpMs, minuteBumpPct }) {
+function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnToSession, presets, setPresets }) {
   const T = useT();
   const lang = useLang();
   const [saveName, setSaveName] = useState("");
@@ -2117,8 +2117,8 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
                       fontSize: 13, fontFamily: "monospace", color: C.amber, width: 38, textAlign: "center", fontWeight: 700,
                       display: "flex", alignItems: "center", justifyContent: "center", position: "relative", zIndex: minuteBump[task.id] ? 1 : 0,
                       borderLeft: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`,
-                      "--bump-scale": 1 + (minuteBumpPct ?? 25) / 100,
-                      animation: minuteBump[task.id] ? `minuteBump ${minuteBumpMs ?? 220}ms ease-out` : "none",
+                      "--bump-scale": 1 + MINUTE_BUMP_PCT / 100,
+                      animation: minuteBump[task.id] ? `minuteBump ${MINUTE_BUMP_MS}ms ease-out` : "none",
                     }}
                   >{task.minutes}m</span>
                   <button style={{ width: 34, background: "none", border: "none", color: C.cream, fontSize: 21, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, lineHeight: 1 }} onClick={() => { upd(task.id, 1); bumpMinutes(task.id); }}>+</button>
@@ -2166,6 +2166,10 @@ const FLY_DURATION_S = 0.75;
 // How long after the flying icon launches the Séance nav tab flashes red —
 // tuned live via a temporary debug slider, settled on 400ms.
 const SESSION_FLASH_DELAY_S = 0.4;
+// Séance minute-count "bump" animation (grow then settle, on +/-) — tuned
+// live via a temporary debug slider, settled on 220ms / +25%.
+const MINUTE_BUMP_MS = 220;
+const MINUTE_BUMP_PCT = 25;
 
 function FlyingExerciseIcon({ icon, from, to }) {
   const [flown, setFlown] = useState(false);
@@ -3040,7 +3044,7 @@ function CategoryEditor({ editCat, setExercises, setCategories, onBack, onReques
   );
 }
 
-function SettingsScreen({ exercises, setExercises, categories, setCategories, volume, onVolumeChange, lang, onLangChange, displaySize, onDisplaySizeChange, onResetBadges, editorGuardRef, guardedRun, minuteBumpMs, onMinuteBumpMsChange, minuteBumpPct, onMinuteBumpPctChange }) {
+function SettingsScreen({ exercises, setExercises, categories, setCategories, volume, onVolumeChange, lang, onLangChange, displaySize, onDisplaySizeChange, onResetBadges, editorGuardRef, guardedRun }) {
   const T = useT();
   // null = top-level Réglages menu (a vertical list of categories, Android-
   // Settings style); a category id = drilled into that section, with a
@@ -3465,11 +3469,6 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
         </div>
       )}
 
-      {/* TEMPORARY — dev-only tuning controls for the Séance minute-count
-          "bump" animation (grow then settle, on +/-), to dial them in by
-          eye instead of guessing values blind. Remove this whole section
-          (and the minuteBumpMs/minuteBumpPct state/props it reads from)
-          once final values are picked. */}
       {section === "debug" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16, flexShrink: 0 }}>
           <div style={{ background: "#1A1A1A", border: `1px solid ${C.border}`, borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "flex-start", gap: 8 }}>
@@ -3478,49 +3477,16 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
               Cette section sert au développement de l'application — elle n'a aucune utilité pour votre usage de l'appli.
             </span>
           </div>
-          <div style={base.card}>
-            <div style={{ padding: "14px 16px" }}>
-              <label style={{ ...base.label, margin: 0 }}>Durée de l'animation +/- minutes (temporaire)</label>
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 4, marginBottom: 12 }}>
-                À retirer une fois la durée idéale trouvée — dis-la moi et je la fige dans le code.
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <input
-                  type="range" min="80" max="600" step="10"
-                  value={minuteBumpMs}
-                  onChange={e => onMinuteBumpMsChange(parseInt(e.target.value))}
-                  style={{ flex: 1, accentColor: C.amber, height: 4, cursor: "pointer" }}
-                />
-                <span style={{ fontSize: 13, fontFamily: "monospace", color: C.amber, fontWeight: 700, width: 60, textAlign: "right" }}>
-                  {minuteBumpMs} ms
-                </span>
-              </div>
-            </div>
+          {/* PROTOTYPE — future replacement for the "Niveau" screen in
+              Progression: a tree that grows with practice time (trunk = total
+              time, one branch per category, leaves populate branches over
+              time). Sliders here use arbitrary values, not real stats, so the
+              look can be judged without wiring up real data yet. */}
+          <div style={{ ...base.sectionTitle, padding: "0 4px" }}>Prototype — arbre de progression</div>
+          <div style={{ fontSize: 11, color: C.muted, padding: "0 4px" }}>
+            Aperçu de ce qui remplacera plus tard l'écran « Niveau ». Les curseurs ci-dessous servent uniquement à tester le rendu — ils n'utilisent pas vos vraies statistiques.
           </div>
-          <div style={base.card}>
-            <div style={{ padding: "14px 16px" }}>
-              <label style={{ ...base.label, margin: 0 }}>Grossissement du texte (temporaire)</label>
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 4, marginBottom: 12 }}>
-                Pourcentage par lequel le texte grossit au pic de l'animation.
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <input
-                  type="range" min="0" max="80" step="1"
-                  value={minuteBumpPct}
-                  onChange={e => onMinuteBumpPctChange(parseInt(e.target.value))}
-                  style={{ flex: 1, accentColor: C.amber, height: 4, cursor: "pointer" }}
-                />
-                <span style={{ fontSize: 13, fontFamily: "monospace", color: C.amber, fontWeight: 700, width: 60, textAlign: "right" }}>
-                  +{minuteBumpPct}%
-                </span>
-              </div>
-            </div>
-          </div>
-          {/* Live preview so the effect can be judged without leaving Réglages */}
-          <div style={{ ...base.card, padding: "18px 16px", textAlign: "center" }}>
-            <label style={{ ...base.label, margin: "0 0 10px" }}>Aperçu</label>
-            <PreviewBump minuteBumpMs={minuteBumpMs} minuteBumpPct={minuteBumpPct} />
-          </div>
+          <GrowthTreeDebugPreview />
         </div>
       )}
 
@@ -3528,24 +3494,118 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
   );
 }
 
-// Standalone re-triggerable preview of the minute-bump animation, used only
-// in the temporary debug section above so the effect can be judged without
-// having to jump to Séance and tap +/- for real each time.
-function PreviewBump({ minuteBumpMs, minuteBumpPct }) {
-  const [nonce, setNonce] = useState(0);
+// ─── Growth Tree (Progression prototype) ───────────────────────────────────
+// Purely visual, driven by arbitrary 0-100 slider values for now (see
+// GrowthTreeDebugPreview below, used only from the Debug section). Once the
+// look is validated this will move to Progression and be fed by real
+// per-category practice time instead.
+const TREE_BRANCH_COLORS = ["#8FBF6B", "#6BA5BF", "#C99A4A", "#B06BBF"];
+
+function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+
+function GrowthTree({ trunkPct, branchPcts, leafCount }) {
+  const W = 300, H = 300;
+  const baseX = W / 2, baseY = H - 16;
+
+  const trunkMin = 40, trunkMax = 210;
+  const trunkH = trunkMin + (trunkMax - trunkMin) * clamp01(trunkPct / 100);
+  const trunkW = 10 + 10 * clamp01(trunkPct / 100);
+  const trunkTopY = baseY - trunkH;
+
+  const branchMin = 28, branchMax = 120;
+  const n = branchPcts.length;
+  const angles = [58, 40, 40, 58]; // degrees from vertical — outer branches splay wider
+  const sides  = [-1, -1, 1, 1];
+
+  const branches = branchPcts.map((pct, i) => {
+    const len = branchMin + (branchMax - branchMin) * clamp01(pct / 100);
+    const t = 0.32 + 0.58 * (i / Math.max(n - 1, 1)); // attach point along the trunk, low → high
+    const attachY = baseY - trunkH * t;
+    const angleRad = (angles[i % angles.length] * Math.PI) / 180;
+    const side = sides[i % sides.length];
+    const endX = baseX + side * Math.sin(angleRad) * len;
+    const endY = attachY - Math.cos(angleRad) * len;
+    return { attachX: baseX, attachY, endX, endY, len, color: TREE_BRANCH_COLORS[i % TREE_BRANCH_COLORS.length] };
+  });
+
+  const totalLen = branches.reduce((s, b) => s + b.len, 0) || 1;
+  let remaining = Math.max(0, Math.round(leafCount));
+  const leaves = [];
+  branches.forEach((b, i) => {
+    const isLast = i === branches.length - 1;
+    const share = isLast ? remaining : Math.min(remaining, Math.round(leafCount * (b.len / totalLen)));
+    remaining -= share;
+    for (let j = 0; j < share; j++) {
+      const t = 0.35 + 0.6 * ((j + 1) / (share + 1));
+      const jitter = (j % 2 === 0 ? 1 : -1) * (5 + (j % 3) * 3);
+      const px = b.attachX + (b.endX - b.attachX) * t;
+      const py = b.attachY + (b.endY - b.attachY) * t;
+      const perpAngle = Math.atan2(b.endY - b.attachY, b.endX - b.attachX) + Math.PI / 2;
+      leaves.push({
+        x: px + Math.cos(perpAngle) * jitter,
+        y: py + Math.sin(perpAngle) * jitter,
+        color: b.color,
+        key: `${i}-${j}`,
+      });
+    }
+  });
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-      <span
-        key={nonce}
-        style={{
-          fontSize: 22, fontFamily: "monospace", color: C.amber, fontWeight: 700,
-          display: "inline-block",
-          "--bump-scale": 1 + minuteBumpPct / 100,
-          animation: nonce > 0 ? `minuteBump ${minuteBumpMs}ms ease-out` : "none",
-        }}
-      >12m</span>
-      <style>{`@keyframes minuteBump { 0%, 100% { transform: scale(1); } 50% { transform: scale(var(--bump-scale, 1.25)); } }`}</style>
-      <button style={{ ...base.pillBtn(false), fontSize: 12 }} onClick={() => setNonce(n => n + 1)}>Tester ↻</button>
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxWidth: 320, display: "block", margin: "0 auto" }}>
+      <ellipse cx={baseX} cy={baseY + 6} rx="70" ry="8" fill="#00000033" />
+      <line x1={baseX} y1={baseY} x2={baseX} y2={trunkTopY} stroke="#8B5E3C" strokeWidth={trunkW} strokeLinecap="round" />
+      {branches.map((b, i) => (
+        <line key={i} x1={b.attachX} y1={b.attachY} x2={b.endX} y2={b.endY} stroke="#8B5E3C" strokeWidth={Math.max(3, trunkW * 0.4)} strokeLinecap="round" />
+      ))}
+      {leaves.map(l => (
+        <circle key={l.key} cx={l.x} cy={l.y} r="5.5" fill={l.color} opacity="0.9" />
+      ))}
+    </svg>
+  );
+}
+
+// Dev-only sliders (Debug section) driving the GrowthTree prototype above
+// with arbitrary values instead of real stats.
+function GrowthTreeDebugPreview() {
+  const [trunkPct, setTrunkPct] = useState(50);
+  const [branchPcts, setBranchPcts] = useState([50, 50, 50, 50]);
+  const [leafCount, setLeafCount] = useState(10);
+  const setBranchAt = (i, v) => setBranchPcts(prev => prev.map((p, idx) => (idx === i ? v : p)));
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ ...base.card, padding: "18px 16px" }}>
+        <GrowthTree trunkPct={trunkPct} branchPcts={branchPcts} leafCount={leafCount} />
+      </div>
+      <div style={base.card}>
+        <div style={{ padding: "14px 16px" }}>
+          <label style={{ ...base.label, margin: 0 }}>Taille du tronc</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+            <input type="range" min="0" max="100" step="1" value={trunkPct} onChange={e => setTrunkPct(parseInt(e.target.value))} style={{ flex: 1, accentColor: C.amber, height: 4, cursor: "pointer" }} />
+            <span style={{ fontSize: 13, fontFamily: "monospace", color: C.amber, fontWeight: 700, width: 34, textAlign: "right" }}>{trunkPct}</span>
+          </div>
+        </div>
+      </div>
+      {branchPcts.map((v, i) => (
+        <div style={base.card} key={i}>
+          <div style={{ padding: "14px 16px" }}>
+            <label style={{ ...base.label, margin: 0 }}>Branche — catégorie {i + 1}</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+              <input type="range" min="0" max="100" step="1" value={v} onChange={e => setBranchAt(i, parseInt(e.target.value))} style={{ flex: 1, accentColor: TREE_BRANCH_COLORS[i], height: 4, cursor: "pointer" }} />
+              <span style={{ fontSize: 13, fontFamily: "monospace", color: TREE_BRANCH_COLORS[i], fontWeight: 700, width: 34, textAlign: "right" }}>{v}</span>
+            </div>
+          </div>
+        </div>
+      ))}
+      <div style={base.card}>
+        <div style={{ padding: "14px 16px" }}>
+          <label style={{ ...base.label, margin: 0 }}>Nombre de feuilles</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+            <input type="range" min="0" max="40" step="1" value={leafCount} onChange={e => setLeafCount(parseInt(e.target.value))} style={{ flex: 1, accentColor: "#8FBF6B", height: 4, cursor: "pointer" }} />
+            <span style={{ fontSize: 13, fontFamily: "monospace", color: "#8FBF6B", fontWeight: 700, width: 34, textAlign: "right" }}>{leafCount}</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -3763,14 +3823,6 @@ export default function App() {
     const t = setTimeout(() => setSessionFlashing(false), 450);
     return () => clearTimeout(t);
   }, [sessionFlash]);
-
-  // TEMPORARY dev controls (Réglages → Debug): tune the Séance minute-count
-  // "bump" animation (see SessionScreen) live instead of guessing values and
-  // re-deploying each time. Remove this state, its Settings section, and the
-  // minuteBumpMs/minuteBumpPct props once final values are picked, hardcoding
-  // them directly where SessionScreen reads them instead.
-  const [minuteBumpMs, setMinuteBumpMs] = usePersisted("minuteBumpMsDebug", 220);
-  const [minuteBumpPct, setMinuteBumpPct] = usePersisted("minuteBumpPctDebug", 25);
 
   // "Fly to Séance" animation: when an exercise is added from the Library, a
   // clone of its icon flies from where it was tapped to the bottom-nav
@@ -4002,9 +4054,9 @@ export default function App() {
           fills it (flex:1, minHeight:0) and owns its own scrolling. */}
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {tab === "library"  && <LibraryScreen exercises={exercises} categories={categories} tasks={tasks} onAdd={addExerciseWithFlight} onRemove={removeExerciseFromSession} stats={stats} subProgress={subProgress} />}
-      {tab === "session"  && <SessionScreen tasks={tasks} setTasks={setTasks} onStart={startSession} sessionInProgress={sessionInProgress} onReturnToSession={returnToSession} presets={presets} setPresets={setPresets} minuteBumpMs={minuteBumpMs} minuteBumpPct={minuteBumpPct} />}
+      {tab === "session"  && <SessionScreen tasks={tasks} setTasks={setTasks} onStart={startSession} sessionInProgress={sessionInProgress} onReturnToSession={returnToSession} presets={presets} setPresets={setPresets} />}
       {tab === "progress" && <ProgressionScreen stats={stats} exercises={exercises} onClearStats={() => { setStats({}); setDailyStats({}); setDailyNoodleSec({}); }} badges={badges} subProgress={subProgress} practiceDays={practiceDays} noodleSec={noodleSec} dailyStats={dailyStats} dailyNoodleSec={dailyNoodleSec} subTab={progressSubTab} setSubTab={setProgressSubTab} />}
-      {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} editorGuardRef={editorGuardRef} guardedRun={guardedRun} minuteBumpMs={minuteBumpMs} onMinuteBumpMsChange={setMinuteBumpMs} minuteBumpPct={minuteBumpPct} onMinuteBumpPctChange={setMinuteBumpPct} />}
+      {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} editorGuardRef={editorGuardRef} guardedRun={guardedRun} />}
       {tab === "active"   && <ActiveSessionScreen
         tasks={tasks} setTasks={setTasks} onFinish={endSession} onBackToMenu={backToMenu}
         audioCtx={audioCtx} masterGainRef={masterGainRef} onCommitStats={commitStats}
