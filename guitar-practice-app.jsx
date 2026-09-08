@@ -87,6 +87,7 @@ const STRINGS = {
     importSuccess: (n, m) => `Imported ${n} exercise${n === 1 ? "" : "s"} across ${m} categor${m === 1 ? "y" : "ies"}.`,
     importError: "Import failed — the file may not be a valid Practice Prodigy export.",
     onboardSkip: "Skip", onboardNext: "Next", onboardStart: "Get started",
+    onboardDontShowAgain: "Don't show this again on startup",
     onboardWelcomeTitle: "Welcome to Practice Prodigy!", onboardWelcomeDesc: "A quick tour to get you started in a few seconds.",
     onboardLibraryTitle: "Library", onboardLibraryDesc: "Browse and add the exercises you want to practice.",
     onboardSessionTitle: "Session", onboardSessionDesc: "Exercises you've added show up here — start your session when you're ready.",
@@ -186,6 +187,7 @@ const STRINGS = {
     importSuccess: (n, m) => `${n} exercice${n > 1 ? "s" : ""} importé${n > 1 ? "s" : ""} dans ${m} catégorie${m > 1 ? "s" : ""}.`,
     importError: "L'import a échoué — le fichier n'est peut-être pas un export Practice Prodigy valide.",
     onboardSkip: "Passer", onboardNext: "Suivant", onboardStart: "Commencer",
+    onboardDontShowAgain: "Ne plus afficher au démarrage",
     onboardWelcomeTitle: "Bienvenue dans Practice Prodigy !", onboardWelcomeDesc: "Un tour rapide pour tout comprendre en quelques secondes.",
     onboardLibraryTitle: "Bibliothèque", onboardLibraryDesc: "Choisis et ajoute les exercices que tu veux pratiquer.",
     onboardSessionTitle: "Séance", onboardSessionDesc: "Les exercices ajoutés arrivent ici — lance ta séance quand tu es prêt.",
@@ -1014,12 +1016,15 @@ function UnsavedChangesModal({ canSave, onSave, onDiscard, onCancel }) {
   );
 }
 
-// First-launch tour: a handful of short cards pointing out the four bottom-nav
-// destinations, shown once (tracked via a persisted flag) so a new user knows
-// where to add exercises, run a session, and check their progress/settings.
+// First-launch-style tour: a handful of short cards pointing out the four
+// bottom-nav destinations. Shown again on every launch by default (like a
+// reminder), unless the user ticks "don't show again" — at which point
+// `onDone` is called with `true` so the caller can persist that choice.
+// Dismissing without ticking it just hides it for the current launch.
 function OnboardingTour({ onDone }) {
   const T = useT();
   const [step, setStep] = useState(0);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
   const steps = [
     { icon: "👋", title: T("onboardWelcomeTitle"), desc: T("onboardWelcomeDesc") },
     { icon: "📚", title: T("onboardLibraryTitle"), desc: T("onboardLibraryDesc") },
@@ -1032,7 +1037,7 @@ function OnboardingTour({ onDone }) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: "#000000cc" }}>
       <div style={{ background: "#151515", border: `1px solid ${C.border}`, borderRadius: 18, padding: "26px 22px 22px", maxWidth: 320, width: "100%", boxShadow: "0 10px 50px #000b", textAlign: "center", position: "relative" }}>
-        <button onClick={onDone} style={{ position: "absolute", top: 12, right: 12, background: "none", border: "none", color: C.muted, fontSize: 12, cursor: "pointer", padding: 4 }}>{T("onboardSkip")}</button>
+        <button onClick={() => onDone(dontShowAgain)} style={{ position: "absolute", top: 12, right: 12, background: "none", border: "none", color: C.muted, fontSize: 12, cursor: "pointer", padding: 4 }}>{T("onboardSkip")}</button>
         <div style={{ fontSize: 46, marginBottom: 14 }}>{cur.icon}</div>
         <div style={{ fontSize: 16, fontWeight: 700, color: C.cream, marginBottom: 8 }}>{cur.title}</div>
         <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5, marginBottom: 20 }}>{cur.desc}</div>
@@ -1041,7 +1046,11 @@ function OnboardingTour({ onDone }) {
             <div key={i} style={{ width: i === step ? 16 : 6, height: 6, borderRadius: 3, background: i === step ? C.amber : "#333", transition: "all 0.2s" }} />
           ))}
         </div>
-        <button style={base.pillBtn(true)} onClick={() => isLast ? onDone() : setStep(s => s + 1)}>
+        <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, marginBottom: 14, fontSize: 11, color: C.muted, cursor: "pointer" }}>
+          <input type="checkbox" checked={dontShowAgain} onChange={e => setDontShowAgain(e.target.checked)} />
+          {T("onboardDontShowAgain")}
+        </label>
+        <button style={base.pillBtn(true)} onClick={() => isLast ? onDone(dontShowAgain) : setStep(s => s + 1)}>
           {isLast ? T("onboardStart") : T("onboardNext")}
         </button>
       </div>
@@ -3300,8 +3309,14 @@ export default function App() {
   const audioCtx      = useRef(null);
   const masterGainRef = useRef(null);
   const [volume, setVolume, volLoaded] = usePersisted("volume", 0.8);
-  // Shown once on first launch to point out the four bottom-nav destinations.
+  // Points out the four bottom-nav destinations. Shown again on every
+  // launch by default (like a reminder) — `onboardingDone` only becomes
+  // permanently true if the user ticks "don't show again"; otherwise
+  // dismissing it just hides it for the current launch via the separate,
+  // non-persisted `onboardingHiddenThisLaunch`, and it's back next time the
+  // app loads fresh.
   const [onboardingDone, setOnboardingDone, onboardingLoaded] = usePersisted("onboardingDone", false);
+  const [onboardingHiddenThisLaunch, setOnboardingHiddenThisLaunch] = useState(false);
 
   // Navigation guard: while the Settings exercise/category editor is open
   // with unsaved changes, any exit (bottom nav, back arrow, phone back
@@ -3694,8 +3709,11 @@ export default function App() {
         <FlyingExerciseIcon key={item.id} icon={item.icon} from={item.fromRect} to={item.toRect} />
       ))}
 
-      {onboardingLoaded && !onboardingDone && (
-        <OnboardingTour onDone={() => setOnboardingDone(true)} />
+      {onboardingLoaded && !onboardingDone && !onboardingHiddenThisLaunch && (
+        <OnboardingTour onDone={hideForever => {
+          setOnboardingHiddenThisLaunch(true);
+          if (hideForever) setOnboardingDone(true);
+        }} />
       )}
 
       {unsavedPrompt && (

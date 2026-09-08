@@ -258,6 +258,7 @@ const STRINGS = {
     onboardSkip: "Skip",
     onboardNext: "Next",
     onboardStart: "Get started",
+    onboardDontShowAgain: "Don't show this again on startup",
     onboardWelcomeTitle: "Welcome to Practice Prodigy!",
     onboardWelcomeDesc: "A quick tour to get you started in a few seconds.",
     onboardLibraryTitle: "Library",
@@ -463,6 +464,7 @@ const STRINGS = {
     onboardSkip: "Passer",
     onboardNext: "Suivant",
     onboardStart: "Commencer",
+    onboardDontShowAgain: "Ne plus afficher au démarrage",
     onboardWelcomeTitle: "Bienvenue dans Practice Prodigy !",
     onboardWelcomeDesc: "Un tour rapide pour tout comprendre en quelques secondes.",
     onboardLibraryTitle: "Bibliothèque",
@@ -1902,14 +1904,17 @@ function UnsavedChangesModal({
   }, T("cancelBtn")))));
 }
 
-// First-launch tour: a handful of short cards pointing out the four bottom-nav
-// destinations, shown once (tracked via a persisted flag) so a new user knows
-// where to add exercises, run a session, and check their progress/settings.
+// First-launch-style tour: a handful of short cards pointing out the four
+// bottom-nav destinations. Shown again on every launch by default (like a
+// reminder), unless the user ticks "don't show again" — at which point
+// `onDone` is called with `true` so the caller can persist that choice.
+// Dismissing without ticking it just hides it for the current launch.
 function OnboardingTour({
   onDone
 }) {
   const T = useT();
   const [step, setStep] = useState(0);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
   const steps = [{
     icon: "👋",
     title: T("onboardWelcomeTitle"),
@@ -1957,7 +1962,7 @@ function OnboardingTour({
       position: "relative"
     }
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: onDone,
+    onClick: () => onDone(dontShowAgain),
     style: {
       position: "absolute",
       top: 12,
@@ -2004,9 +2009,24 @@ function OnboardingTour({
       background: i === step ? C.amber : "#333",
       transition: "all 0.2s"
     }
-  }))), /*#__PURE__*/React.createElement("button", {
+  }))), /*#__PURE__*/React.createElement("label", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 7,
+      marginBottom: 14,
+      fontSize: 11,
+      color: C.muted,
+      cursor: "pointer"
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: dontShowAgain,
+    onChange: e => setDontShowAgain(e.target.checked)
+  }), T("onboardDontShowAgain")), /*#__PURE__*/React.createElement("button", {
     style: base.pillBtn(true),
-    onClick: () => isLast ? onDone() : setStep(s => s + 1)
+    onClick: () => isLast ? onDone(dontShowAgain) : setStep(s => s + 1)
   }, isLast ? T("onboardStart") : T("onboardNext"))));
 }
 function FilesSection({
@@ -7026,8 +7046,14 @@ function App() {
   const audioCtx = useRef(null);
   const masterGainRef = useRef(null);
   const [volume, setVolume, volLoaded] = usePersisted("volume", 0.8);
-  // Shown once on first launch to point out the four bottom-nav destinations.
+  // Points out the four bottom-nav destinations. Shown again on every
+  // launch by default (like a reminder) — `onboardingDone` only becomes
+  // permanently true if the user ticks "don't show again"; otherwise
+  // dismissing it just hides it for the current launch via the separate,
+  // non-persisted `onboardingHiddenThisLaunch`, and it's back next time the
+  // app loads fresh.
   const [onboardingDone, setOnboardingDone, onboardingLoaded] = usePersisted("onboardingDone", false);
+  const [onboardingHiddenThisLaunch, setOnboardingHiddenThisLaunch] = useState(false);
 
   // Navigation guard: while the Settings exercise/category editor is open
   // with unsaved changes, any exit (bottom nav, back arrow, phone back
@@ -7634,8 +7660,11 @@ function App() {
     icon: item.icon,
     from: item.fromRect,
     to: item.toRect
-  })), onboardingLoaded && !onboardingDone && /*#__PURE__*/React.createElement(OnboardingTour, {
-    onDone: () => setOnboardingDone(true)
+  })), onboardingLoaded && !onboardingDone && !onboardingHiddenThisLaunch && /*#__PURE__*/React.createElement(OnboardingTour, {
+    onDone: hideForever => {
+      setOnboardingHiddenThisLaunch(true);
+      if (hideForever) setOnboardingDone(true);
+    }
   }), unsavedPrompt && /*#__PURE__*/React.createElement(UnsavedChangesModal, {
     canSave: unsavedPrompt.canSave,
     onSave: () => {
