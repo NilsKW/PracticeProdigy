@@ -1,0 +1,95 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Practice Prodigy — historique des mises à jour
+// ─────────────────────────────────────────────────────────────────────────────
+// Un nouvel élément par petite mise à jour. Le plus récent en premier
+// (version la plus haute en tête du tableau). Chaque entrée : { version,
+// date (YYYY-MM-DD), changes: [texte, ...] }.
+//
+// Pour ajouter une nouvelle mise à jour : dupliquez le premier bloc,
+// incrémentez "version" de 1, mettez la date du jour, et listez les
+// changements en une phrase courte et compréhensible par un utilisateur
+// (pas de jargon technique). L'appli affichera automatiquement ce nouveau
+// contenu au prochain lancement pour quiconque avait déjà vu une version
+// antérieure.
+
+window.CHANGELOG_DATA = [
+  { version: 25, date: "2026-09-08", changes: [
+    "Nouveau : un bouton « Historique des changements » dans les Réglages pour retrouver toutes les mises à jour passées.",
+  ] },
+  { version: 24, date: "2026-09-08", changes: [
+    "La description de l'exercice s'affiche maintenant pendant qu'on le pratique en séance.",
+  ] },
+  { version: 23, date: "2026-09-08", changes: [
+    "Nouveau : les statistiques peuvent être filtrées sur une période précise (date de début / date de fin).",
+  ] },
+  { version: 22, date: "2026-09-08", changes: [
+    "Le bouton retour du téléphone demande maintenant confirmation avant de quitter une séance en cours.",
+    "Renommage des derniers textes encore appelés « modèle » en « favori ».",
+  ] },
+  { version: 21, date: "2026-09-08", changes: [
+    "Le tutoriel de bienvenue s'affiche désormais à chaque lancement (avec une case « ne plus afficher » pour le désactiver).",
+  ] },
+  { version: 20, date: "2026-09-08", changes: [
+    "Nouvelle rubrique « Retours » dans les Réglages pour signaler un bug ou proposer une idée par email.",
+  ] },
+  { version: 19, date: "2026-09-08", changes: [
+    "Le métronome adopte automatiquement les réglages propres à chaque exercice quand on change d'exercice en séance.",
+  ] },
+  { version: 18, date: "2026-09-08", changes: [
+    "Réorganisation des Réglages en menu déroulant, avec une flèche de retour plus grande et plus visible.",
+    "Le bouton retour du téléphone fonctionne maintenant correctement pour naviguer dans les Réglages.",
+  ] },
+  { version: 17, date: "2026-09-07", changes: [
+    "Petite animation sur le nombre de minutes en séance quand on l'ajuste avec + ou −.",
+  ] },
+  { version: 16, date: "2026-09-07", changes: [
+    "Nouveau design des boutons + et × : pleine hauteur, plus visibles, avec séparateur.",
+  ] },
+  { version: 15, date: "2026-09-07", changes: [
+    "Quand on ajoute un exercice à la séance, son icône s'envole visuellement vers l'onglet Séance.",
+    "Un petit repère visuel reste sur l'exercice déjà ajouté dans la Bibliothèque.",
+  ] },
+  { version: 14, date: "2026-09-07", changes: [
+    "Nouvelle jauge de progression compacte pendant une séance, à la place de la liste complète des exercices.",
+  ] },
+  { version: 13, date: "2026-09-06", changes: [
+    "Les exercices et catégories par défaut sont désormais généralistes, adaptés à tout instrument (plus seulement guitare).",
+  ] },
+  { version: 12, date: "2026-09-06", changes: [
+    "Tutoriel de bienvenue au tout premier lancement de l'application.",
+  ] },
+  { version: 11, date: "2026-09-06", changes: [
+    "L'application s'adapte maintenant correctement aux écrans de tablette et d'ordinateur.",
+  ] },
+  { version: 10, date: "2026-09-05", changes: [
+    "Correction d'un bug où une catégorie pouvait s'afficher deux fois dans la Bibliothèque.",
+  ] },
+  { version: 9, date: "2026-09-05", changes: [
+    "Nouveau : export et import d'un groupe d'exercices (avec leurs fichiers) en un seul fichier à partager.",
+  ] },
+  { version: 8, date: "2026-09-05", changes: [
+    "Une confirmation est demandée avant de quitter l'édition d'un exercice si des modifications n'ont pas été enregistrées.",
+  ] },
+  { version: 7, date: "2026-09-05", changes: [
+    "Nouveau : possibilité d'ajouter des fichiers pédagogiques (audio, vidéo, image, PDF) à un exercice.",
+  ] },
+  { version: 6, date: "2026-09-04", changes: [
+    "Renommage de « Mes modèles » en « Favoris », avec une petite animation quand la séance est modifiée.",
+  ] },
+  { version: 5, date: "2026-09-04", changes: [
+    "Nouveau mode « Noodling » : une pause libre pendant une séance, avec suivi du temps qui y est passé.",
+  ] },
+  { version: 4, date: "2026-09-04", changes: [
+    "Un bouton rouge permet désormais de retirer un exercice directement depuis la Bibliothèque.",
+  ] },
+  { version: 3, date: "2026-09-04", changes: [
+    "Correction d'un débordement d'affichage des boutons pendant une séance active.",
+  ] },
+  { version: 2, date: "2026-09-04", changes: [
+    "Agrandissement de plusieurs textes et icônes (niveau, badges, flèches précédent/passer) pour une meilleure lisibilité.",
+  ] },
+  { version: 1, date: "2026-09-04", changes: [
+    "Nouvelle navigation avec une barre en bas de l'écran (Bibliothèque, Séance, Progression, Réglages).",
+    "Corrections de lisibilité et d'un problème d'affichage en taille « Grand ».",
+  ] },
+];

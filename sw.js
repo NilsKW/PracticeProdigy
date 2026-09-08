@@ -11,6 +11,7 @@ const PRECACHE = [
   "./icon-512.png",
   "./exercises-data.js",
   "./Rewards/badges-data.js",
+  "./changelog-data.js",
   "https://unpkg.com/react@18/umd/react.production.min.js",
   "https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
 ];
@@ -38,7 +39,8 @@ self.addEventListener("activate", e => {
 // offline-capable loading.
 self.addEventListener("fetch", e => {
   const isAppShell = e.request.mode === "navigate" || e.request.destination === "document"
-    || e.request.url.endsWith("/exercises-data.js") || e.request.url.endsWith("/Rewards/badges-data.js");
+    || e.request.url.endsWith("/exercises-data.js") || e.request.url.endsWith("/Rewards/badges-data.js")
+    || e.request.url.endsWith("/changelog-data.js");
 
   if (isAppShell) {
     e.respondWith(

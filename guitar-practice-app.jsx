@@ -84,6 +84,9 @@ const STRINGS = {
     unsavedSaveBtn: "Save and leave", unsavedDiscardBtn: "Discard changes",
     quitSessionTitle: "Quit the session?", quitSessionMsg: "You'll go back to Session to organize your exercise queue. Your progress on the current session ends.",
     quitSessionConfirmBtn: "Quit the session", quitSessionCancelBtn: "Keep going",
+    changelogTitle: "What's new", changelogSubtitle: "Here's what changed since you last opened the app.",
+    changelogContinueBtn: "Continue", settingsChangelog: "updates", changelogHistoryTitle: "Update history",
+    changelogHistoryEmpty: "No updates recorded yet.",
     settingsShare: "share",
     exportTitle: "Export an exercise group", exportDesc: "Bundle selected categories, their exercises, and any attached files into a single file you can send to someone else.",
     exportNameLabel: "Group name (also used as the file name)", exportCategoriesLabel: "Categories to include", exportNamePlaceholder: "Pack name (e.g. Oboe — Beginner)",
@@ -190,6 +193,9 @@ const STRINGS = {
     unsavedSaveBtn: "Enregistrer et quitter", unsavedDiscardBtn: "Quitter sans enregistrer",
     quitSessionTitle: "Quitter la séance ?", quitSessionMsg: "Vous reviendrez dans l'onglet Séance pour organiser votre file d'exercices. La progression de la séance en cours s'arrête.",
     quitSessionConfirmBtn: "Quitter la séance", quitSessionCancelBtn: "Continuer",
+    changelogTitle: "Quoi de neuf", changelogSubtitle: "Voici ce qui a changé depuis votre dernière visite.",
+    changelogContinueBtn: "Continuer", settingsChangelog: "nouveautés", changelogHistoryTitle: "Historique des mises à jour",
+    changelogHistoryEmpty: "Aucune mise à jour enregistrée pour l'instant.",
     settingsShare: "partage",
     exportTitle: "Exporter un groupe d'exercices", exportDesc: "Regroupe les catégories sélectionnées, leurs exercices et les fichiers attachés en un seul fichier à envoyer à quelqu'un d'autre.",
     exportNameLabel: "Nom du groupe (utilisé aussi comme nom de fichier)", exportCategoriesLabel: "Catégories à inclure", exportNamePlaceholder: "Nom du groupe (ex. Hautbois — Débutant)",
@@ -1117,6 +1123,56 @@ function QuitSessionModal({ onConfirm, onCancel }) {
           <button style={{ ...base.pillBtn(false), textAlign: "center", color: "#F87171", border: "1px solid #3A1A1A" }} onClick={onConfirm}>{T("quitSessionConfirmBtn")}</button>
           <button style={{ ...base.pillBtn(true), textAlign: "center" }} onClick={onCancel}>{T("quitSessionCancelBtn")}</button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Shared rendering for a list of changelog entries (newest first) — used
+// both by the popup shown on launch and the full history in Réglages.
+function ChangelogEntries({ entries }) {
+  const lang = useLang();
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {entries.map(entry => (
+        <div key={entry.version}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: C.amber, fontFamily: "monospace" }}>v{entry.version}</span>
+            <span style={{ fontSize: 10, color: C.muted }}>{formatChangelogDate(entry.date, lang)}</span>
+          </div>
+          <ul style={{ margin: 0, padding: "0 0 0 18px", display: "flex", flexDirection: "column", gap: 4 }}>
+            {entry.changes.map((c, i) => (
+              <li key={i} style={{ fontSize: 12.5, color: C.cream, lineHeight: 1.5 }}>{c}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function formatChangelogDate(dateStr, lang) {
+  try {
+    return new Date(dateStr + "T00:00:00").toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US", { day: "numeric", month: "short", year: "numeric" });
+  } catch { return dateStr; }
+}
+
+// Shown on launch when this device last saw an older version than what's
+// currently shipped — lists everything that changed since then (not just
+// the latest entry), then defers to the onboarding tour's own turn (see
+// App). Purely informational: no "don't show again" here, since by
+// definition it only ever shows once per actual update.
+function ChangelogModal({ entries, onDone }) {
+  const T = useT();
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 450, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: "#000000cc" }}>
+      <div style={{ background: "#151515", border: `1px solid ${C.border}`, borderRadius: 18, padding: "22px 20px", maxWidth: 340, width: "100%", maxHeight: "80vh", display: "flex", flexDirection: "column", boxShadow: "0 10px 50px #000b" }}>
+        <div style={{ fontSize: 16, fontWeight: 800, color: C.cream, marginBottom: 2 }}>✨ {T("changelogTitle")}</div>
+        <div style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>{T("changelogSubtitle")}</div>
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", marginBottom: 16 }}>
+          <ChangelogEntries entries={entries} />
+        </div>
+        <button style={base.pillBtn(true)} onClick={onDone}>{T("changelogContinueBtn")}</button>
       </div>
     </div>
   );
@@ -2971,6 +3027,7 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
     { id: "display",    icon: "🔠", label: T("settingsDisplay") },
     { id: "badges",     icon: "🏅", label: T("settingsBadges") },
     { id: "feedback",   icon: "💬", label: T("settingsFeedback") },
+    { id: "changelog",  icon: "🆕", label: T("settingsChangelog") },
     { id: "debug",      icon: "🔧", label: "debug" },
   ];
   const [editEx, setEditEx]   = useState(null);  // null | "new" | exercise object
@@ -3303,6 +3360,21 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
         </div>
       )}
 
+      {section === "changelog" && (
+        <div style={base.card}>
+          <div style={{ padding: "14px 16px" }}>
+            <label style={{ ...base.label, margin: 0 }}>{T("changelogHistoryTitle")}</label>
+            {(window.CHANGELOG_DATA || []).length === 0 ? (
+              <div style={{ fontSize: 12, color: C.muted, marginTop: 8 }}>{T("changelogHistoryEmpty")}</div>
+            ) : (
+              <div style={{ marginTop: 12 }}>
+                <ChangelogEntries entries={window.CHANGELOG_DATA} />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* TEMPORARY — dev-only tuning controls for the Séance minute-count
           "bump" animation (grow then settle, on +/-), to dial them in by
           eye instead of guessing values blind. Remove this whole section
@@ -3447,6 +3519,32 @@ export default function App() {
   // app loads fresh.
   const [onboardingDone, setOnboardingDone, onboardingLoaded] = usePersisted("onboardingDone", false);
   const [onboardingHiddenThisLaunch, setOnboardingHiddenThisLaunch] = useState(false);
+
+  // Changelog: window.CHANGELOG_DATA (changelog-data.js) is a plain array,
+  // newest entry first — its own "version" is just that first entry's
+  // number. On the very first-ever launch (lastSeenChangelogVersion still
+  // null) there's nothing to catch up on, so it's silently set to the
+  // current version without showing anything — the tutorial covers a brand
+  // new user, not a changelog. On every later launch, if a newer version
+  // exists than what this device last saw, show it (all the entries in
+  // between, not just the latest one) before the onboarding tour gets its
+  // turn, so a returning user sees "what changed" first, then the reminder
+  // tour if that's still due.
+  const CHANGELOG = window.CHANGELOG_DATA || [];
+  const latestChangelogVersion = CHANGELOG[0]?.version || 0;
+  const [lastSeenChangelogVersion, setLastSeenChangelogVersion, changelogVersionLoaded] = usePersisted("lastSeenChangelogVersion", null);
+  const [changelogChecked, setChangelogChecked] = useState(false);
+  const [showChangelog, setShowChangelog] = useState(false);
+  useEffect(() => {
+    if (!changelogVersionLoaded || changelogChecked) return;
+    if (lastSeenChangelogVersion === null) {
+      setLastSeenChangelogVersion(latestChangelogVersion);
+    } else if (lastSeenChangelogVersion < latestChangelogVersion) {
+      setShowChangelog(true);
+    }
+    setChangelogChecked(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [changelogVersionLoaded]);
 
   // Navigation guard: while the Settings exercise/category editor is open
   // with unsaved changes, any exit (bottom nav, back arrow, phone back
@@ -3872,7 +3970,17 @@ export default function App() {
         <FlyingExerciseIcon key={item.id} icon={item.icon} from={item.fromRect} to={item.toRect} />
       ))}
 
-      {onboardingLoaded && !onboardingDone && !onboardingHiddenThisLaunch && (
+      {showChangelog && (
+        <ChangelogModal
+          entries={CHANGELOG.filter(e => e.version > (lastSeenChangelogVersion || 0))}
+          onDone={() => {
+            setLastSeenChangelogVersion(latestChangelogVersion);
+            setShowChangelog(false);
+          }}
+        />
+      )}
+
+      {!showChangelog && onboardingLoaded && !onboardingDone && !onboardingHiddenThisLaunch && (
         <OnboardingTour onDone={hideForever => {
           setOnboardingHiddenThisLaunch(true);
           if (hideForever) setOnboardingDone(true);

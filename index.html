@@ -250,6 +250,12 @@ const STRINGS = {
     quitSessionMsg: "You'll go back to Session to organize your exercise queue. Your progress on the current session ends.",
     quitSessionConfirmBtn: "Quit the session",
     quitSessionCancelBtn: "Keep going",
+    changelogTitle: "What's new",
+    changelogSubtitle: "Here's what changed since you last opened the app.",
+    changelogContinueBtn: "Continue",
+    settingsChangelog: "updates",
+    changelogHistoryTitle: "Update history",
+    changelogHistoryEmpty: "No updates recorded yet.",
     settingsShare: "share",
     exportTitle: "Export an exercise group",
     exportDesc: "Bundle selected categories, their exercises, and any attached files into a single file you can send to someone else.",
@@ -466,6 +472,12 @@ const STRINGS = {
     quitSessionMsg: "Vous reviendrez dans l'onglet Séance pour organiser votre file d'exercices. La progression de la séance en cours s'arrête.",
     quitSessionConfirmBtn: "Quitter la séance",
     quitSessionCancelBtn: "Continuer",
+    changelogTitle: "Quoi de neuf",
+    changelogSubtitle: "Voici ce qui a changé depuis votre dernière visite.",
+    changelogContinueBtn: "Continuer",
+    settingsChangelog: "nouveautés",
+    changelogHistoryTitle: "Historique des mises à jour",
+    changelogHistoryEmpty: "Aucune mise à jour enregistrée pour l'instant.",
     settingsShare: "partage",
     exportTitle: "Exporter un groupe d'exercices",
     exportDesc: "Regroupe les catégories sélectionnées, leurs exercices et les fichiers attachés en un seul fichier à envoyer à quelqu'un d'autre.",
@@ -2139,6 +2151,130 @@ function QuitSessionModal({
     },
     onClick: onCancel
   }, T("quitSessionCancelBtn")))));
+}
+
+// Shared rendering for a list of changelog entries (newest first) — used
+// both by the popup shown on launch and the full history in Réglages.
+function ChangelogEntries({
+  entries
+}) {
+  const lang = useLang();
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 14
+    }
+  }, entries.map(entry => /*#__PURE__*/React.createElement("div", {
+    key: entry.version
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "baseline",
+      gap: 8,
+      marginBottom: 6
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      fontWeight: 800,
+      color: C.amber,
+      fontFamily: "monospace"
+    }
+  }, "v", entry.version), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 10,
+      color: C.muted
+    }
+  }, formatChangelogDate(entry.date, lang))), /*#__PURE__*/React.createElement("ul", {
+    style: {
+      margin: 0,
+      padding: "0 0 0 18px",
+      display: "flex",
+      flexDirection: "column",
+      gap: 4
+    }
+  }, entry.changes.map((c, i) => /*#__PURE__*/React.createElement("li", {
+    key: i,
+    style: {
+      fontSize: 12.5,
+      color: C.cream,
+      lineHeight: 1.5
+    }
+  }, c))))));
+}
+function formatChangelogDate(dateStr, lang) {
+  try {
+    return new Date(dateStr + "T00:00:00").toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US", {
+      day: "numeric",
+      month: "short",
+      year: "numeric"
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
+// Shown on launch when this device last saw an older version than what's
+// currently shipped — lists everything that changed since then (not just
+// the latest entry), then defers to the onboarding tour's own turn (see
+// App). Purely informational: no "don't show again" here, since by
+// definition it only ever shows once per actual update.
+function ChangelogModal({
+  entries,
+  onDone
+}) {
+  const T = useT();
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "fixed",
+      inset: 0,
+      zIndex: 450,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+      background: "#000000cc"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "#151515",
+      border: `1px solid ${C.border}`,
+      borderRadius: 18,
+      padding: "22px 20px",
+      maxWidth: 340,
+      width: "100%",
+      maxHeight: "80vh",
+      display: "flex",
+      flexDirection: "column",
+      boxShadow: "0 10px 50px #000b"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 16,
+      fontWeight: 800,
+      color: C.cream,
+      marginBottom: 2
+    }
+  }, "✨ ", T("changelogTitle")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: C.muted,
+      marginBottom: 16
+    }
+  }, T("changelogSubtitle")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minHeight: 0,
+      overflowY: "auto",
+      marginBottom: 16
+    }
+  }, /*#__PURE__*/React.createElement(ChangelogEntries, {
+    entries: entries
+  })), /*#__PURE__*/React.createElement("button", {
+    style: base.pillBtn(true),
+    onClick: onDone
+  }, T("changelogContinueBtn"))));
 }
 
 // First-launch-style tour: a handful of short cards pointing out the four
@@ -6375,6 +6511,10 @@ function SettingsScreen({
     icon: "💬",
     label: T("settingsFeedback")
   }, {
+    id: "changelog",
+    icon: "🆕",
+    label: T("settingsChangelog")
+  }, {
     id: "debug",
     icon: "🔧",
     label: "debug"
@@ -7097,7 +7237,30 @@ function SettingsScreen({
       color: C.muted,
       marginTop: 8
     }
-  }, T("feedbackHint")))), section === "debug" && /*#__PURE__*/React.createElement("div", {
+  }, T("feedbackHint")))), section === "changelog" && /*#__PURE__*/React.createElement("div", {
+    style: base.card
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "14px 16px"
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      ...base.label,
+      margin: 0
+    }
+  }, T("changelogHistoryTitle")), (window.CHANGELOG_DATA || []).length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: C.muted,
+      marginTop: 8
+    }
+  }, T("changelogHistoryEmpty")) : /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 12
+    }
+  }, /*#__PURE__*/React.createElement(ChangelogEntries, {
+    entries: window.CHANGELOG_DATA
+  })))), section === "debug" && /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",
@@ -7312,6 +7475,32 @@ function App() {
   // app loads fresh.
   const [onboardingDone, setOnboardingDone, onboardingLoaded] = usePersisted("onboardingDone", false);
   const [onboardingHiddenThisLaunch, setOnboardingHiddenThisLaunch] = useState(false);
+
+  // Changelog: window.CHANGELOG_DATA (changelog-data.js) is a plain array,
+  // newest entry first — its own "version" is just that first entry's
+  // number. On the very first-ever launch (lastSeenChangelogVersion still
+  // null) there's nothing to catch up on, so it's silently set to the
+  // current version without showing anything — the tutorial covers a brand
+  // new user, not a changelog. On every later launch, if a newer version
+  // exists than what this device last saw, show it (all the entries in
+  // between, not just the latest one) before the onboarding tour gets its
+  // turn, so a returning user sees "what changed" first, then the reminder
+  // tour if that's still due.
+  const CHANGELOG = window.CHANGELOG_DATA || [];
+  const latestChangelogVersion = CHANGELOG[0]?.version || 0;
+  const [lastSeenChangelogVersion, setLastSeenChangelogVersion, changelogVersionLoaded] = usePersisted("lastSeenChangelogVersion", null);
+  const [changelogChecked, setChangelogChecked] = useState(false);
+  const [showChangelog, setShowChangelog] = useState(false);
+  useEffect(() => {
+    if (!changelogVersionLoaded || changelogChecked) return;
+    if (lastSeenChangelogVersion === null) {
+      setLastSeenChangelogVersion(latestChangelogVersion);
+    } else if (lastSeenChangelogVersion < latestChangelogVersion) {
+      setShowChangelog(true);
+    }
+    setChangelogChecked(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [changelogVersionLoaded]);
 
   // Navigation guard: while the Settings exercise/category editor is open
   // with unsaved changes, any exit (bottom nav, back arrow, phone back
@@ -7971,7 +8160,13 @@ function App() {
     icon: item.icon,
     from: item.fromRect,
     to: item.toRect
-  })), onboardingLoaded && !onboardingDone && !onboardingHiddenThisLaunch && /*#__PURE__*/React.createElement(OnboardingTour, {
+  })), showChangelog && /*#__PURE__*/React.createElement(ChangelogModal, {
+    entries: CHANGELOG.filter(e => e.version > (lastSeenChangelogVersion || 0)),
+    onDone: () => {
+      setLastSeenChangelogVersion(latestChangelogVersion);
+      setShowChangelog(false);
+    }
+  }), !showChangelog && onboardingLoaded && !onboardingDone && !onboardingHiddenThisLaunch && /*#__PURE__*/React.createElement(OnboardingTour, {
     onDone: hideForever => {
       setOnboardingHiddenThisLaunch(true);
       if (hideForever) setOnboardingDone(true);
@@ -8039,7 +8234,14 @@ function App() {
                 document.getElementById('boot-sub').textContent = 'Loading badges…';
                 loadScript(
                   './Rewards/badges-data.js',
-                  function() { startApp(); },
+                  function() {
+                    document.getElementById('boot-sub').textContent = 'Loading changelog…';
+                    loadScript(
+                      './changelog-data.js',
+                      function() { startApp(); },
+                      function() { bootErr('Network error', 'Could not load changelog-data.js'); }
+                    );
+                  },
                   function() { bootErr('Network error', 'Could not load Rewards/badges-data.js'); }
                 );
               },
