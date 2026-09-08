@@ -1469,6 +1469,31 @@ const base = {
     display: "flex",
     alignItems: "center"
   }),
+  // A "← Title" back header, boxed and sized to actually stand out (unlike
+  // iconBtn's bare, easy-to-miss icon) — used for every drilled-into screen
+  // that only has this as its way back (Réglages sections, exercise/category
+  // editors).
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    background: "#C8873A22",
+    border: `1px solid ${C.amber}55`,
+    color: C.amber,
+    fontSize: 20,
+    fontWeight: 700,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    flexShrink: 0,
+    padding: 0
+  },
+  backTitle: {
+    fontSize: 18,
+    fontWeight: 800,
+    color: C.cream
+  },
   // Bottom tab bar: the single primary navigation surface for the whole app.
   bottomNav: {
     display: "flex",
@@ -5500,18 +5525,14 @@ function ExerciseEditor({
     style: {
       display: "flex",
       alignItems: "center",
-      gap: 10,
-      marginBottom: 6
+      gap: 12,
+      marginBottom: 10
     }
   }, /*#__PURE__*/React.createElement("button", {
-    style: base.iconBtn(C.amber),
+    style: base.backBtn,
     onClick: onRequestBack || onBack
   }, "←"), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 14,
-      fontWeight: 700,
-      color: C.cream
-    }
+    style: base.backTitle
   }, isNew ? T("newExerciseTitle") : T("editExercise"))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -5990,18 +6011,14 @@ function CategoryEditor({
     style: {
       display: "flex",
       alignItems: "center",
-      gap: 10,
-      marginBottom: 6
+      gap: 12,
+      marginBottom: 10
     }
   }, /*#__PURE__*/React.createElement("button", {
-    style: base.iconBtn(C.amber),
+    style: base.backBtn,
     onClick: onRequestBack || onBack
   }, "←"), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 14,
-      fontWeight: 700,
-      color: C.cream
-    }
+    style: base.backTitle
   }, isNew ? T("newCategoryTitle") : T("editCategory"))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -6209,19 +6226,27 @@ function SettingsScreen({
   };
   const requestCloseEditor = () => guardedRun(closeEditor);
 
-  // The exercise/category editor has no visible tab bar to go back with, so
-  // it's exactly the kind of screen where a phone's back button/gesture would
-  // otherwise leave the app entirely. Trap it here to just close the editor —
-  // guarded the same way as any other exit, so unsaved changes aren't lost.
+  // None of these drilled-into screens (a settings section, or the exercise/
+  // category editor inside one) have a visible tab bar to go back with, so
+  // they're exactly the kind where a phone's back button/gesture would
+  // otherwise leave the app entirely. Trap it here instead — one combined
+  // effect (not one per level) so a single physical back-press pops exactly
+  // one level: the editor if it's open, otherwise the section. Each level
+  // change re-runs this (pushing one fresh history entry and re-attaching
+  // the listener with up-to-date closure state), so going back from the
+  // editor lands on the section's list, and going back again from there
+  // lands on the main Réglages menu.
   useEffect(() => {
-    if (!editEx && !editCat) return;
+    if (!editEx && !editCat && !section) return;
     history.pushState({
-      practiceProdigyEditorOpen: true
+      practiceProdigySubScreen: true
     }, "");
-    const onPopState = () => requestCloseEditor();
+    const onPopState = () => {
+      if (editEx || editCat) requestCloseEditor();else setSection(null);
+    };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, [editEx, editCat]);
+  }, [editEx, editCat, section]);
   if (editEx) return /*#__PURE__*/React.createElement(ExerciseEditor, {
     editEx: editEx,
     categories: categories,
@@ -6275,17 +6300,15 @@ function SettingsScreen({
     style: {
       display: "flex",
       alignItems: "center",
-      gap: 10,
-      marginBottom: 6
+      gap: 12,
+      marginBottom: 10
     }
   }, /*#__PURE__*/React.createElement("button", {
-    style: base.iconBtn(C.amber),
+    style: base.backBtn,
     onClick: () => setSection(null)
   }, "←"), /*#__PURE__*/React.createElement("span", {
     style: {
-      fontSize: 14,
-      fontWeight: 700,
-      color: C.cream,
+      ...base.backTitle,
       textTransform: "capitalize"
     }
   }, SETTINGS_MENU.find(m => m.id === section)?.label)), section === "exercises" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {

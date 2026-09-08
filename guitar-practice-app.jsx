@@ -878,6 +878,12 @@ const base = {
   app: { background: C.bg, margin: "0 auto", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.cream, position: "relative", display: "flex", flexDirection: "column", overflow: "hidden" },
   header: { background: "linear-gradient(180deg,#1A1208 0%,#0F0F0F 100%)", padding: "14px 20px 10px", borderBottom: "1px solid #2A2008", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 },
   iconBtn: (col) => ({ background: "none", border: "none", color: col || C.muted, fontSize: 18, cursor: "pointer", padding: "4px 6px", borderRadius: 6, display: "flex", alignItems: "center" }),
+  // A "← Title" back header, boxed and sized to actually stand out (unlike
+  // iconBtn's bare, easy-to-miss icon) — used for every drilled-into screen
+  // that only has this as its way back (Réglages sections, exercise/category
+  // editors).
+  backBtn: { width: 38, height: 38, borderRadius: 10, background: "#C8873A22", border: `1px solid ${C.amber}55`, color: C.amber, fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, padding: 0 },
+  backTitle: { fontSize: 18, fontWeight: 800, color: C.cream },
   // Bottom tab bar: the single primary navigation surface for the whole app.
   bottomNav: { display: "flex", background: "#0A0A0A", borderTop: `1px solid ${C.border}`, flexShrink: 0, paddingBottom: "env(safe-area-inset-bottom, 0px)" },
   bottomNavBtn: (active, col) => ({ flex: 1, padding: "8px 4px 7px", background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, color: active ? (col || C.amber) : C.navInactive, fontSize: 10, fontWeight: active ? 700 : 500, letterSpacing: "0.02em", cursor: "pointer", position: "relative" }),
@@ -2600,9 +2606,9 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBac
 
   return (
     <div className="pp-narrow" style={base.scrollArea(24)}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-        <button style={base.iconBtn(C.amber)} onClick={onRequestBack || onBack}>←</button>
-        <span style={{ fontSize: 14, fontWeight: 700, color: C.cream }}>{isNew ? T("newExerciseTitle") : T("editExercise")}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+        <button style={base.backBtn} onClick={onRequestBack || onBack}>←</button>
+        <span style={base.backTitle}>{isNew ? T("newExerciseTitle") : T("editExercise")}</span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div>
@@ -2810,9 +2816,9 @@ function CategoryEditor({ editCat, setExercises, setCategories, onBack, onReques
 
   return (
     <div className="pp-narrow" style={base.scrollArea(24)}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-        <button style={base.iconBtn(C.amber)} onClick={onRequestBack || onBack}>←</button>
-        <span style={{ fontSize: 14, fontWeight: 700, color: C.cream }}>{isNew ? T("newCategoryTitle") : T("editCategory")}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+        <button style={base.backBtn} onClick={onRequestBack || onBack}>←</button>
+        <span style={base.backTitle}>{isNew ? T("newCategoryTitle") : T("editCategory")}</span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div>
@@ -2925,17 +2931,26 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
   const closeEditor = () => { setEditEx(null); setEditCat(null); };
   const requestCloseEditor = () => guardedRun(closeEditor);
 
-  // The exercise/category editor has no visible tab bar to go back with, so
-  // it's exactly the kind of screen where a phone's back button/gesture would
-  // otherwise leave the app entirely. Trap it here to just close the editor —
-  // guarded the same way as any other exit, so unsaved changes aren't lost.
+  // None of these drilled-into screens (a settings section, or the exercise/
+  // category editor inside one) have a visible tab bar to go back with, so
+  // they're exactly the kind where a phone's back button/gesture would
+  // otherwise leave the app entirely. Trap it here instead — one combined
+  // effect (not one per level) so a single physical back-press pops exactly
+  // one level: the editor if it's open, otherwise the section. Each level
+  // change re-runs this (pushing one fresh history entry and re-attaching
+  // the listener with up-to-date closure state), so going back from the
+  // editor lands on the section's list, and going back again from there
+  // lands on the main Réglages menu.
   useEffect(() => {
-    if (!editEx && !editCat) return;
-    history.pushState({ practiceProdigyEditorOpen: true }, "");
-    const onPopState = () => requestCloseEditor();
+    if (!editEx && !editCat && !section) return;
+    history.pushState({ practiceProdigySubScreen: true }, "");
+    const onPopState = () => {
+      if (editEx || editCat) requestCloseEditor();
+      else setSection(null);
+    };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, [editEx, editCat]);
+  }, [editEx, editCat, section]);
 
   if (editEx)  return <ExerciseEditor  editEx={editEx}   categories={categories} setExercises={setExercises} onBack={() => setEditEx(null)} onRequestBack={requestCloseEditor} guardRef={editorGuardRef} />;
   if (editCat) return <CategoryEditor  editCat={editCat} setExercises={setExercises} setCategories={setCategories} onBack={() => setEditCat(null)} onRequestBack={requestCloseEditor} guardRef={editorGuardRef} />;
@@ -2958,9 +2973,9 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
           ))}
         </div>
       ) : (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-          <button style={base.iconBtn(C.amber)} onClick={() => setSection(null)}>←</button>
-          <span style={{ fontSize: 14, fontWeight: 700, color: C.cream, textTransform: "capitalize" }}>{SETTINGS_MENU.find(m => m.id === section)?.label}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+          <button style={base.backBtn} onClick={() => setSection(null)}>←</button>
+          <span style={{ ...base.backTitle, textTransform: "capitalize" }}>{SETTINGS_MENU.find(m => m.id === section)?.label}</span>
         </div>
       )}
 
