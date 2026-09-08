@@ -3526,11 +3526,21 @@ function buildBranchNode({ attachX, attachY, dirAngle, len, color, depth, key },
   if (depth < opts.maxDepth && opts.subCount > 0 && opts.counter.n < TREE_MAX_NODES) {
     const maxSubAngle = (clamp01(opts.subBiasPct / 100) * 70 * Math.PI) / 180;
     const subLen = Math.max(2, len * clamp01(opts.subLenPct / 100));
+    // "Répartition des départs de ramification": at 100 every child starts
+    // right at the tip (t=1), like before; at 0 the children's start points
+    // are spread evenly along the whole parent instead, from its base to its
+    // tip, which avoids the too-regular look of everything branching from
+    // exactly the same point.
+    const spread = clamp01(opts.originSpreadPct / 100);
     for (let j = 0; j < opts.subCount && opts.counter.n < TREE_MAX_NODES; j++) {
       opts.counter.n++;
       const offset = opts.subCount > 1 ? -maxSubAngle + (2 * maxSubAngle) * (j / (opts.subCount - 1)) : 0;
+      const baseT = opts.subCount > 1 ? j / (opts.subCount - 1) : 0.5;
+      const originT = baseT + (1 - baseT) * spread;
+      const originX = attachX + (endX - attachX) * originT;
+      const originY = attachY + (endY - attachY) * originT;
       const child = buildBranchNode({
-        attachX: endX, attachY: endY, dirAngle: dirAngle + offset, len: subLen,
+        attachX: originX, attachY: originY, dirAngle: dirAngle + offset, len: subLen,
         color, depth: depth + 1, key: `${key}-${j}`,
       }, opts);
       children.push(child);
@@ -3565,7 +3575,7 @@ function leavesForNode(b, perBranchLeaves) {
 
 function GrowthTree({
   trunkPct, branchCount, leafCount, firstBranchPct = 50,
-  subDepth = 0, subCount = 3, subLenPct = 65, subBiasPct = 50,
+  subDepth = 0, subCount = 3, subLenPct = 65, subBiasPct = 50, originSpreadPct = 50,
 }) {
   const W = 300, H = 300;
   const baseX = W / 2, baseY = H - 16;
@@ -3607,7 +3617,7 @@ function GrowthTree({
   const startT = Math.min(clamp01(firstBranchPct / 100), topT - 0.02);
 
   const counter = { n: 0 };
-  const subOpts = { maxDepth: Math.round(subDepth), subCount: Math.round(subCount), subLenPct, subBiasPct, counter };
+  const subOpts = { maxDepth: Math.round(subDepth), subCount: Math.round(subCount), subLenPct, subBiasPct, originSpreadPct, counter };
   const allNodes = [];
   for (let i = 0; i < n; i++) {
     const len = branchMin + (branchMax - branchMin) * clamp01(TREE_DEFAULT_BRANCH_PCT / 100);
@@ -3653,13 +3663,19 @@ function GrowthTreeDebugPreview() {
   const [subCount, setSubCount] = useState(3);
   const [subLenPct, setSubLenPct] = useState(60);
   const [subBiasPct, setSubBiasPct] = useState(45);
+  const [originSpreadPct, setOriginSpreadPct] = useState(50);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ ...base.card, padding: "18px 16px" }}>
+      {/* Sticky so the tree stays visible while scrolling through the
+          growing pile of sliders below — no more tweak, scroll up, look,
+          scroll back down. Can't reuse base.card as-is: its overflow:hidden
+          would clip the sticky element against its own (small) box instead
+          of letting it stick against the Réglages scroll area. */}
+      <div style={{ ...base.card, overflow: "visible", padding: "18px 16px", position: "sticky", top: 0, zIndex: 5, boxShadow: "0 10px 18px -10px #000000cc" }}>
         <GrowthTree
           trunkPct={trunkPct} branchCount={branchCount} leafCount={leafCount} firstBranchPct={firstBranchPct}
-          subDepth={subDepth} subCount={subCount} subLenPct={subLenPct} subBiasPct={subBiasPct}
+          subDepth={subDepth} subCount={subCount} subLenPct={subLenPct} subBiasPct={subBiasPct} originSpreadPct={originSpreadPct}
         />
       </div>
       <div style={base.card}>
@@ -3701,6 +3717,18 @@ function GrowthTreeDebugPreview() {
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
             <input type="range" min="0" max="100" step="1" value={subBiasPct} onChange={e => setSubBiasPct(parseInt(e.target.value))} style={{ flex: 1, accentColor: "#B06BBF", height: 4, cursor: "pointer" }} />
             <span style={{ fontSize: 13, fontFamily: "monospace", color: "#B06BBF", fontWeight: 700, width: 34, textAlign: "right" }}>{subBiasPct}</span>
+          </div>
+        </div>
+      </div>
+      <div style={base.card}>
+        <div style={{ padding: "14px 16px" }}>
+          <label style={{ ...base.label, margin: 0 }}>Répartition des départs de ramification</label>
+          <div style={{ fontSize: 11, color: C.muted, marginTop: 4, marginBottom: 10 }}>
+            À 100, toutes les ramifications partent de la pointe de la branche. À 0, leurs départs sont répartis sur toute sa longueur.
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <input type="range" min="0" max="100" step="1" value={originSpreadPct} onChange={e => setOriginSpreadPct(parseInt(e.target.value))} style={{ flex: 1, accentColor: "#B06BBF", height: 4, cursor: "pointer" }} />
+            <span style={{ fontSize: 13, fontFamily: "monospace", color: "#B06BBF", fontWeight: 700, width: 34, textAlign: "right" }}>{originSpreadPct}</span>
           </div>
         </div>
       </div>
