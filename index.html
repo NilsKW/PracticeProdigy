@@ -253,7 +253,7 @@ const STRINGS = {
     changelogTitle: "What's new",
     changelogSubtitle: "Here's what changed since you last opened the app.",
     changelogContinueBtn: "Continue",
-    settingsChangelog: "updates",
+    settingsChangelog: "version history",
     changelogHistoryTitle: "Update history",
     changelogHistoryEmpty: "No updates recorded yet.",
     settingsShare: "share",
@@ -475,7 +475,7 @@ const STRINGS = {
     changelogTitle: "Quoi de neuf",
     changelogSubtitle: "Voici ce qui a changé depuis votre dernière visite.",
     changelogContinueBtn: "Continuer",
-    settingsChangelog: "nouveautés",
+    settingsChangelog: "historique des versions",
     changelogHistoryTitle: "Historique des mises à jour",
     changelogHistoryEmpty: "Aucune mise à jour enregistrée pour l'instant.",
     settingsShare: "partage",
@@ -7238,7 +7238,10 @@ function SettingsScreen({
       marginTop: 8
     }
   }, T("feedbackHint")))), section === "changelog" && /*#__PURE__*/React.createElement("div", {
-    style: base.card
+    style: {
+      ...base.card,
+      flexShrink: 0
+    }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       padding: "14px 16px"

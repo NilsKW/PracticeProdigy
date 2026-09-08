@@ -85,7 +85,7 @@ const STRINGS = {
     quitSessionTitle: "Quit the session?", quitSessionMsg: "You'll go back to Session to organize your exercise queue. Your progress on the current session ends.",
     quitSessionConfirmBtn: "Quit the session", quitSessionCancelBtn: "Keep going",
     changelogTitle: "What's new", changelogSubtitle: "Here's what changed since you last opened the app.",
-    changelogContinueBtn: "Continue", settingsChangelog: "updates", changelogHistoryTitle: "Update history",
+    changelogContinueBtn: "Continue", settingsChangelog: "version history", changelogHistoryTitle: "Update history",
     changelogHistoryEmpty: "No updates recorded yet.",
     settingsShare: "share",
     exportTitle: "Export an exercise group", exportDesc: "Bundle selected categories, their exercises, and any attached files into a single file you can send to someone else.",
@@ -194,7 +194,7 @@ const STRINGS = {
     quitSessionTitle: "Quitter la séance ?", quitSessionMsg: "Vous reviendrez dans l'onglet Séance pour organiser votre file d'exercices. La progression de la séance en cours s'arrête.",
     quitSessionConfirmBtn: "Quitter la séance", quitSessionCancelBtn: "Continuer",
     changelogTitle: "Quoi de neuf", changelogSubtitle: "Voici ce qui a changé depuis votre dernière visite.",
-    changelogContinueBtn: "Continuer", settingsChangelog: "nouveautés", changelogHistoryTitle: "Historique des mises à jour",
+    changelogContinueBtn: "Continuer", settingsChangelog: "historique des versions", changelogHistoryTitle: "Historique des mises à jour",
     changelogHistoryEmpty: "Aucune mise à jour enregistrée pour l'instant.",
     settingsShare: "partage",
     exportTitle: "Exporter un groupe d'exercices", exportDesc: "Regroupe les catégories sélectionnées, leurs exercices et les fichiers attachés en un seul fichier à envoyer à quelqu'un d'autre.",
@@ -3361,7 +3361,7 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
       )}
 
       {section === "changelog" && (
-        <div style={base.card}>
+        <div style={{ ...base.card, flexShrink: 0 }}>
           <div style={{ padding: "14px 16px" }}>
             <label style={{ ...base.label, margin: 0 }}>{T("changelogHistoryTitle")}</label>
             {(window.CHANGELOG_DATA || []).length === 0 ? (
