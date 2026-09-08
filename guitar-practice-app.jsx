@@ -104,6 +104,7 @@ const STRINGS = {
     onboardSettingsTitle: "Settings", onboardSettingsDesc: "Customize your exercises, categories, and app options.",
     addedToSessionToast: "Added to session",
     settingsFeedback: "bugs & ideas",
+    settingsAppGroupLabel: "App settings",
     settingsDevGroupLabel: "About this app",
     settingsAbout: "about",
     aboutWhatTitle: "What this app is for",
@@ -227,6 +228,7 @@ const STRINGS = {
     onboardSettingsTitle: "Réglages", onboardSettingsDesc: "Personnalise tes exercices, tes catégories et les options de l'appli.",
     addedToSessionToast: "Ajouté à la séance",
     settingsFeedback: "bugs & idées",
+    settingsAppGroupLabel: "Réglages de l'application",
     settingsDevGroupLabel: "À propos de l'appli",
     settingsAbout: "à propos",
     aboutWhatTitle: "À quoi sert cette application",
@@ -3156,6 +3158,7 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
     <div className="pp-narrow" style={base.scrollArea(24)}>
       {section === null ? (
         <>
+          <div style={{ ...base.sectionTitle, padding: "0 4px 4px" }}>{T("settingsAppGroupLabel")}</div>
           <div style={base.card}>
             {SETTINGS_MENU.filter(item => item.group === "app").map((item, idx, arr) => (
               <div
