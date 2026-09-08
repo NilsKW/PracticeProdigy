@@ -2065,7 +2065,7 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
             <div
               key={task.id}
               ref={node => { if (node) rowRefs.current[task.id] = node; else delete rowRefs.current[task.id]; }}
-              style={{ background: C.surface, border: `1px solid ${draggingId === task.id ? C.amber : C.border}`, borderRadius: 10, display: "flex", alignItems: "stretch", opacity: draggingId === task.id ? 0.6 : 1, transition: "opacity 0.15s, border-color 0.15s", overflow: "hidden" }}
+              style={{ background: C.surface, border: `1px solid ${draggingId === task.id ? C.amber : C.border}`, borderRadius: 10, display: "flex", alignItems: "stretch", flexShrink: 0, opacity: draggingId === task.id ? 0.6 : 1, transition: "opacity 0.15s, border-color 0.15s", overflow: "hidden" }}
             >
               <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 9, padding: "11px 13px" }}>
                 <span
@@ -2079,18 +2079,19 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
                 <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#2A2A2A", color: "#C9A876", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</div>
                 <span style={{ fontSize: 15, flexShrink: 0 }}>{task.icon}</span>
                 <div style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600 }}>{exerciseName(task, lang)}</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
-                  <button style={{ width: 22, height: 22, borderRadius: "50%", background: "#222", border: `1px solid #333`, color: C.cream, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, flexShrink: 0 }} onClick={() => { upd(task.id, -1); bumpMinutes(task.id); }}>−</button>
+                <div style={{ display: "flex", alignItems: "stretch", flexShrink: 0, border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
+                  <button style={{ width: 34, background: "none", border: "none", color: C.cream, fontSize: 21, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, lineHeight: 1 }} onClick={() => { upd(task.id, -1); bumpMinutes(task.id); }}>−</button>
                   <span
                     key={`min-${task.id}-${minuteBump[task.id] || 0}`}
                     style={{
-                      fontSize: 13, fontFamily: "monospace", color: C.amber, width: 34, textAlign: "center", fontWeight: 700,
-                      display: "inline-block", position: "relative", zIndex: minuteBump[task.id] ? 1 : 0,
+                      fontSize: 13, fontFamily: "monospace", color: C.amber, width: 38, textAlign: "center", fontWeight: 700,
+                      display: "flex", alignItems: "center", justifyContent: "center", position: "relative", zIndex: minuteBump[task.id] ? 1 : 0,
+                      borderLeft: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`,
                       "--bump-scale": 1 + (minuteBumpPct ?? 25) / 100,
                       animation: minuteBump[task.id] ? `minuteBump ${minuteBumpMs ?? 220}ms ease-out` : "none",
                     }}
                   >{task.minutes}m</span>
-                  <button style={{ width: 22, height: 22, borderRadius: "50%", background: "#222", border: `1px solid #333`, color: C.cream, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, flexShrink: 0 }} onClick={() => { upd(task.id, 1); bumpMinutes(task.id); }}>+</button>
+                  <button style={{ width: 34, background: "none", border: "none", color: C.cream, fontSize: 21, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, lineHeight: 1 }} onClick={() => { upd(task.id, 1); bumpMinutes(task.id); }}>+</button>
                 </div>
               </div>
               <button

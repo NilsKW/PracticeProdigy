@@ -13,6 +13,13 @@
 // antérieure.
 
 window.CHANGELOG_DATA = [
+  { version: 27, date: "2026-09-08", changes: [
+    "Dans la Séance, les boutons − et + sont plus grands et séparés par des traits verticaux, comme la croix de suppression.",
+    "Correction : avec beaucoup d'exercices dans la séance, la liste devenait illisible au lieu de défiler — elle défile maintenant normalement.",
+  ] },
+  { version: 26, date: "2026-09-08", changes: [
+    "Renommage de « Nouveautés » en « Historique des versions », et correction d'un bug qui empêchait de faire défiler les anciennes mises à jour.",
+  ] },
   { version: 25, date: "2026-09-08", changes: [
     "Nouveau : un bouton « Historique des changements » dans les Réglages pour retrouver toutes les mises à jour passées.",
   ] },
