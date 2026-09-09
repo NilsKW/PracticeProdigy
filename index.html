@@ -183,6 +183,8 @@ const STRINGS = {
     youtubeOk: "✓ Video ID: ",
     durationLabel: "Default Duration (minutes)",
     categoryLabel: "Category",
+    recreEnabledLabel: "Allow Recess during this exercise",
+    recreEnabledHint: "When off, the 🛝 Recess button won't be offered during a session while this exercise is active.",
     addExercise: "Add Exercise",
     saveChanges: "Save Changes",
     deleteExercise: "Delete Exercise",
@@ -420,6 +422,8 @@ const STRINGS = {
     youtubeOk: "✓ ID vidéo : ",
     durationLabel: "Durée par défaut (minutes)",
     categoryLabel: "Catégorie",
+    recreEnabledLabel: "Autoriser la récré pendant cet exercice",
+    recreEnabledHint: "Si désactivé, le bouton 🛝 Récré ne sera pas proposé en séance tant que cet exercice est en cours.",
     addExercise: "Ajouter l'exercice",
     saveChanges: "Enregistrer",
     deleteExercise: "Supprimer l'exercice",
@@ -5535,7 +5539,7 @@ function ActiveSessionScreen({
       setRunning(r => !r);
       setHasStarted(true);
     }
-  }, running ? T("pauseBtn") : hasStarted ? T("resumePlayBtn") : T("playBtn")), /*#__PURE__*/React.createElement("button", {
+  }, running ? T("pauseBtn") : hasStarted ? T("resumePlayBtn") : T("playBtn")), currentTask?.recreEnabled !== false && /*#__PURE__*/React.createElement("button", {
     style: {
       ...base.pillBtn(false),
       fontSize: 13,
@@ -5834,7 +5838,8 @@ function ExerciseEditor({
     bpm: 0,
     beatsPerBar: 4,
     subExercises: [],
-    files: []
+    files: [],
+    recreEnabled: true
   } : {
     ...editEx,
     name: exerciseName(editEx, lang),
@@ -5847,7 +5852,11 @@ function ExerciseEditor({
       label: subExerciseLabel(s, lang),
       _origLabel: s.label
     })),
-    files: editEx.files || []
+    files: editEx.files || [],
+    // Exercises created before this toggle existed don't have the
+    // field at all — treat that the same as explicitly enabled so
+    // Récré keeps working for every exercise made until now.
+    recreEnabled: editEx.recreEnabled !== false
   });
   const [iconPicker, setIconPicker] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
@@ -6225,6 +6234,25 @@ function ExerciseEditor({
       marginTop: 4
     }
   }, form.beatsPerBar, "/4 · ", form.bpm, " BPM"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      fontSize: 13,
+      color: C.cream,
+      cursor: "pointer"
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: form.recreEnabled !== false,
+    onChange: e => setF("recreEnabled", e.target.checked)
+  }), T("recreEnabledLabel")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: C.muted,
+      marginTop: 4
+    }
+  }, T("recreEnabledHint"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     style: base.label
   }, T("durationLabel")), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -8642,7 +8670,8 @@ function App() {
       bpm: ex.bpm || 0,
       beatsPerBar: ex.beatsPerBar || 4,
       subExercises: ex.subExercises || [],
-      files: ex.files || []
+      files: ex.files || [],
+      recreEnabled: ex.recreEnabled !== false
     }]);
   };
   const removeExerciseFromSession = exerciseId => {

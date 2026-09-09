@@ -42,6 +42,7 @@ const STRINGS = {
     iconLabel: "Icon", nameLabel: "Name", descLabel: "Description", youtubeLabel: "YouTube Reference Video (optional)",
     youtubePlaceholder: "https://youtube.com/watch?v=...", youtubeError: "⚠ URL not recognised — try a standard youtube.com or youtu.be link",
     youtubeOk: "✓ Video ID: ", durationLabel: "Default Duration (minutes)", categoryLabel: "Category",
+    recreEnabledLabel: "Allow Recess during this exercise", recreEnabledHint: "When off, the 🛝 Recess button won't be offered during a session while this exercise is active.",
     addExercise: "Add Exercise", saveChanges: "Save Changes", deleteExercise: "Delete Exercise",
     newCategory: "+ New Category", editCategory: "Edit Category", newCategoryTitle: "New Category",
     colorLabel: "Color", preview: "Preview", addCategory: "Add Category",
@@ -166,6 +167,7 @@ const STRINGS = {
     iconLabel: "Icône", nameLabel: "Nom", descLabel: "Description", youtubeLabel: "Vidéo YouTube de référence (optionnel)",
     youtubePlaceholder: "https://youtube.com/watch?v=...", youtubeError: "⚠ URL non reconnue — essayez un lien youtube.com ou youtu.be standard",
     youtubeOk: "✓ ID vidéo : ", durationLabel: "Durée par défaut (minutes)", categoryLabel: "Catégorie",
+    recreEnabledLabel: "Autoriser la récré pendant cet exercice", recreEnabledHint: "Si désactivé, le bouton 🛝 Récré ne sera pas proposé en séance tant que cet exercice est en cours.",
     addExercise: "Ajouter l'exercice", saveChanges: "Enregistrer", deleteExercise: "Supprimer l'exercice",
     newCategory: "+ Nouvelle catégorie", editCategory: "Modifier la catégorie", newCategoryTitle: "Nouvelle catégorie",
     colorLabel: "Couleur", preview: "Aperçu", addCategory: "Ajouter la catégorie",
@@ -2617,12 +2619,14 @@ function ActiveSessionScreen({
             >
               {running ? T("pauseBtn") : hasStarted ? T("resumePlayBtn") : T("playBtn")}
             </button>
-            <button
-              style={{ ...base.pillBtn(false), fontSize: 13, padding: "9px 13px", display: "flex", alignItems: "center", gap: 5, color: "#FBBF24", border: "1px solid #FBBF2455", background: "#FBBF2418" }}
-              onClick={startNoodling}
-            >
-              {T("noodleBtn")}
-            </button>
+            {currentTask?.recreEnabled !== false && (
+              <button
+                style={{ ...base.pillBtn(false), fontSize: 13, padding: "9px 13px", display: "flex", alignItems: "center", gap: 5, color: "#FBBF24", border: "1px solid #FBBF2455", background: "#FBBF2418" }}
+                onClick={startNoodling}
+              >
+                {T("noodleBtn")}
+              </button>
+            )}
           </div>
           {/* Metronome — on/off toggle always available; BPM & time signature
               only shown once switched on, adjustable live for this exercise. */}
@@ -2747,7 +2751,7 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBac
   // kept, so translations keep working after switching languages again.
   const [form, setForm] = useState(
     isNew
-      ? { name: "", description: "", defaultMin: 10, icon: "🎸", categoryId: categories[0]?.id || "", youtubeUrl: "", bpm: 0, beatsPerBar: 4, subExercises: [], files: [] }
+      ? { name: "", description: "", defaultMin: 10, icon: "🎸", categoryId: categories[0]?.id || "", youtubeUrl: "", bpm: 0, beatsPerBar: 4, subExercises: [], files: [], recreEnabled: true }
       : {
           ...editEx,
           name: exerciseName(editEx, lang),
@@ -2755,6 +2759,10 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBac
           youtubeUrl: editEx.youtubeUrl || "", bpm: editEx.bpm || 0, beatsPerBar: editEx.beatsPerBar || 4,
           subExercises: (editEx.subExercises || []).map(s => ({ id: s.id, label: subExerciseLabel(s, lang), _origLabel: s.label })),
           files: editEx.files || [],
+          // Exercises created before this toggle existed don't have the
+          // field at all — treat that the same as explicitly enabled so
+          // Récré keeps working for every exercise made until now.
+          recreEnabled: editEx.recreEnabled !== false,
         }
   );
   const [iconPicker, setIconPicker] = useState(false);
@@ -2919,6 +2927,13 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBac
               <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>{form.beatsPerBar}/4 · {form.bpm} BPM</div>
             </div>
           )}
+        </div>
+        <div>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: C.cream, cursor: "pointer" }}>
+            <input type="checkbox" checked={form.recreEnabled !== false} onChange={e => setF("recreEnabled", e.target.checked)} />
+            {T("recreEnabledLabel")}
+          </label>
+          <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>{T("recreEnabledHint")}</div>
         </div>
         <div>
           <label style={base.label}>{T("durationLabel")}</label>
@@ -4138,7 +4153,7 @@ export default function App() {
 
   const addExercise = (ex) => {
     ensureAudio();
-    setTasks(prev => [...prev, { id: uid(), exerciseId: ex.id, name: ex.name, icon: ex.icon, description: ex.description || "", minutes: ex.defaultMin, categoryId: ex.categoryId, youtubeUrl: ex.youtubeUrl || "", bpm: ex.bpm || 0, beatsPerBar: ex.beatsPerBar || 4, subExercises: ex.subExercises || [], files: ex.files || [] }]);
+    setTasks(prev => [...prev, { id: uid(), exerciseId: ex.id, name: ex.name, icon: ex.icon, description: ex.description || "", minutes: ex.defaultMin, categoryId: ex.categoryId, youtubeUrl: ex.youtubeUrl || "", bpm: ex.bpm || 0, beatsPerBar: ex.beatsPerBar || 4, subExercises: ex.subExercises || [], files: ex.files || [], recreEnabled: ex.recreEnabled !== false }]);
   };
 
   const removeExerciseFromSession = (exerciseId) => {

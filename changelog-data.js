@@ -19,6 +19,9 @@
 // version antérieure.
 
 window.CHANGELOG_DATA = [
+  { version: 6, date: "2026-09-09", changes: [
+    "Le mode Récré peut maintenant être activé ou désactivé pour chaque exercice (dans ses réglages) — désactivé, le bouton 🛝 Récré ne s'affiche plus pendant cet exercice en séance.",
+  ] },
   { version: 5, date: "2026-09-08", changes: [
     "Réorganisation des Réglages en menu déroulant, avec une flèche de retour plus grande et plus visible.",
     "Le bouton retour du téléphone fonctionne maintenant correctement pour naviguer dans les Réglages.",
