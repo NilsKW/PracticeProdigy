@@ -3691,8 +3691,19 @@ function buildBranchNode({ attachX, attachY, dirAngle, len, color, depth, key },
       const offset = (skew + baseOffset + angleJitter) * depthDamp * (0.4 + 0.6 * originT);
       const originX = attachX + (endX - attachX) * originT;
       const originY = attachY + (endY - attachY) * originT;
+      // "Biais vers le ciel des premières ramifications" only touches depth
+      // 0 → 1 (the very first split off each main branch). At 0 it's a
+      // no-op (the angle above, whatever direction chance sent it in); at
+      // 100 it overrides that entirely and points straight up (absolute
+      // dirAngle 0), regardless of the branch's own lean or any of the
+      // randomness above — everything in between blends linearly.
+      let childDirAngle = dirAngle + offset;
+      if (depth === 0) {
+        const skyBias = clamp01(opts.skyBiasPct / 100);
+        childDirAngle *= (1 - skyBias);
+      }
       const child = buildBranchNode({
-        attachX: originX, attachY: originY, dirAngle: dirAngle + offset, len: subLen,
+        attachX: originX, attachY: originY, dirAngle: childDirAngle, len: subLen,
         color, depth: depth + 1, key: `${key}-${j}`,
       }, opts);
       children.push(child);
@@ -3727,7 +3738,7 @@ function leavesForNode(b, perBranchLeaves) {
 
 function GrowthTree({
   trunkPct, branchCount, leafCount, firstBranchPct = 50, leafSizePct = 50,
-  subDepth = 0, subCount = 3, subLenPct = 65, subBiasPct = 50, originSpreadPct = 50,
+  subDepth = 0, subCount = 3, subLenPct = 65, subBiasPct = 50, originSpreadPct = 50, skyBiasPct = 0,
 }) {
   const W = 300, H = 300;
   const baseX = W / 2, baseY = H - 16;
@@ -3769,7 +3780,7 @@ function GrowthTree({
   const startT = Math.min(clamp01(firstBranchPct / 100), topT - 0.02);
 
   const counter = { n: 0 };
-  const subOpts = { maxDepth: Math.round(subDepth), subCount: Math.round(subCount), subLenPct, subBiasPct, originSpreadPct, counter };
+  const subOpts = { maxDepth: Math.round(subDepth), subCount: Math.round(subCount), subLenPct, subBiasPct, originSpreadPct, skyBiasPct, counter };
   const allNodes = [];
   for (let i = 0; i < n; i++) {
     const len = branchMin + (branchMax - branchMin) * clamp01(TREE_DEFAULT_BRANCH_PCT / 100);
@@ -3820,6 +3831,7 @@ function GrowthTreeDebugPreview() {
   const [subBiasPct, setSubBiasPct] = useState(45);
   const [originSpreadPct, setOriginSpreadPct] = useState(50);
   const [leafSizePct, setLeafSizePct] = useState(50);
+  const [skyBiasPct, setSkyBiasPct] = useState(0);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -3831,7 +3843,7 @@ function GrowthTreeDebugPreview() {
       <div style={{ ...base.card, overflow: "visible", padding: "18px 16px", position: "sticky", top: 0, zIndex: 5, boxShadow: "0 10px 18px -10px #000000cc" }}>
         <GrowthTree
           trunkPct={trunkPct} branchCount={branchCount} leafCount={leafCount} firstBranchPct={firstBranchPct} leafSizePct={leafSizePct}
-          subDepth={subDepth} subCount={subCount} subLenPct={subLenPct} subBiasPct={subBiasPct} originSpreadPct={originSpreadPct}
+          subDepth={subDepth} subCount={subCount} subLenPct={subLenPct} subBiasPct={subBiasPct} originSpreadPct={originSpreadPct} skyBiasPct={skyBiasPct}
         />
       </div>
       <div style={base.card}>
@@ -3885,6 +3897,18 @@ function GrowthTreeDebugPreview() {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <input type="range" min="0" max="100" step="1" value={originSpreadPct} onChange={e => setOriginSpreadPct(parseInt(e.target.value))} style={{ flex: 1, accentColor: "#B06BBF", height: 4, cursor: "pointer" }} />
             <span style={{ fontSize: 13, fontFamily: "monospace", color: "#B06BBF", fontWeight: 700, width: 34, textAlign: "right" }}>{originSpreadPct}</span>
+          </div>
+        </div>
+      </div>
+      <div style={base.card}>
+        <div style={{ padding: "14px 16px" }}>
+          <label style={{ ...base.label, margin: 0 }}>Biais vers le ciel des premières ramifications</label>
+          <div style={{ fontSize: 11, color: C.muted, marginTop: 4, marginBottom: 10 }}>
+            À 0, les premières ramifications pointent dans une direction aléatoire. À 100, elles pointent toutes complètement vers le haut.
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <input type="range" min="0" max="100" step="1" value={skyBiasPct} onChange={e => setSkyBiasPct(parseInt(e.target.value))} style={{ flex: 1, accentColor: "#B06BBF", height: 4, cursor: "pointer" }} />
+            <span style={{ fontSize: 13, fontFamily: "monospace", color: "#B06BBF", fontWeight: 700, width: 34, textAlign: "right" }}>{skyBiasPct}</span>
           </div>
         </div>
       </div>
