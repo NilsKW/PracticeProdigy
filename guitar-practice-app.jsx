@@ -3575,6 +3575,18 @@ function buildBranchNode({ attachX, attachY, dirAngle, len, color, depth, key },
       .map(s => ({ s, r: seededRandom(`${key}|order|${s}`) }))
       .sort((a, b) => a.r - b.r)
       .map(o => o.s);
+    // Origin position along the parent gets its OWN independent shuffle
+    // rather than reusing the angle's slot. Reusing it meant slot 0 (the
+    // leftmost angle) always also got the lowest origin-t, and the last
+    // slot (rightmost angle) always got t=1 — so the rightmost branch
+    // always started at the tip, barely moved by "répartition", while the
+    // leftmost one was the one entirely at the mercy of that slider,
+    // collapsing towards the trunk as it dropped. Angle and position had no
+    // business being tied together like that.
+    const originOrder = Array.from({ length: n }, (_, s) => s)
+      .map(s => ({ s, r: seededRandom(`${key}|originOrder|${s}`) }))
+      .sort((a, b) => a.r - b.r)
+      .map(o => o.s);
     // Every node used to fan out symmetrically around its own direction, so
     // moving "biais des sous-ramifications" just scaled that same symmetric
     // fan up or down identically everywhere — bigger or smaller, but the
@@ -3609,8 +3621,9 @@ function buildBranchNode({ attachX, attachY, dirAngle, len, color, depth, key },
     for (let j = 0; j < n && opts.counter.n < TREE_MAX_NODES; j++) {
       opts.counter.n++;
       const slot = order[j];
+      const originSlot = originOrder[j];
       const baseOffset = n > 1 ? -maxSubAngle + (2 * maxSubAngle) * (slot / (n - 1)) : 0;
-      const baseT = n > 1 ? originFloor + (1 - originFloor) * (slot / (n - 1)) : 0.5;
+      const baseT = n > 1 ? originFloor + (1 - originFloor) * (originSlot / (n - 1)) : 0.5;
       const angleJitter = (seededRandom(`${key}|${j}|a`) - 0.5) * maxSubAngle * 0.7;
       const tJitter = (seededRandom(`${key}|${j}|t`) - 0.5) * 0.3;
       const originT = clamp01(baseT + (1 - baseT) * spread + tJitter);
