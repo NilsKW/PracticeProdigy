@@ -3068,6 +3068,12 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
   // than inventing a separate multi-level breadcrumb for what's really just
   // one level of nesting.
   const [section, setSection] = useState(null);
+  // One extra level of nesting inside the "debug" section: null = the
+  // "Arbre manuel" / "Arbre animé" sub-menu list, otherwise which of the two
+  // is open. Reset whenever the user leaves "debug" entirely, so re-opening
+  // it later always starts back at the sub-menu list.
+  const [debugSubSection, setDebugSubSection] = useState(null);
+  useEffect(() => { if (section !== "debug") setDebugSubSection(null); }, [section]);
   // `group` splits the menu into the app's own settings vs. the
   // meta/development section (feedback, version history, the temporary
   // debug tools) — rendered with a small label divider between them so the
@@ -3159,15 +3165,16 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
   // editor lands on the section's list, and going back again from there
   // lands on the main Réglages menu.
   useEffect(() => {
-    if (!editEx && !editCat && !section) return;
+    if (!editEx && !editCat && !section && !debugSubSection) return;
     history.pushState({ practiceProdigySubScreen: true }, "");
     const onPopState = () => {
       if (editEx || editCat) requestCloseEditor();
+      else if (debugSubSection) setDebugSubSection(null);
       else setSection(null);
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, [editEx, editCat, section]);
+  }, [editEx, editCat, section, debugSubSection]);
 
   if (editEx)  return <ExerciseEditor  editEx={editEx}   categories={categories} setExercises={setExercises} onBack={() => setEditEx(null)} onRequestBack={requestCloseEditor} guardRef={editorGuardRef} />;
   if (editCat) return <CategoryEditor  editCat={editCat} setExercises={setExercises} setCategories={setCategories} onBack={() => setEditCat(null)} onRequestBack={requestCloseEditor} guardRef={editorGuardRef} />;
@@ -3492,16 +3499,61 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
               Cette section sert au développement de l'application — elle n'a aucune utilité pour votre usage de l'appli.
             </span>
           </div>
+
           {/* PROTOTYPE — future replacement for the "Niveau" screen in
               Progression: a tree that grows with practice time (trunk = total
               time, one branch per category, leaves populate branches over
-              time). Sliders here use arbitrary values, not real stats, so the
-              look can be judged without wiring up real data yet. */}
-          <div style={{ ...base.sectionTitle, padding: "0 4px" }}>Prototype — arbre de progression</div>
-          <div style={{ fontSize: 11, color: C.muted, padding: "0 4px" }}>
-            Aperçu de ce qui remplacera plus tard l'écran « Niveau ». Les curseurs ci-dessous servent uniquement à tester le rendu — ils n'utilisent pas vos vraies statistiques.
-          </div>
-          <GrowthTreeDebugPreview />
+              time). "Arbre manuel" is the free-form slider playground used to
+              dial in the look; "Arbre animé" replays a fixed start → end
+              journey over time, previewing what a real student's progression
+              would actually look like growing. */}
+          {debugSubSection === null && (
+            <>
+              <div style={{ ...base.sectionTitle, padding: "0 4px" }}>Prototype — arbre de progression</div>
+              <div style={base.card}>
+                {[
+                  { id: "manual", icon: "🌳", label: "Arbre manuel" },
+                  { id: "animated", icon: "🎬", label: "Arbre animé" },
+                ].map((item, idx, arr) => (
+                  <div
+                    key={item.id}
+                    style={{ ...base.row, borderBottom: idx < arr.length - 1 ? `1px solid ${C.faint}` : "none", cursor: "pointer" }}
+                    onClick={() => setDebugSubSection(item.id)}
+                  >
+                    <span style={{ fontSize: 17, flexShrink: 0 }}>{item.icon}</span>
+                    <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.cream }}>{item.label}</span>
+                    <span style={{ color: C.muted, fontSize: 14 }}>›</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {debugSubSection === "manual" && (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <button style={base.backBtn} onClick={() => setDebugSubSection(null)}>←</button>
+                <span style={base.backTitle}>Arbre manuel</span>
+              </div>
+              <div style={{ fontSize: 11, color: C.muted, padding: "0 4px" }}>
+                Aperçu de ce qui remplacera plus tard l'écran « Niveau ». Les curseurs ci-dessous servent uniquement à tester le rendu — ils n'utilisent pas vos vraies statistiques.
+              </div>
+              <GrowthTreeDebugPreview />
+            </>
+          )}
+
+          {debugSubSection === "animated" && (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <button style={base.backBtn} onClick={() => setDebugSubSection(null)}>←</button>
+                <span style={base.backTitle}>Arbre animé</span>
+              </div>
+              <div style={{ fontSize: 11, color: C.muted, padding: "0 4px" }}>
+                Simulation de la progression d'un élève : chaque feuille représente une séance de travail. L'arbre grandit et se ramifie naturellement entre un premier et un dernier jeu de réglages.
+              </div>
+              <GrowthTreeAnimatedPreview />
+            </>
+          )}
         </div>
       )}
 
@@ -3884,6 +3936,80 @@ function GrowthTreeDebugPreview() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// The parameter set "Arbre manuel" left the tree at when the growth-through-
+// time look was judged good — one practice session's worth of tree (a single
+// thin sprout) at one end, several seasons of steady practice (a full,
+// many-branched tree) at the other. Branch count is deliberately left out
+// and held fixed at 4: this animation is about a single student's tree
+// filling in over time, not about the number of categories changing.
+const TREE_ANIM_START = { subDepth: 1, subCount: 1, subLenPct: 44, subBiasPct: 100, originSpreadPct: 20, leafSizePct: 60, trunkPct: 25, branchCount: 4, firstBranchPct: 45, leafCount: 1 };
+const TREE_ANIM_END   = { subDepth: 3, subCount: 5, subLenPct: 75, subBiasPct: 66,  originSpreadPct: 60, leafSizePct: 16, trunkPct: 77, branchCount: 4, firstBranchPct: 74, leafCount: 4 };
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+// "Arbre animé": replays that start → end journey over a chosen duration
+// instead of leaving every parameter under manual control, so the growth
+// itself — meant to stand in for a student's practice history, one leaf per
+// session — can be watched happening rather than poked at frame by frame.
+function GrowthTreeAnimatedPreview() {
+  const [durationSec, setDurationSec] = useState(8);
+  const [progress, setProgress] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  // A setInterval tick (rather than requestAnimationFrame) so the growth
+  // keeps advancing on real elapsed time even if this tab loses focus or
+  // gets backgrounded mid-animation — rAF can throttle down to near-zero in
+  // a hidden tab, which would otherwise leave "en cours" stuck indefinitely.
+  const intervalRef = useRef(null);
+  const startedAtRef = useRef(null);
+
+  useEffect(() => () => { if (intervalRef.current) clearInterval(intervalRef.current); }, []);
+
+  const play = () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setPlaying(true);
+    setProgress(0);
+    startedAtRef.current = Date.now();
+    intervalRef.current = setInterval(() => {
+      const elapsedSec = (Date.now() - startedAtRef.current) / 1000;
+      const p = Math.min(1, elapsedSec / durationSec);
+      setProgress(p);
+      if (p >= 1) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+        setPlaying(false);
+      }
+    }, 40);
+  };
+
+  const params = {};
+  for (const k in TREE_ANIM_START) params[k] = lerp(TREE_ANIM_START[k], TREE_ANIM_END[k], progress);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ ...base.card, overflow: "visible", padding: "18px 16px" }}>
+        <GrowthTree
+          trunkPct={params.trunkPct} branchCount={params.branchCount} leafCount={params.leafCount}
+          firstBranchPct={params.firstBranchPct} leafSizePct={params.leafSizePct}
+          subDepth={params.subDepth} subCount={params.subCount} subLenPct={params.subLenPct}
+          subBiasPct={params.subBiasPct} originSpreadPct={params.originSpreadPct}
+        />
+      </div>
+      <div style={base.card}>
+        <div style={{ padding: "14px 16px" }}>
+          <label style={{ ...base.label, margin: 0 }}>Durée totale de l'animation</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+            <input type="range" min="1" max="60" step="1" value={durationSec} onChange={e => setDurationSec(parseInt(e.target.value))} style={{ flex: 1, accentColor: C.amber, height: 4, cursor: "pointer" }} />
+            <span style={{ fontSize: 13, fontFamily: "monospace", color: C.amber, fontWeight: 700, width: 44, textAlign: "right" }}>{durationSec}s</span>
+          </div>
+        </div>
+      </div>
+      <button style={base.pillBtn(true)} onClick={play}>
+        {playing ? "⏳ Animation en cours…" : "▶ Lancer l'animation"}
+      </button>
     </div>
   );
 }
