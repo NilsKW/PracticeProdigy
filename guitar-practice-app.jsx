@@ -3834,10 +3834,27 @@ function GrowthTree({
   const leafMin = 2.5, leafMax = 10;
   const leafR = leafMin + (leafMax - leafMin) * clamp01(leafSizePct / 100);
 
+  // A few dark bark lines drawn along the trunk, purely cosmetic (fixed
+  // relative offsets/spans, no randomness needed) to break up the flat
+  // trunk color with a bit of grain/texture.
+  const barkLines = [
+    { dxFrac: -0.32, yStartFrac: 0.06, yEndFrac: 0.92 },
+    { dxFrac: 0.12, yStartFrac: 0.16, yEndFrac: 0.80 },
+    { dxFrac: 0.4, yStartFrac: 0.02, yEndFrac: 0.55 },
+  ];
+
   return (
     <svg viewBox={`-40 -60 ${W + 80} ${H + 90}`} width="100%" style={{ maxWidth: 320, display: "block", margin: "0 auto", overflow: "visible" }}>
       <ellipse cx={baseX} cy={baseY + 6} rx="70" ry="8" fill="#00000033" />
       <line x1={baseX} y1={baseY} x2={baseX} y2={trunkTopY} stroke="#8B5E3C" strokeWidth={trunkW} strokeLinecap="round" />
+      {barkLines.map((bl, i) => {
+        const x = baseX + bl.dxFrac * trunkW;
+        const y1 = baseY - trunkH * bl.yStartFrac;
+        const y2 = baseY - trunkH * bl.yEndFrac;
+        return (
+          <line key={`bark${i}`} x1={x} y1={y1} x2={x} y2={y2} stroke="#4A2F1E" strokeWidth={1.4} strokeLinecap="round" opacity="0.55" />
+        );
+      })}
       {allNodes.map(b => (
         <line key={b.key} x1={b.attachX} y1={b.attachY} x2={b.endX} y2={b.endY} stroke="#8B5E3C" strokeWidth={Math.max(1.5, trunkW * 0.4 * Math.pow(0.7, b.depth))} strokeLinecap="round" />
       ))}
@@ -4009,6 +4026,20 @@ const TREE_ANIM_MIN_LEAVES = 2;
 
 function lerp(a, b, t) { return a + (b - a) * t; }
 
+// Reshapes a 0-1 progress value so growth can front-load — fast early
+// levels, slower later ones — instead of scaling linearly with level.
+// curveAmount 0 = linear (returned as-is); as it rises toward 100 the
+// curve bends more sharply logarithmic (K grows, so early t values map to
+// a much larger share of the 0-1 output than they would linearly, while
+// values near t=1 still land on exactly 1). Always passes through (0,0)
+// and (1,1) regardless of amount, so it never changes the start/end tree.
+function curveProgress(t, curveAmount) {
+  const amount = clamp01(curveAmount / 100);
+  if (amount <= 0) return t;
+  const K = 1 + amount * 60;
+  return Math.log(1 + t * (K - 1)) / Math.log(K);
+}
+
 // "Arbre animé": a single "niveau" slider (0-100) drives every parameter's
 // position between that start and end set directly and instantly — no
 // timer, no play button. At 0 it's the very first session's tree (a single
@@ -4017,15 +4048,18 @@ function lerp(a, b, t) { return a + (b - a) * t; }
 // same way a real level slider would once this reads off actual progress.
 function GrowthTreeAnimatedPreview() {
   const [level, setLevel] = useState(0);
-  const [maxLeaves, setMaxLeaves] = useState(300);
-  const progress = level / 100;
+  const [maxLeaves, setMaxLeaves] = useState(900);
+  const [curveAmount, setCurveAmount] = useState(60);
+  const progress = curveProgress(level / 100, curveAmount);
 
   const params = {};
   for (const k in TREE_ANIM_START) params[k] = lerp(TREE_ANIM_START[k], TREE_ANIM_END[k], progress);
   // Leaf count is anchored to land on exactly 2 at level 1 and exactly
   // maxLeaves at level 100 (not level 0), so the very first level already
   // shows a couple of leaves instead of starting from a fraction of one.
-  const leafProgress = clamp01((level - 1) / 99);
+  // The same curve is applied here so leaf growth front-loads together
+  // with the rest of the tree instead of staying linear on its own.
+  const leafProgress = curveProgress(clamp01((level - 1) / 99), curveAmount);
   const totalLeaves = Math.round(lerp(TREE_ANIM_MIN_LEAVES, maxLeaves, leafProgress));
 
   return (
@@ -4053,6 +4087,16 @@ function GrowthTreeAnimatedPreview() {
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
             <input type="range" min="10" max="1000" step="10" value={maxLeaves} onChange={e => setMaxLeaves(parseInt(e.target.value))} style={{ flex: 1, accentColor: "#8FBF6B", height: 4, cursor: "pointer" }} />
             <span style={{ fontSize: 13, fontFamily: "monospace", color: "#8FBF6B", fontWeight: 700, width: 40, textAlign: "right" }}>{maxLeaves}</span>
+          </div>
+        </div>
+      </div>
+      <div style={base.card}>
+        <div style={{ padding: "14px 16px" }}>
+          <label style={{ ...base.label, margin: 0 }}>Évolution : linéaire ↔ logarithmique</label>
+          <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>À 0, la croissance est régulière à chaque niveau. Plus proche de 100, l'arbre grandit surtout au début, puis de moins en moins à chaque niveau.</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+            <input type="range" min="0" max="100" step="1" value={curveAmount} onChange={e => setCurveAmount(parseInt(e.target.value))} style={{ flex: 1, accentColor: "#6FA8D6", height: 4, cursor: "pointer" }} />
+            <span style={{ fontSize: 13, fontFamily: "monospace", color: "#6FA8D6", fontWeight: 700, width: 34, textAlign: "right" }}>{curveAmount}</span>
           </div>
         </div>
       </div>
