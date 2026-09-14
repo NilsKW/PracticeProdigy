@@ -3504,9 +3504,10 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
               Progression: a tree that grows with practice time (trunk = total
               time, one branch per category, leaves populate branches over
               time). "Arbre manuel" is the free-form slider playground used to
-              dial in the look; "Arbre animé" replays a fixed start → end
-              journey over time, previewing what a real student's progression
-              would actually look like growing. */}
+              dial in the look; "Arbre animé" drives every parameter between a
+              fixed start and end set with a single "niveau" slider (0-100),
+              previewing what a real student's progression would actually
+              look like growing as that level rises. */}
           {debugSubSection === null && (
             <>
               <div style={{ ...base.sectionTitle, padding: "0 4px" }}>Prototype — arbre de progression</div>
@@ -3970,70 +3971,43 @@ function GrowthTreeDebugPreview() {
 // many-branched tree) at the other. Branch count is deliberately left out
 // and held fixed at 4: this animation is about a single student's tree
 // filling in over time, not about the number of categories changing.
-const TREE_ANIM_START = { subDepth: 1, subCount: 1, subLenPct: 44, subBiasPct: 100, originSpreadPct: 20, leafSizePct: 60, trunkPct: 25, branchCount: 4, firstBranchPct: 45, leafCount: 1 };
-const TREE_ANIM_END   = { subDepth: 3, subCount: 5, subLenPct: 75, subBiasPct: 66,  originSpreadPct: 60, leafSizePct: 16, trunkPct: 77, branchCount: 4, firstBranchPct: 74, leafCount: 4 };
+const TREE_ANIM_START = { subDepth: 1, subCount: 1, subLenPct: 44, subBiasPct: 100, originSpreadPct: 20, leafSizePct: 60, trunkPct: 25, branchCount: 4, firstBranchPct: 45, leafCount: 1, skyBiasPct: 20 };
+const TREE_ANIM_END   = { subDepth: 3, subCount: 5, subLenPct: 75, subBiasPct: 66,  originSpreadPct: 60, leafSizePct: 16, trunkPct: 77, branchCount: 4, firstBranchPct: 74, leafCount: 4, skyBiasPct: 30 };
 
 function lerp(a, b, t) { return a + (b - a) * t; }
 
-// "Arbre animé": replays that start → end journey over a chosen duration
-// instead of leaving every parameter under manual control, so the growth
-// itself — meant to stand in for a student's practice history, one leaf per
-// session — can be watched happening rather than poked at frame by frame.
+// "Arbre animé": a single "niveau" slider (0-100) drives every parameter's
+// position between that start and end set directly and instantly — no
+// timer, no play button. At 0 it's the very first session's tree (a single
+// thin sprout); at 100, several seasons of steady practice (a full,
+// many-branched tree); dragging between the two moves the tree live, the
+// same way a real level slider would once this reads off actual progress.
 function GrowthTreeAnimatedPreview() {
-  const [durationSec, setDurationSec] = useState(8);
-  const [progress, setProgress] = useState(0);
-  const [playing, setPlaying] = useState(false);
-  // A setInterval tick (rather than requestAnimationFrame) so the growth
-  // keeps advancing on real elapsed time even if this tab loses focus or
-  // gets backgrounded mid-animation — rAF can throttle down to near-zero in
-  // a hidden tab, which would otherwise leave "en cours" stuck indefinitely.
-  const intervalRef = useRef(null);
-  const startedAtRef = useRef(null);
-
-  useEffect(() => () => { if (intervalRef.current) clearInterval(intervalRef.current); }, []);
-
-  const play = () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    setPlaying(true);
-    setProgress(0);
-    startedAtRef.current = Date.now();
-    intervalRef.current = setInterval(() => {
-      const elapsedSec = (Date.now() - startedAtRef.current) / 1000;
-      const p = Math.min(1, elapsedSec / durationSec);
-      setProgress(p);
-      if (p >= 1) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-        setPlaying(false);
-      }
-    }, 40);
-  };
+  const [level, setLevel] = useState(0);
+  const progress = level / 100;
 
   const params = {};
   for (const k in TREE_ANIM_START) params[k] = lerp(TREE_ANIM_START[k], TREE_ANIM_END[k], progress);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ ...base.card, overflow: "visible", padding: "18px 16px" }}>
+      <div style={{ ...base.card, overflow: "visible", padding: "18px 16px", position: "sticky", top: 0, zIndex: 5, boxShadow: "0 10px 18px -10px #000000cc" }}>
         <GrowthTree
           trunkPct={params.trunkPct} branchCount={params.branchCount} leafCount={params.leafCount}
           firstBranchPct={params.firstBranchPct} leafSizePct={params.leafSizePct}
           subDepth={params.subDepth} subCount={params.subCount} subLenPct={params.subLenPct}
-          subBiasPct={params.subBiasPct} originSpreadPct={params.originSpreadPct}
+          subBiasPct={params.subBiasPct} originSpreadPct={params.originSpreadPct} skyBiasPct={params.skyBiasPct}
         />
       </div>
       <div style={base.card}>
         <div style={{ padding: "14px 16px" }}>
-          <label style={{ ...base.label, margin: 0 }}>Durée totale de l'animation</label>
+          <label style={{ ...base.label, margin: 0 }}>Niveau</label>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
-            <input type="range" min="1" max="60" step="1" value={durationSec} onChange={e => setDurationSec(parseInt(e.target.value))} style={{ flex: 1, accentColor: C.amber, height: 4, cursor: "pointer" }} />
-            <span style={{ fontSize: 13, fontFamily: "monospace", color: C.amber, fontWeight: 700, width: 44, textAlign: "right" }}>{durationSec}s</span>
+            <input type="range" min="0" max="100" step="1" value={level} onChange={e => setLevel(parseInt(e.target.value))} style={{ flex: 1, accentColor: C.amber, height: 4, cursor: "pointer" }} />
+            <span style={{ fontSize: 13, fontFamily: "monospace", color: C.amber, fontWeight: 700, width: 34, textAlign: "right" }}>{level}</span>
           </div>
         </div>
       </div>
-      <button style={base.pillBtn(true)} onClick={play}>
-        {playing ? "⏳ Animation en cours…" : "▶ Lancer l'animation"}
-      </button>
     </div>
   );
 }

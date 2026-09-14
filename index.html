@@ -8502,7 +8502,8 @@ const TREE_ANIM_START = {
   trunkPct: 25,
   branchCount: 4,
   firstBranchPct: 45,
-  leafCount: 1
+  leafCount: 1,
+  skyBiasPct: 20
 };
 const TREE_ANIM_END = {
   subDepth: 3,
@@ -8514,45 +8515,22 @@ const TREE_ANIM_END = {
   trunkPct: 77,
   branchCount: 4,
   firstBranchPct: 74,
-  leafCount: 4
+  leafCount: 4,
+  skyBiasPct: 30
 };
 function lerp(a, b, t) {
   return a + (b - a) * t;
 }
 
-// "Arbre animé": replays that start → end journey over a chosen duration
-// instead of leaving every parameter under manual control, so the growth
-// itself — meant to stand in for a student's practice history, one leaf per
-// session — can be watched happening rather than poked at frame by frame.
+// "Arbre animé": a single "niveau" slider (0-100) drives every parameter's
+// position between that start and end set directly and instantly — no
+// timer, no play button. At 0 it's the very first session's tree (a single
+// thin sprout); at 100, several seasons of steady practice (a full,
+// many-branched tree); dragging between the two moves the tree live, the
+// same way a real level slider would once this reads off actual progress.
 function GrowthTreeAnimatedPreview() {
-  const [durationSec, setDurationSec] = useState(8);
-  const [progress, setProgress] = useState(0);
-  const [playing, setPlaying] = useState(false);
-  // A setInterval tick (rather than requestAnimationFrame) so the growth
-  // keeps advancing on real elapsed time even if this tab loses focus or
-  // gets backgrounded mid-animation — rAF can throttle down to near-zero in
-  // a hidden tab, which would otherwise leave "en cours" stuck indefinitely.
-  const intervalRef = useRef(null);
-  const startedAtRef = useRef(null);
-  useEffect(() => () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-  }, []);
-  const play = () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    setPlaying(true);
-    setProgress(0);
-    startedAtRef.current = Date.now();
-    intervalRef.current = setInterval(() => {
-      const elapsedSec = (Date.now() - startedAtRef.current) / 1000;
-      const p = Math.min(1, elapsedSec / durationSec);
-      setProgress(p);
-      if (p >= 1) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-        setPlaying(false);
-      }
-    }, 40);
-  };
+  const [level, setLevel] = useState(0);
+  const progress = level / 100;
   const params = {};
   for (const k in TREE_ANIM_START) params[k] = lerp(TREE_ANIM_START[k], TREE_ANIM_END[k], progress);
   return /*#__PURE__*/React.createElement("div", {
@@ -8565,7 +8543,11 @@ function GrowthTreeAnimatedPreview() {
     style: {
       ...base.card,
       overflow: "visible",
-      padding: "18px 16px"
+      padding: "18px 16px",
+      position: "sticky",
+      top: 0,
+      zIndex: 5,
+      boxShadow: "0 10px 18px -10px #000000cc"
     }
   }, /*#__PURE__*/React.createElement(GrowthTree, {
     trunkPct: params.trunkPct,
@@ -8577,7 +8559,8 @@ function GrowthTreeAnimatedPreview() {
     subCount: params.subCount,
     subLenPct: params.subLenPct,
     subBiasPct: params.subBiasPct,
-    originSpreadPct: params.originSpreadPct
+    originSpreadPct: params.originSpreadPct,
+    skyBiasPct: params.skyBiasPct
   })), /*#__PURE__*/React.createElement("div", {
     style: base.card
   }, /*#__PURE__*/React.createElement("div", {
@@ -8589,7 +8572,7 @@ function GrowthTreeAnimatedPreview() {
       ...base.label,
       margin: 0
     }
-  }, "Durée totale de l'animation"), /*#__PURE__*/React.createElement("div", {
+  }, "Niveau"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       alignItems: "center",
@@ -8598,11 +8581,11 @@ function GrowthTreeAnimatedPreview() {
     }
   }, /*#__PURE__*/React.createElement("input", {
     type: "range",
-    min: "1",
-    max: "60",
+    min: "0",
+    max: "100",
     step: "1",
-    value: durationSec,
-    onChange: e => setDurationSec(parseInt(e.target.value)),
+    value: level,
+    onChange: e => setLevel(parseInt(e.target.value)),
     style: {
       flex: 1,
       accentColor: C.amber,
@@ -8615,13 +8598,10 @@ function GrowthTreeAnimatedPreview() {
       fontFamily: "monospace",
       color: C.amber,
       fontWeight: 700,
-      width: 44,
+      width: 34,
       textAlign: "right"
     }
-  }, durationSec, "s")))), /*#__PURE__*/React.createElement("button", {
-    style: base.pillBtn(true),
-    onClick: play
-  }, playing ? "⏳ Animation en cours…" : "▶ Lancer l'animation"));
+  }, level)))));
 }
 
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
