@@ -19,6 +19,9 @@
 // version antérieure.
 
 window.CHANGELOG_DATA = [
+  { version: 7, date: "2026-09-14", changes: [
+    "Nouveau réglage dans « Historique des versions » : possibilité de désactiver l'affichage automatique des nouveautés au démarrage après une mise à jour (l'historique complet reste consultable à tout moment).",
+  ] },
   { version: 6, date: "2026-09-09", changes: [
     "Le mode Récré peut maintenant être activé ou désactivé pour chaque exercice (dans ses réglages) — désactivé, le bouton 🛝 Récré ne s'affiche plus pendant cet exercice en séance.",
   ] },

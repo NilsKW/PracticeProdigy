@@ -265,6 +265,8 @@ const STRINGS = {
     changelogContinueBtn: "Continue",
     settingsChangelog: "version history",
     changelogHistoryTitle: "Update history",
+    changelogShowOnUpdateLabel: "Show what's new on launch after an update",
+    changelogShowOnUpdateHint: "When off, updates are tracked silently — you can still read the full history below any time.",
     changelogHistoryEmpty: "No updates recorded yet.",
     settingsShare: "import / export exercise groups",
     exportTitle: "Export an exercise group",
@@ -504,6 +506,8 @@ const STRINGS = {
     changelogContinueBtn: "Continuer",
     settingsChangelog: "historique des versions",
     changelogHistoryTitle: "Historique des mises à jour",
+    changelogShowOnUpdateLabel: "Afficher les nouveautés au démarrage après une mise à jour",
+    changelogShowOnUpdateHint: "Si désactivé, les mises à jour sont suivies silencieusement — tu peux toujours consulter l'historique complet ci-dessous à tout moment.",
     changelogHistoryEmpty: "Aucune mise à jour enregistrée pour l'instant.",
     settingsShare: "importer / exporter des groupes d'exercices",
     exportTitle: "Exporter un groupe d'exercices",
@@ -6537,7 +6541,9 @@ function SettingsScreen({
   onDisplaySizeChange,
   onResetBadges,
   editorGuardRef,
-  guardedRun
+  guardedRun,
+  showChangelogOnUpdate,
+  onShowChangelogOnUpdateChange
 }) {
   const T = useT();
   // null = top-level Réglages menu (a vertical list of categories, Android-
@@ -7505,6 +7511,40 @@ function SettingsScreen({
     }
   }, T("feedbackHint")))), section === "changelog" && /*#__PURE__*/React.createElement("div", {
     style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...base.card,
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "14px 16px"
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      fontSize: 13,
+      color: C.cream,
+      cursor: "pointer"
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: showChangelogOnUpdate !== false,
+    onChange: e => onShowChangelogOnUpdateChange(e.target.checked)
+  }), T("changelogShowOnUpdateLabel")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: C.muted,
+      marginTop: 4
+    }
+  }, T("changelogShowOnUpdateHint")))), /*#__PURE__*/React.createElement("div", {
+    style: {
       ...base.card,
       flexShrink: 0
     }
@@ -7529,7 +7569,7 @@ function SettingsScreen({
     }
   }, /*#__PURE__*/React.createElement(ChangelogEntries, {
     entries: window.CHANGELOG_DATA
-  })))), section === "debug" && /*#__PURE__*/React.createElement("div", {
+  }))))), section === "debug" && /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",
@@ -8683,18 +8723,23 @@ function App() {
   const CHANGELOG = window.CHANGELOG_DATA || [];
   const latestChangelogVersion = CHANGELOG[0]?.version || 0;
   const [lastSeenChangelogVersion, setLastSeenChangelogVersion, changelogVersionLoaded] = usePersisted("lastSeenChangelogVersion", null);
+  // Lets the user turn off the automatic "what's new" popup (Réglages →
+  // Historique des versions) while still being able to read the full history
+  // manually there any time — checked (shown) by default, matching the
+  // behavior before this setting existed.
+  const [showChangelogOnUpdate, setShowChangelogOnUpdate, showChangelogOnUpdateLoaded] = usePersisted("showChangelogOnUpdate", true);
   const [changelogChecked, setChangelogChecked] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
   useEffect(() => {
-    if (!changelogVersionLoaded || changelogChecked) return;
+    if (!changelogVersionLoaded || !showChangelogOnUpdateLoaded || changelogChecked) return;
     if (lastSeenChangelogVersion === null) {
       setLastSeenChangelogVersion(latestChangelogVersion);
     } else if (lastSeenChangelogVersion < latestChangelogVersion) {
-      setShowChangelog(true);
+      if (showChangelogOnUpdate) setShowChangelog(true);else setLastSeenChangelogVersion(latestChangelogVersion);
     }
     setChangelogChecked(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [changelogVersionLoaded]);
+  }, [changelogVersionLoaded, showChangelogOnUpdateLoaded]);
 
   // Navigation guard: while the Settings exercise/category editor is open
   // with unsaved changes, any exit (bottom nav, back arrow, phone back
@@ -9204,7 +9249,9 @@ function App() {
     onDisplaySizeChange: setDisplaySize,
     onResetBadges: () => setBadges({}),
     editorGuardRef: editorGuardRef,
-    guardedRun: guardedRun
+    guardedRun: guardedRun,
+    showChangelogOnUpdate: showChangelogOnUpdate,
+    onShowChangelogOnUpdateChange: setShowChangelogOnUpdate
   }), tab === "active" && /*#__PURE__*/React.createElement(ActiveSessionScreen, {
     tasks: tasks,
     setTasks: setTasks,

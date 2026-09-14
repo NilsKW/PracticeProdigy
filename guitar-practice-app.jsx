@@ -87,6 +87,7 @@ const STRINGS = {
     quitSessionConfirmBtn: "Quit the session", quitSessionCancelBtn: "Keep going",
     changelogTitle: "What's new", changelogSubtitle: "Here's what changed since you last opened the app.",
     changelogContinueBtn: "Continue", settingsChangelog: "version history", changelogHistoryTitle: "Update history",
+    changelogShowOnUpdateLabel: "Show what's new on launch after an update", changelogShowOnUpdateHint: "When off, updates are tracked silently — you can still read the full history below any time.",
     changelogHistoryEmpty: "No updates recorded yet.",
     settingsShare: "import / export exercise groups",
     exportTitle: "Export an exercise group", exportDesc: "Bundle selected categories, their exercises, and any attached files into a single file you can send to someone else.",
@@ -212,6 +213,7 @@ const STRINGS = {
     quitSessionConfirmBtn: "Quitter la séance", quitSessionCancelBtn: "Continuer",
     changelogTitle: "Quoi de neuf", changelogSubtitle: "Voici ce qui a changé depuis votre dernière visite.",
     changelogContinueBtn: "Continuer", settingsChangelog: "historique des versions", changelogHistoryTitle: "Historique des mises à jour",
+    changelogShowOnUpdateLabel: "Afficher les nouveautés au démarrage après une mise à jour", changelogShowOnUpdateHint: "Si désactivé, les mises à jour sont suivies silencieusement — tu peux toujours consulter l'historique complet ci-dessous à tout moment.",
     changelogHistoryEmpty: "Aucune mise à jour enregistrée pour l'instant.",
     settingsShare: "importer / exporter des groupes d'exercices",
     exportTitle: "Exporter un groupe d'exercices", exportDesc: "Regroupe les catégories sélectionnées, leurs exercices et les fichiers attachés en un seul fichier à envoyer à quelqu'un d'autre.",
@@ -3059,7 +3061,7 @@ function CategoryEditor({ editCat, setExercises, setCategories, onBack, onReques
   );
 }
 
-function SettingsScreen({ exercises, setExercises, categories, setCategories, volume, onVolumeChange, lang, onLangChange, displaySize, onDisplaySizeChange, onResetBadges, editorGuardRef, guardedRun }) {
+function SettingsScreen({ exercises, setExercises, categories, setCategories, volume, onVolumeChange, lang, onLangChange, displaySize, onDisplaySizeChange, onResetBadges, editorGuardRef, guardedRun, showChangelogOnUpdate, onShowChangelogOnUpdateChange }) {
   const T = useT();
   // null = top-level Réglages menu (a vertical list of categories, Android-
   // Settings style); a category id = drilled into that section, with a
@@ -3477,16 +3479,27 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
       )}
 
       {section === "changelog" && (
-        <div style={{ ...base.card, flexShrink: 0 }}>
-          <div style={{ padding: "14px 16px" }}>
-            <label style={{ ...base.label, margin: 0 }}>{T("changelogHistoryTitle")}</label>
-            {(window.CHANGELOG_DATA || []).length === 0 ? (
-              <div style={{ fontSize: 12, color: C.muted, marginTop: 8 }}>{T("changelogHistoryEmpty")}</div>
-            ) : (
-              <div style={{ marginTop: 12 }}>
-                <ChangelogEntries entries={window.CHANGELOG_DATA} />
-              </div>
-            )}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ ...base.card, flexShrink: 0 }}>
+            <div style={{ padding: "14px 16px" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: C.cream, cursor: "pointer" }}>
+                <input type="checkbox" checked={showChangelogOnUpdate !== false} onChange={e => onShowChangelogOnUpdateChange(e.target.checked)} />
+                {T("changelogShowOnUpdateLabel")}
+              </label>
+              <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>{T("changelogShowOnUpdateHint")}</div>
+            </div>
+          </div>
+          <div style={{ ...base.card, flexShrink: 0 }}>
+            <div style={{ padding: "14px 16px" }}>
+              <label style={{ ...base.label, margin: 0 }}>{T("changelogHistoryTitle")}</label>
+              {(window.CHANGELOG_DATA || []).length === 0 ? (
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 8 }}>{T("changelogHistoryEmpty")}</div>
+              ) : (
+                <div style={{ marginTop: 12 }}>
+                  <ChangelogEntries entries={window.CHANGELOG_DATA} />
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -4091,18 +4104,24 @@ export default function App() {
   const CHANGELOG = window.CHANGELOG_DATA || [];
   const latestChangelogVersion = CHANGELOG[0]?.version || 0;
   const [lastSeenChangelogVersion, setLastSeenChangelogVersion, changelogVersionLoaded] = usePersisted("lastSeenChangelogVersion", null);
+  // Lets the user turn off the automatic "what's new" popup (Réglages →
+  // Historique des versions) while still being able to read the full history
+  // manually there any time — checked (shown) by default, matching the
+  // behavior before this setting existed.
+  const [showChangelogOnUpdate, setShowChangelogOnUpdate, showChangelogOnUpdateLoaded] = usePersisted("showChangelogOnUpdate", true);
   const [changelogChecked, setChangelogChecked] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
   useEffect(() => {
-    if (!changelogVersionLoaded || changelogChecked) return;
+    if (!changelogVersionLoaded || !showChangelogOnUpdateLoaded || changelogChecked) return;
     if (lastSeenChangelogVersion === null) {
       setLastSeenChangelogVersion(latestChangelogVersion);
     } else if (lastSeenChangelogVersion < latestChangelogVersion) {
-      setShowChangelog(true);
+      if (showChangelogOnUpdate) setShowChangelog(true);
+      else setLastSeenChangelogVersion(latestChangelogVersion);
     }
     setChangelogChecked(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [changelogVersionLoaded]);
+  }, [changelogVersionLoaded, showChangelogOnUpdateLoaded]);
 
   // Navigation guard: while the Settings exercise/category editor is open
   // with unsaved changes, any exit (bottom nav, back arrow, phone back
@@ -4458,7 +4477,7 @@ export default function App() {
       {tab === "library"  && <LibraryScreen exercises={exercises} categories={categories} tasks={tasks} onAdd={addExerciseWithFlight} onRemove={removeExerciseFromSession} stats={stats} subProgress={subProgress} />}
       {tab === "session"  && <SessionScreen tasks={tasks} setTasks={setTasks} onStart={startSession} sessionInProgress={sessionInProgress} onReturnToSession={returnToSession} presets={presets} setPresets={setPresets} />}
       {tab === "progress" && <ProgressionScreen stats={stats} exercises={exercises} onClearStats={() => { setStats({}); setDailyStats({}); setDailyNoodleSec({}); }} badges={badges} subProgress={subProgress} practiceDays={practiceDays} noodleSec={noodleSec} dailyStats={dailyStats} dailyNoodleSec={dailyNoodleSec} subTab={progressSubTab} setSubTab={setProgressSubTab} />}
-      {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} editorGuardRef={editorGuardRef} guardedRun={guardedRun} />}
+      {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} editorGuardRef={editorGuardRef} guardedRun={guardedRun} showChangelogOnUpdate={showChangelogOnUpdate} onShowChangelogOnUpdateChange={setShowChangelogOnUpdate} />}
       {tab === "active"   && <ActiveSessionScreen
         tasks={tasks} setTasks={setTasks} onFinish={endSession} onBackToMenu={backToMenu}
         audioCtx={audioCtx} masterGainRef={masterGainRef} onCommitStats={commitStats}
