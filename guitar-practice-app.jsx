@@ -3750,8 +3750,22 @@ function leavesForNode(b, perBranchLeaves) {
   return leaves;
 }
 
+// Distributes an exact total leaf count across every branch/sub-branch node
+// (round-robin: the first nodes each get one extra leaf so the sum matches
+// totalLeaves precisely), instead of the same fixed count on every node —
+// used by the "Arbre animé" preview, where the total needs to land on a
+// precise number at each level rather than scale per branch.
+function leavesDistributed(allNodes, totalLeaves) {
+  const nodeCount = allNodes.length;
+  const total = Math.max(0, Math.round(totalLeaves));
+  if (nodeCount === 0 || total === 0) return [];
+  const base = Math.floor(total / nodeCount);
+  const remainder = total - base * nodeCount;
+  return allNodes.flatMap((b, i) => leavesForNode(b, base + (i < remainder ? 1 : 0)));
+}
+
 function GrowthTree({
-  trunkPct, branchCount, leafCount, firstBranchPct = 50, leafSizePct = 50,
+  trunkPct, branchCount, leafCount, totalLeaves, firstBranchPct = 50, leafSizePct = 50,
   subDepth = 0, subCount = 3, subLenPct = 65, subBiasPct = 50, originSpreadPct = 50, skyBiasPct = 0,
 }) {
   const W = 300, H = 300;
@@ -3810,10 +3824,12 @@ function GrowthTree({
     flattenBranchTree(built, allNodes);
   }
 
-  // Leaf count is per branch (applies identically to every branch and
-  // sub-branch at every depth), not a total split across them.
-  const perBranchLeaves = Math.max(0, Math.round(leafCount));
-  const leaves = allNodes.flatMap(b => leavesForNode(b, perBranchLeaves));
+  // Leaf count is normally per branch (applies identically to every branch
+  // and sub-branch at every depth). When totalLeaves is given instead (the
+  // "Arbre animé" preview), that exact total is spread across all nodes.
+  const leaves = totalLeaves != null
+    ? leavesDistributed(allNodes, totalLeaves)
+    : allNodes.flatMap(b => leavesForNode(b, Math.max(0, Math.round(leafCount))));
 
   const leafMin = 2.5, leafMax = 10;
   const leafR = leafMin + (leafMax - leafMin) * clamp01(leafSizePct / 100);
@@ -3984,8 +4000,12 @@ function GrowthTreeDebugPreview() {
 // many-branched tree) at the other. Branch count is deliberately left out
 // and held fixed at 4: this animation is about a single student's tree
 // filling in over time, not about the number of categories changing.
-const TREE_ANIM_START = { subDepth: 1, subCount: 1, subLenPct: 44, subBiasPct: 100, originSpreadPct: 20, leafSizePct: 60, trunkPct: 25, branchCount: 4, firstBranchPct: 45, leafCount: 1, skyBiasPct: 20 };
-const TREE_ANIM_END   = { subDepth: 3, subCount: 5, subLenPct: 75, subBiasPct: 66,  originSpreadPct: 60, leafSizePct: 16, trunkPct: 77, branchCount: 4, firstBranchPct: 74, leafCount: 4, skyBiasPct: 30 };
+// Total leaf count (across the whole tree) is driven separately from this
+// table: it goes from 2 leaves at the very first level up to a user-set
+// maximum at level 100, via leavesDistributed — see GrowthTreeAnimatedPreview.
+const TREE_ANIM_START = { subDepth: 1, subCount: 1, subLenPct: 44, subBiasPct: 100, originSpreadPct: 20, leafSizePct: 60, trunkPct: 25, branchCount: 4, firstBranchPct: 45, skyBiasPct: 20 };
+const TREE_ANIM_END   = { subDepth: 3, subCount: 5, subLenPct: 75, subBiasPct: 66,  originSpreadPct: 60, leafSizePct: 16, trunkPct: 77, branchCount: 4, firstBranchPct: 74, skyBiasPct: 30 };
+const TREE_ANIM_MIN_LEAVES = 2;
 
 function lerp(a, b, t) { return a + (b - a) * t; }
 
@@ -3997,16 +4017,22 @@ function lerp(a, b, t) { return a + (b - a) * t; }
 // same way a real level slider would once this reads off actual progress.
 function GrowthTreeAnimatedPreview() {
   const [level, setLevel] = useState(0);
+  const [maxLeaves, setMaxLeaves] = useState(300);
   const progress = level / 100;
 
   const params = {};
   for (const k in TREE_ANIM_START) params[k] = lerp(TREE_ANIM_START[k], TREE_ANIM_END[k], progress);
+  // Leaf count is anchored to land on exactly 2 at level 1 and exactly
+  // maxLeaves at level 100 (not level 0), so the very first level already
+  // shows a couple of leaves instead of starting from a fraction of one.
+  const leafProgress = clamp01((level - 1) / 99);
+  const totalLeaves = Math.round(lerp(TREE_ANIM_MIN_LEAVES, maxLeaves, leafProgress));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ ...base.card, overflow: "visible", padding: "18px 16px", position: "sticky", top: 0, zIndex: 5, boxShadow: "0 10px 18px -10px #000000cc" }}>
         <GrowthTree
-          trunkPct={params.trunkPct} branchCount={params.branchCount} leafCount={params.leafCount}
+          trunkPct={params.trunkPct} branchCount={params.branchCount} totalLeaves={totalLeaves}
           firstBranchPct={params.firstBranchPct} leafSizePct={params.leafSizePct}
           subDepth={params.subDepth} subCount={params.subCount} subLenPct={params.subLenPct}
           subBiasPct={params.subBiasPct} originSpreadPct={params.originSpreadPct} skyBiasPct={params.skyBiasPct}
@@ -4018,6 +4044,15 @@ function GrowthTreeAnimatedPreview() {
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
             <input type="range" min="0" max="100" step="1" value={level} onChange={e => setLevel(parseInt(e.target.value))} style={{ flex: 1, accentColor: C.amber, height: 4, cursor: "pointer" }} />
             <span style={{ fontSize: 13, fontFamily: "monospace", color: C.amber, fontWeight: 700, width: 34, textAlign: "right" }}>{level}</span>
+          </div>
+        </div>
+      </div>
+      <div style={base.card}>
+        <div style={{ padding: "14px 16px" }}>
+          <label style={{ ...base.label, margin: 0 }}>Nombre maximum de feuilles (niveau 100)</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+            <input type="range" min="10" max="1000" step="10" value={maxLeaves} onChange={e => setMaxLeaves(parseInt(e.target.value))} style={{ flex: 1, accentColor: "#8FBF6B", height: 4, cursor: "pointer" }} />
+            <span style={{ fontSize: 13, fontFamily: "monospace", color: "#8FBF6B", fontWeight: 700, width: 40, textAlign: "right" }}>{maxLeaves}</span>
           </div>
         </div>
       </div>
