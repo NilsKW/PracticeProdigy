@@ -3732,7 +3732,8 @@ function flattenBranchTree(built, out = []) {
   return out;
 }
 
-function leavesForNode(b, perBranchLeaves) {
+function leavesForNode(b, perBranchLeaves, orientOpts) {
+  const { orientRandomPct = 0, skyBiasPct = 0 } = orientOpts || {};
   const leaves = [];
   for (let j = 0; j < perBranchLeaves; j++) {
     const t = 0.35 + 0.6 * ((j + 1) / (perBranchLeaves + 1));
@@ -3740,11 +3741,27 @@ function leavesForNode(b, perBranchLeaves) {
     const px = b.attachX + (b.endX - b.attachX) * t;
     const py = b.attachY + (b.endY - b.attachY) * t;
     const perpAngle = Math.atan2(b.endY - b.attachY, b.endX - b.attachX) + Math.PI / 2;
+    const key = `${b.key}-leaf${j}`;
+
+    // Orientation blends two things as unit vectors (never as raw degrees,
+    // so there's no jump when an angle wraps past ±180°): first perpAngle
+    // (perpendicular to the branch, the 0% "randomisation" case) toward a
+    // per-leaf random angle as orientRandomPct rises, then that result
+    // toward straight up as skyBiasPct rises — at 100% sky bias every leaf
+    // points up regardless of the randomisation setting.
+    const randomAngle = seededRandom(`${key}|leafOrient`) * Math.PI * 2;
+    const r = clamp01(orientRandomPct / 100);
+    const s = clamp01(skyBiasPct / 100);
+    const vx = (Math.cos(perpAngle) * (1 - r) + Math.cos(randomAngle) * r) * (1 - s);
+    const vy = (Math.sin(perpAngle) * (1 - r) + Math.sin(randomAngle) * r) * (1 - s) - s;
+    const angle = Math.atan2(vy, vx);
+
     leaves.push({
       x: px + Math.cos(perpAngle) * jitter,
       y: py + Math.sin(perpAngle) * jitter,
       color: b.color,
-      key: `${b.key}-leaf${j}`,
+      angle,
+      key,
     });
   }
   return leaves;
@@ -3755,18 +3772,52 @@ function leavesForNode(b, perBranchLeaves) {
 // totalLeaves precisely), instead of the same fixed count on every node —
 // used by the "Arbre animé" preview, where the total needs to land on a
 // precise number at each level rather than scale per branch.
-function leavesDistributed(allNodes, totalLeaves) {
+function leavesDistributed(allNodes, totalLeaves, orientOpts) {
   const nodeCount = allNodes.length;
   const total = Math.max(0, Math.round(totalLeaves));
   if (nodeCount === 0 || total === 0) return [];
   const base = Math.floor(total / nodeCount);
   const remainder = total - base * nodeCount;
-  return allNodes.flatMap((b, i) => leavesForNode(b, base + (i < remainder ? 1 : 0)));
+  return allNodes.flatMap((b, i) => leavesForNode(b, base + (i < remainder ? 1 : 0), orientOpts));
+}
+
+// Builds the point lists for the "stem + head shape" leaf renders, all
+// anchored at (x, y) and pointing along `angle` (a stem sticking straight
+// out from the attach point, with the head shape at its far end).
+function leafStemShape(x, y, angle, leafR) {
+  const dx = Math.cos(angle), dy = Math.sin(angle);
+  const px = -dy, py = dx;
+  const stemLen = leafR * 1.3, stemHalfW = leafR * 0.15;
+  const stemEndX = x + dx * stemLen, stemEndY = y + dy * stemLen;
+  const stemPoints = [
+    [x + px * stemHalfW, y + py * stemHalfW],
+    [stemEndX + px * stemHalfW, stemEndY + py * stemHalfW],
+    [stemEndX - px * stemHalfW, stemEndY - py * stemHalfW],
+    [x - px * stemHalfW, y - py * stemHalfW],
+  ].map(p => p.join(",")).join(" ");
+
+  const headR = leafR * 0.8;
+  const headCx = stemEndX + dx * headR, headCy = stemEndY + dy * headR;
+
+  const triHeight = leafR * 1.4, triBaseHalfW = leafR * 0.8;
+  const triPoints = [
+    [stemEndX + dx * triHeight, stemEndY + dy * triHeight],
+    [stemEndX + px * triBaseHalfW, stemEndY + py * triBaseHalfW],
+    [stemEndX - px * triBaseHalfW, stemEndY - py * triBaseHalfW],
+  ].map(p => p.join(",")).join(" ");
+
+  const hexPoints = Array.from({ length: 6 }, (_, k) => {
+    const a = angle + (k * Math.PI) / 3;
+    return `${headCx + Math.cos(a) * headR},${headCy + Math.sin(a) * headR}`;
+  }).join(" ");
+
+  return { stemPoints, headCx, headCy, headR, triPoints, hexPoints };
 }
 
 function GrowthTree({
   trunkPct, branchCount, leafCount, totalLeaves, firstBranchPct = 50, leafSizePct = 50,
   subDepth = 0, subCount = 3, subLenPct = 65, subBiasPct = 50, originSpreadPct = 50, skyBiasPct = 0,
+  leafOrientRandomPct = 0, leafSkyBiasPct = 0, leafShape = "circle",
 }) {
   const W = 300, H = 300;
   const baseX = W / 2, baseY = H - 16;
@@ -3827,9 +3878,10 @@ function GrowthTree({
   // Leaf count is normally per branch (applies identically to every branch
   // and sub-branch at every depth). When totalLeaves is given instead (the
   // "Arbre animé" preview), that exact total is spread across all nodes.
+  const leafOrientOpts = { orientRandomPct: leafOrientRandomPct, skyBiasPct: leafSkyBiasPct };
   const leaves = totalLeaves != null
-    ? leavesDistributed(allNodes, totalLeaves)
-    : allNodes.flatMap(b => leavesForNode(b, Math.max(0, Math.round(leafCount))));
+    ? leavesDistributed(allNodes, totalLeaves, leafOrientOpts)
+    : allNodes.flatMap(b => leavesForNode(b, Math.max(0, Math.round(leafCount)), leafOrientOpts));
 
   const leafMin = 2.5, leafMax = 10;
   const leafR = leafMin + (leafMax - leafMin) * clamp01(leafSizePct / 100);
@@ -3858,12 +3910,53 @@ function GrowthTree({
       {allNodes.map(b => (
         <line key={b.key} x1={b.attachX} y1={b.attachY} x2={b.endX} y2={b.endY} stroke="#8B5E3C" strokeWidth={Math.max(1.5, trunkW * 0.4 * Math.pow(0.7, b.depth))} strokeLinecap="round" />
       ))}
-      {leaves.map(l => (
-        <circle key={l.key} cx={l.x} cy={l.y} r={leafR} fill={l.color} opacity="0.9" />
-      ))}
+      {leaves.map(l => {
+        if (leafShape === "ring") {
+          return <circle key={l.key} cx={l.x} cy={l.y} r={leafR * 0.9} fill="none" stroke={l.color} strokeWidth={leafR * 0.2} opacity="0.9" />;
+        }
+        if (leafShape === "stem-circle" || leafShape === "stem-triangle" || leafShape === "stem-hexagon") {
+          const sp = leafStemShape(l.x, l.y, l.angle || 0, leafR);
+          return (
+            <g key={l.key} opacity="0.9">
+              <polygon points={sp.stemPoints} fill={l.color} />
+              {leafShape === "stem-circle" && <circle cx={sp.headCx} cy={sp.headCy} r={sp.headR} fill={l.color} />}
+              {leafShape === "stem-triangle" && <polygon points={sp.triPoints} fill={l.color} />}
+              {leafShape === "stem-hexagon" && <polygon points={sp.hexPoints} fill={l.color} />}
+            </g>
+          );
+        }
+        return <circle key={l.key} cx={l.x} cy={l.y} r={leafR} fill={l.color} opacity="0.9" />;
+      })}
     </svg>
   );
 }
+
+// Small preview icon for each leaf-shape option in the picker below,
+// drawn in a fixed neutral pose (doesn't reflect the actual orientation
+// sliders — it's just there to distinguish the shapes at a glance).
+function LeafShapeIcon({ shape, color = "currentColor" }) {
+  if (shape === "ring") {
+    return <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="6.3" fill="none" stroke={color} strokeWidth="2.4" /></svg>;
+  }
+  if (shape === "stem-circle") {
+    return <svg width="20" height="20" viewBox="0 0 20 20"><rect x="9" y="9" width="2" height="8" fill={color} /><circle cx="10" cy="6" r="4.2" fill={color} /></svg>;
+  }
+  if (shape === "stem-triangle") {
+    return <svg width="20" height="20" viewBox="0 0 20 20"><rect x="9" y="9" width="2" height="8" fill={color} /><polygon points="10,1.5 15,9.5 5,9.5" fill={color} /></svg>;
+  }
+  if (shape === "stem-hexagon") {
+    return <svg width="20" height="20" viewBox="0 0 20 20"><rect x="9" y="9" width="2" height="8" fill={color} /><polygon points="10,1.5 14.3,4 14.3,9 10,11.5 5.7,9 5.7,4" fill={color} /></svg>;
+  }
+  return <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill={color} /></svg>;
+}
+
+const LEAF_SHAPES = [
+  { id: "circle", label: "Cercle" },
+  { id: "ring", label: "Anneau" },
+  { id: "stem-circle", label: "Tige + cercle" },
+  { id: "stem-triangle", label: "Tige + triangle" },
+  { id: "stem-hexagon", label: "Tige + hexagone" },
+];
 
 // Dev-only sliders (Debug section) driving the GrowthTree prototype above
 // with arbitrary values instead of real stats.
@@ -4049,7 +4142,10 @@ function curveProgress(t, curveAmount) {
 function GrowthTreeAnimatedPreview() {
   const [level, setLevel] = useState(0);
   const [maxLeaves, setMaxLeaves] = useState(900);
-  const [curveAmount, setCurveAmount] = useState(60);
+  const [curveAmount, setCurveAmount] = useState(10);
+  const [leafOrientRandomPct, setLeafOrientRandomPct] = useState(35);
+  const [leafSkyBiasPct, setLeafSkyBiasPct] = useState(0);
+  const [leafShape, setLeafShape] = useState("circle");
   const progress = curveProgress(level / 100, curveAmount);
 
   const params = {};
@@ -4070,6 +4166,7 @@ function GrowthTreeAnimatedPreview() {
           firstBranchPct={params.firstBranchPct} leafSizePct={params.leafSizePct}
           subDepth={params.subDepth} subCount={params.subCount} subLenPct={params.subLenPct}
           subBiasPct={params.subBiasPct} originSpreadPct={params.originSpreadPct} skyBiasPct={params.skyBiasPct}
+          leafOrientRandomPct={leafOrientRandomPct} leafSkyBiasPct={leafSkyBiasPct} leafShape={leafShape}
         />
       </div>
       <div style={base.card}>
@@ -4097,6 +4194,49 @@ function GrowthTreeAnimatedPreview() {
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
             <input type="range" min="0" max="100" step="1" value={curveAmount} onChange={e => setCurveAmount(parseInt(e.target.value))} style={{ flex: 1, accentColor: "#6FA8D6", height: 4, cursor: "pointer" }} />
             <span style={{ fontSize: 13, fontFamily: "monospace", color: "#6FA8D6", fontWeight: 700, width: 34, textAlign: "right" }}>{curveAmount}</span>
+          </div>
+        </div>
+      </div>
+      <div style={base.card}>
+        <div style={{ padding: "14px 16px" }}>
+          <label style={{ ...base.label, margin: 0 }}>Randomisation d'orientation des feuilles</label>
+          <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>À 0, chaque feuille est perpendiculaire à son point de départ sur la branche. À 100, l'orientation est complètement aléatoire.</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+            <input type="range" min="0" max="100" step="1" value={leafOrientRandomPct} onChange={e => setLeafOrientRandomPct(parseInt(e.target.value))} style={{ flex: 1, accentColor: "#C77DD6", height: 4, cursor: "pointer" }} />
+            <span style={{ fontSize: 13, fontFamily: "monospace", color: "#C77DD6", fontWeight: 700, width: 34, textAlign: "right" }}>{leafOrientRandomPct}</span>
+          </div>
+        </div>
+      </div>
+      <div style={base.card}>
+        <div style={{ padding: "14px 16px" }}>
+          <label style={{ ...base.label, margin: 0 }}>Biais vers le ciel d'orientation des feuilles</label>
+          <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>À 0, l'orientation suit uniquement le réglage de randomisation ci-dessus. À 100, toutes les feuilles pointent vers le ciel.</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+            <input type="range" min="0" max="100" step="1" value={leafSkyBiasPct} onChange={e => setLeafSkyBiasPct(parseInt(e.target.value))} style={{ flex: 1, accentColor: "#6FA8D6", height: 4, cursor: "pointer" }} />
+            <span style={{ fontSize: 13, fontFamily: "monospace", color: "#6FA8D6", fontWeight: 700, width: 34, textAlign: "right" }}>{leafSkyBiasPct}</span>
+          </div>
+        </div>
+      </div>
+      <div style={base.card}>
+        <div style={{ padding: "14px 16px" }}>
+          <label style={{ ...base.label, margin: 0 }}>Forme des feuilles</label>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+            {LEAF_SHAPES.map(s => (
+              <button
+                key={s.id}
+                onClick={() => setLeafShape(s.id)}
+                style={{
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                  padding: "8px 10px", borderRadius: 8, cursor: "pointer",
+                  background: leafShape === s.id ? "#C8873A33" : "none",
+                  border: leafShape === s.id ? `1px solid ${C.amber}` : "1px solid #2A2A2A",
+                  color: leafShape === s.id ? C.amber : "#AEB0C0",
+                }}
+              >
+                <LeafShapeIcon shape={s.id} />
+                <span style={{ fontSize: 10, fontWeight: leafShape === s.id ? 700 : 500 }}>{s.label}</span>
+              </button>
+            ))}
           </div>
         </div>
       </div>
