@@ -84,6 +84,7 @@ window.EXERCISES_DATA = {
     { id: "cat-improv",     name: "Improvisation",           name_fr: "Improvisation",           color: "#34D399" },
     { id: "cat-theory",     name: "Theory",                  name_fr: "Théorie",                 color: "#4FC3F7" },
     { id: "cat-arpeggios",  name: "Arpeggios",                name_fr: "Arpèges",                 color: "#A78BFA" },
+    { id: "cat-repertoire", name: "Repertoire",               name_fr: "Répertoire",              color: "#F472B6" },
   ],
 
   exercises: [
@@ -138,5 +139,10 @@ window.EXERCISES_DATA = {
       defaultMin: 8, icon: "🔀",
       description: "Play arpeggio notes out of strict order for a broken pattern.",
       description_fr: "Jouez les notes de l'arpège dans un ordre brisé plutôt que strict." },
+
+    { id: "rep1", categoryId: "cat-repertoire", name: "Song to Work On", name_fr: "Morceau à travailler",
+      defaultMin: 15, icon: "🎤",
+      description: "Work on a specific piece, from a tricky passage to a full run-through.",
+      description_fr: "Travaillez un morceau précis, d'un passage difficile à une interprétation complète." },
   ],
 };
