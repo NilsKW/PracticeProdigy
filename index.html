@@ -7057,7 +7057,64 @@ function SettingsScreen({
         fontSize: 14
       }
     }, "›")))));
-  })), section === "sound" && /*#__PURE__*/React.createElement("div", {
+  }), (() => {
+    // Exercises whose categoryId no longer matches any existing
+    // category (e.g. the category they were created under was later
+    // deleted) — the Library still shows these under "Unknown", but
+    // until now this list only ever looped over `categories`, so
+    // they were invisible here and impossible to edit, reassign, or
+    // delete. Surface them the same way Library does.
+    const orphanExs = exercises.filter(e => !categories.some(c => c.id === e.categoryId));
+    if (orphanExs.length === 0) return null;
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        marginBottom: 10
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        letterSpacing: "0.15em",
+        textTransform: "uppercase",
+        color: "#AEB0C0",
+        padding: "4px 0 6px",
+        fontWeight: 700
+      }
+    }, T("unknownCategory")), /*#__PURE__*/React.createElement("div", {
+      style: base.card
+    }, orphanExs.map((ex, idx) => /*#__PURE__*/React.createElement("div", {
+      key: ex.id,
+      style: {
+        ...base.row,
+        borderBottom: idx < orphanExs.length - 1 ? `1px solid ${C.faint}` : "none",
+        cursor: "pointer"
+      },
+      onClick: () => setEditEx(ex)
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 16
+      }
+    }, ex.icon), /*#__PURE__*/React.createElement("div", {
+      style: {
+        flex: 1
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 13,
+        fontWeight: 600
+      }
+    }, exerciseName(ex, lang))), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 11,
+        color: C.muted,
+        fontFamily: "monospace"
+      }
+    }, ex.defaultMin, "m"), /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: C.muted,
+        fontSize: 14
+      }
+    }, "›")))));
+  })()), section === "sound" && /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",
