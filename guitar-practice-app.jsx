@@ -13,8 +13,7 @@ const STRINGS = {
     needsPractice: "Needs Practice", leastWorkedOn: "· least worked on",
     neverPractised: "never practised", mPractised: "m practised", hPractised: "h", mPractisedUnit: "m practised",
     allCat: "All",
-    libraryAddTitle: "Add your own", libraryAddSubtitle: "Missing an exercise or a category?",
-    libraryAddExerciseBtn: "+ New exercise", libraryAddCategoryBtn: "+ New category",
+    libraryCustomizeLine: "Customize your exercises",
     emptySession: "Your session queue is empty.", emptySessionSub: "Library → tap + to add exercises, or Favorites to load a saved session.",
     totalSessionTime: "Total Session Time", exercises: "exercises", exercise: "exercise",
     returnToSession: "▶ Return to Session", startSession: "▶ Start Session",
@@ -147,8 +146,7 @@ const STRINGS = {
     needsPractice: "À travailler", leastWorkedOn: "· les moins pratiqués",
     neverPractised: "jamais pratiqué", mPractised: "min pratiqué", hPractised: "h", mPractisedUnit: "min pratiqué",
     allCat: "Tout",
-    libraryAddTitle: "Ajoute le tien", libraryAddSubtitle: "Un exercice ou une catégorie te manque ?",
-    libraryAddExerciseBtn: "+ Nouvel exercice", libraryAddCategoryBtn: "+ Nouvelle catégorie",
+    libraryCustomizeLine: "Personnalise tes exercices",
     emptySession: "Votre file d'exercices est vide.", emptySessionSub: "Bibliothèque → appuyez sur + pour ajouter des exercices, ou Favoris pour charger une séance.",
     totalSessionTime: "Durée totale", exercises: "exercices", exercise: "exercice",
     returnToSession: "▶ Reprendre la séance", startSession: "▶ Démarrer",
@@ -1730,7 +1728,7 @@ function ProgressionScreen({ stats, exercises, onClearStats, badges, subProgress
 
 // ─── LIBRARY SCREEN ───────────────────────────────────────────────────────────
 
-function LibraryScreen({ exercises, categories, tasks, onAdd, onRemove, stats, subProgress, onAddExercise, onAddCategory }) {
+function LibraryScreen({ exercises, categories, tasks, onAdd, onRemove, stats, subProgress, onGoToExerciseSettings }) {
   const T = useT();
   const lang = useLang();
   const [catId, setCatId] = useState("all");
@@ -1781,18 +1779,10 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, onRemove, stats, s
         ))}
       </div>
       <div style={base.scrollArea(24)}>
-        {/* Add-your-own box — always shown at top, in place of the moved-to-bottom suggestions box */}
-        <div style={{ background: "linear-gradient(135deg,#1A1208 0%,#0F1A0F 100%)", border: "1px solid #2A2008", borderRadius: 12, padding: "12px 14px", marginBottom: 4 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-            <span style={{ fontSize: 13 }}>✨</span>
-            <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase", color: C.amber }}>{T("libraryAddTitle")}</span>
-          </div>
-          <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>{T("libraryAddSubtitle")}</div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={onAddExercise} style={{ ...base.pillBtn(false), flex: 1, textAlign: "center", color: C.amber, border: `1px solid ${C.amber}44`, fontSize: 12 }}>{T("libraryAddExerciseBtn")}</button>
-            <button onClick={onAddCategory} style={{ ...base.pillBtn(false), flex: 1, textAlign: "center", fontSize: 12 }}>{T("libraryAddCategoryBtn")}</button>
-          </div>
-        </div>
+        {/* Single line, in place of the moved-to-bottom suggestions box — points to Réglages > Exercices rather than opening a form inline */}
+        <button onClick={onGoToExerciseSettings} style={{ background: "none", border: "none", padding: "2px 0 4px", margin: 0, textAlign: "left", cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#4FC3F7" }}>
+          {T("libraryCustomizeLine")}
+        </button>
         {(() => {
           if (filtered.length === 0) return (
             <div style={{ textAlign: "center", padding: "40px 20px", color: C.muted, fontSize: 13 }}>{T("noExercisesInCategory")}</div>
@@ -3167,13 +3157,12 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
   ];
   const [editEx, setEditEx]   = useState(null);  // null | "new" | exercise object
   const [editCat, setEditCat] = useState(null);  // null | "new" | category object
-  // Lets the Library screen's "add your own" box jump straight into the
-  // exercise/category creation form on arrival, instead of just landing on
-  // the Réglages menu and making the user drill in themselves.
+  // Lets the Library screen's "Personnalise tes exercices" line jump
+  // straight to the Exercices section on arrival, instead of just landing
+  // on the Réglages menu and making the user drill in themselves.
   useEffect(() => {
     if (!autoOpen) return;
-    if (autoOpen === "exercise") { setSection("exercises"); setEditEx("new"); }
-    else if (autoOpen === "category") { setSection("categories"); setEditCat("new"); }
+    if (autoOpen === "exercises") setSection("exercises");
     onAutoOpenConsumed();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoOpen]);
@@ -3306,8 +3295,11 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
 
       {section === "exercises" && (
         <>
-          <button style={{ ...base.pillBtn(false), width: "100%", textAlign: "center", color: C.amber, border: `1px solid ${C.amber}44`, marginBottom: 10, padding: "11px" }} onClick={() => setEditEx("new")}>
+          <button style={{ ...base.pillBtn(false), width: "100%", textAlign: "center", color: C.amber, border: `1px solid ${C.amber}44`, marginBottom: 8, padding: "11px" }} onClick={() => setEditEx("new")}>
             {T("newExercise")}
+          </button>
+          <button style={{ ...base.pillBtn(false), width: "100%", textAlign: "center", marginBottom: 10, padding: "11px" }} onClick={() => setEditCat("new")}>
+            {T("newCategory")}
           </button>
           {categories.map(cat => {
             const catExs = exercises.filter(e => e.categoryId === cat.id);
@@ -4468,12 +4460,11 @@ export default function App() {
   };
   const requestTab = (newTab, extra) => guardedRun(() => { setTab(newTab); if (extra) extra(); });
 
-  // Lets the Library screen's "add your own" box send the user straight to
-  // Réglages with the exercise/category creation form already open, instead
-  // of just switching tabs and leaving them to find it themselves.
-  const [settingsAutoOpen, setSettingsAutoOpen] = useState(null); // null | "exercise" | "category"
-  const goAddExercise = () => requestTab("settings", () => setSettingsAutoOpen("exercise"));
-  const goAddCategory = () => requestTab("settings", () => setSettingsAutoOpen("category"));
+  // Lets the Library screen's "Personnalise tes exercices" line send the
+  // user straight to the Exercices section of Réglages, instead of just
+  // switching tabs and leaving them to find it themselves.
+  const [settingsAutoOpen, setSettingsAutoOpen] = useState(null); // null | "exercises"
+  const goToExerciseSettings = () => requestTab("settings", () => setSettingsAutoOpen("exercises"));
 
   // ── Lifted session progress state ─────────────────────────────────────────
   const [sessionCurrent, setSessionCurrent]       = useState(0);
@@ -4809,7 +4800,7 @@ export default function App() {
       {/* Content — the single sizing box for the active screen; each screen
           fills it (flex:1, minHeight:0) and owns its own scrolling. */}
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      {tab === "library"  && <LibraryScreen exercises={exercises} categories={categories} tasks={tasks} onAdd={addExerciseWithFlight} onRemove={removeExerciseFromSession} stats={stats} subProgress={subProgress} onAddExercise={goAddExercise} onAddCategory={goAddCategory} />}
+      {tab === "library"  && <LibraryScreen exercises={exercises} categories={categories} tasks={tasks} onAdd={addExerciseWithFlight} onRemove={removeExerciseFromSession} stats={stats} subProgress={subProgress} onGoToExerciseSettings={goToExerciseSettings} />}
       {tab === "session"  && <SessionScreen tasks={tasks} setTasks={setTasks} onStart={startSession} sessionInProgress={sessionInProgress} onReturnToSession={returnToSession} presets={presets} setPresets={setPresets} />}
       {tab === "progress" && <ProgressionScreen stats={stats} exercises={exercises} onClearStats={() => { setStats({}); setDailyStats({}); setDailyNoodleSec({}); }} badges={badges} subProgress={subProgress} practiceDays={practiceDays} noodleSec={noodleSec} dailyStats={dailyStats} dailyNoodleSec={dailyNoodleSec} subTab={progressSubTab} setSubTab={setProgressSubTab} />}
       {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} editorGuardRef={editorGuardRef} guardedRun={guardedRun} showChangelogOnUpdate={showChangelogOnUpdate} onShowChangelogOnUpdateChange={setShowChangelogOnUpdate} autoOpen={settingsAutoOpen} onAutoOpenConsumed={() => setSettingsAutoOpen(null)} />}

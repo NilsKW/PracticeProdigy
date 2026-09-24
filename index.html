@@ -110,10 +110,7 @@ const STRINGS = {
     hPractised: "h",
     mPractisedUnit: "m practised",
     allCat: "All",
-    libraryAddTitle: "Add your own",
-    libraryAddSubtitle: "Missing an exercise or a category?",
-    libraryAddExerciseBtn: "+ New exercise",
-    libraryAddCategoryBtn: "+ New category",
+    libraryCustomizeLine: "Customize your exercises",
     emptySession: "Your session queue is empty.",
     emptySessionSub: "Library → tap + to add exercises, or Favorites to load a saved session.",
     totalSessionTime: "Total Session Time",
@@ -359,10 +356,7 @@ const STRINGS = {
     hPractised: "h",
     mPractisedUnit: "min pratiqué",
     allCat: "Tout",
-    libraryAddTitle: "Ajoute le tien",
-    libraryAddSubtitle: "Un exercice ou une catégorie te manque ?",
-    libraryAddExerciseBtn: "+ Nouvel exercice",
-    libraryAddCategoryBtn: "+ Nouvelle catégorie",
+    libraryCustomizeLine: "Personnalise tes exercices",
     emptySession: "Votre file d'exercices est vide.",
     emptySessionSub: "Bibliothèque → appuyez sur + pour ajouter des exercices, ou Favoris pour charger une séance.",
     totalSessionTime: "Durée totale",
@@ -3761,8 +3755,7 @@ function LibraryScreen({
   onRemove,
   stats,
   subProgress,
-  onAddExercise,
-  onAddCategory
+  onGoToExerciseSettings
 }) {
   const T = useT();
   const lang = useLang();
@@ -3817,63 +3810,20 @@ function LibraryScreen({
     onClick: () => setCatId(c.id)
   }, categoryName(c, lang)))), /*#__PURE__*/React.createElement("div", {
     style: base.scrollArea(24)
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: "linear-gradient(135deg,#1A1208 0%,#0F1A0F 100%)",
-      border: "1px solid #2A2008",
-      borderRadius: 12,
-      padding: "12px 14px",
-      marginBottom: 4
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 6,
-      marginBottom: 4
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 13
-    }
-  }, "✨"), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 10,
-      fontWeight: 800,
-      letterSpacing: "0.15em",
-      textTransform: "uppercase",
-      color: C.amber
-    }
-  }, T("libraryAddTitle"))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: C.muted,
-      marginBottom: 10
-    }
-  }, T("libraryAddSubtitle")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 8
-    }
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: onAddExercise,
+    onClick: onGoToExerciseSettings,
     style: {
-      ...base.pillBtn(false),
-      flex: 1,
-      textAlign: "center",
-      color: C.amber,
-      border: `1px solid ${C.amber}44`,
-      fontSize: 12
+      background: "none",
+      border: "none",
+      padding: "2px 0 4px",
+      margin: 0,
+      textAlign: "left",
+      cursor: "pointer",
+      fontSize: 12,
+      fontWeight: 700,
+      color: "#4FC3F7"
     }
-  }, T("libraryAddExerciseBtn")), /*#__PURE__*/React.createElement("button", {
-    onClick: onAddCategory,
-    style: {
-      ...base.pillBtn(false),
-      flex: 1,
-      textAlign: "center",
-      fontSize: 12
-    }
-  }, T("libraryAddCategoryBtn")))), (() => {
+  }, T("libraryCustomizeLine")), (() => {
     if (filtered.length === 0) return /*#__PURE__*/React.createElement("div", {
       style: {
         textAlign: "center",
@@ -6785,18 +6735,12 @@ function SettingsScreen({
   }];
   const [editEx, setEditEx] = useState(null); // null | "new" | exercise object
   const [editCat, setEditCat] = useState(null); // null | "new" | category object
-  // Lets the Library screen's "add your own" box jump straight into the
-  // exercise/category creation form on arrival, instead of just landing on
-  // the Réglages menu and making the user drill in themselves.
+  // Lets the Library screen's "Personnalise tes exercices" line jump
+  // straight to the Exercices section on arrival, instead of just landing
+  // on the Réglages menu and making the user drill in themselves.
   useEffect(() => {
     if (!autoOpen) return;
-    if (autoOpen === "exercise") {
-      setSection("exercises");
-      setEditEx("new");
-    } else if (autoOpen === "category") {
-      setSection("categories");
-      setEditCat("new");
-    }
+    if (autoOpen === "exercises") setSection("exercises");
     onAutoOpenConsumed();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoOpen]);
@@ -7001,11 +6945,20 @@ function SettingsScreen({
       textAlign: "center",
       color: C.amber,
       border: `1px solid ${C.amber}44`,
-      marginBottom: 10,
+      marginBottom: 8,
       padding: "11px"
     },
     onClick: () => setEditEx("new")
-  }, T("newExercise")), categories.map(cat => {
+  }, T("newExercise")), /*#__PURE__*/React.createElement("button", {
+    style: {
+      ...base.pillBtn(false),
+      width: "100%",
+      textAlign: "center",
+      marginBottom: 10,
+      padding: "11px"
+    },
+    onClick: () => setEditCat("new")
+  }, T("newCategory")), categories.map(cat => {
     const catExs = exercises.filter(e => e.categoryId === cat.id);
     if (catExs.length === 0) return null;
     return /*#__PURE__*/React.createElement("div", {
@@ -9490,12 +9443,11 @@ function App() {
     if (extra) extra();
   });
 
-  // Lets the Library screen's "add your own" box send the user straight to
-  // Réglages with the exercise/category creation form already open, instead
-  // of just switching tabs and leaving them to find it themselves.
-  const [settingsAutoOpen, setSettingsAutoOpen] = useState(null); // null | "exercise" | "category"
-  const goAddExercise = () => requestTab("settings", () => setSettingsAutoOpen("exercise"));
-  const goAddCategory = () => requestTab("settings", () => setSettingsAutoOpen("category"));
+  // Lets the Library screen's "Personnalise tes exercices" line send the
+  // user straight to the Exercices section of Réglages, instead of just
+  // switching tabs and leaving them to find it themselves.
+  const [settingsAutoOpen, setSettingsAutoOpen] = useState(null); // null | "exercises"
+  const goToExerciseSettings = () => requestTab("settings", () => setSettingsAutoOpen("exercises"));
 
   // ── Lifted session progress state ─────────────────────────────────────────
   const [sessionCurrent, setSessionCurrent] = useState(0);
@@ -9945,8 +9897,7 @@ function App() {
     onRemove: removeExerciseFromSession,
     stats: stats,
     subProgress: subProgress,
-    onAddExercise: goAddExercise,
-    onAddCategory: goAddCategory
+    onGoToExerciseSettings: goToExerciseSettings
   }), tab === "session" && /*#__PURE__*/React.createElement(SessionScreen, {
     tasks: tasks,
     setTasks: setTasks,
