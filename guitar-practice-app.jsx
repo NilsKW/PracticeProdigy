@@ -49,6 +49,12 @@ const STRINGS = {
     newCategory: "+ New Category", editCategory: "Edit Category", newCategoryTitle: "New Category",
     colorLabel: "Color", preview: "Preview", addCategory: "Add Category",
     deleteCategoryMsg: "Delete Category & Its Exercises",
+    deleteExerciseConfirmTitle: "Delete exercise?",
+    deleteExerciseConfirmMsg: (name) => `"${name}" will be permanently deleted. This can't be undone.`,
+    deleteCategoryConfirmTitle: "Delete category?",
+    deleteCategoryConfirmMsg: (name, n) => n > 0
+      ? `"${name}" and its ${n} exercise${n === 1 ? "" : "s"} will be permanently deleted. This can't be undone.`
+      : `"${name}" will be permanently deleted. This can't be undone.`,
     volumeLabel: "Master Volume", volumeDesc: "Controls the volume of all in-app sounds (exercise bell, session complete chord).",
     langLabel: "Language", langDesc: "Choose the app display language.",
     metronomeLabel: "Metronome", bpmLabel: "BPM", timeSigLabel: "Time signature",
@@ -177,6 +183,12 @@ const STRINGS = {
     newCategory: "+ Nouvelle catégorie", editCategory: "Modifier la catégorie", newCategoryTitle: "Nouvelle catégorie",
     colorLabel: "Couleur", preview: "Aperçu", addCategory: "Ajouter la catégorie",
     deleteCategoryMsg: "Supprimer la catégorie et ses exercices",
+    deleteExerciseConfirmTitle: "Supprimer l'exercice ?",
+    deleteExerciseConfirmMsg: (name) => `« ${name} » sera définitivement supprimé. Cette action est irréversible.`,
+    deleteCategoryConfirmTitle: "Supprimer la catégorie ?",
+    deleteCategoryConfirmMsg: (name, n) => n > 0
+      ? `« ${name} » et ${n === 1 ? "son exercice" : `ses ${n} exercices`} seront définitivement supprimés. Cette action est irréversible.`
+      : `« ${name} » sera définitivement supprimée. Cette action est irréversible.`,
     volumeLabel: "Volume général", volumeDesc: "Contrôle le volume de tous les sons de l'appli (cloche d'exercice, accord de fin de séance).",
     langLabel: "Langue", langDesc: "Choisissez la langue d'affichage de l'application.",
     metronomeLabel: "Métronome", bpmLabel: "BPM", timeSigLabel: "Mesure",
@@ -1141,6 +1153,25 @@ function UnsavedChangesModal({ canSave, onSave, onDiscard, onCancel }) {
           <button disabled={!canSave} style={{ ...base.pillBtn(true), opacity: canSave ? 1 : 0.5, cursor: canSave ? "pointer" : "not-allowed" }} onClick={onSave}>{T("unsavedSaveBtn")}</button>
           <button style={{ ...base.pillBtn(false), textAlign: "center", color: "#F87171", border: "1px solid #3A1A1A" }} onClick={onDiscard}>{T("unsavedDiscardBtn")}</button>
           <button style={{ ...base.pillBtn(false), textAlign: "center" }} onClick={onCancel}>{T("cancelBtn")}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Generic delete confirmation, reused for both the exercise and category
+// editors — always names the specific item about to be deleted so a
+// mis-tap on the delete button doesn't silently destroy the wrong thing.
+function ConfirmDeleteModal({ title, message, confirmLabel, onConfirm, onCancel }) {
+  const T = useT();
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: "#000000aa" }} onClick={onCancel}>
+      <div style={{ background: "#151515", border: `1px solid ${C.border}`, borderRadius: 16, padding: "22px 20px", maxWidth: 320, width: "100%", boxShadow: "0 10px 50px #000b" }} onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.cream, marginBottom: 8 }}>{title}</div>
+        <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.5, marginBottom: 18 }}>{message}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <button style={{ ...base.pillBtn(false), textAlign: "center", color: "#F87171", border: "1px solid #3A1A1A" }} onClick={onConfirm}>{confirmLabel}</button>
+          <button style={{ ...base.pillBtn(true), textAlign: "center" }} onClick={onCancel}>{T("cancelBtn")}</button>
         </div>
       </div>
     </div>
@@ -2785,6 +2816,7 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBac
   );
   const [iconPicker, setIconPicker] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const initialSnapshotRef = useRef(JSON.stringify(form));
   const dirty = JSON.stringify(form) !== initialSnapshotRef.current;
@@ -2827,6 +2859,7 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBac
   useEffect(() => () => { if (guardRef) guardRef.current = null; }, []);
 
   return (
+    <>
     <div className="pp-narrow" style={base.scrollArea(24)}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
         <button style={base.backBtn} onClick={onRequestBack || onBack}>←</button>
@@ -2917,9 +2950,9 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBac
           <label style={base.label}>{T("metronomeLabel")} {T("bpmHint")}</label>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <button style={{ width: 28, height: 28, borderRadius: "50%", background: "#222", border: "1px solid #333", color: C.cream, fontSize: 16, cursor: "pointer" }} onClick={() => setF("bpm", Math.max(0, (form.bpm||0) - 5))}>−</button>
+              <button style={{ width: 28, height: 28, borderRadius: "50%", background: "#222", border: "1px solid #333", color: C.cream, fontSize: 16, cursor: "pointer" }} onClick={() => setF("bpm", Math.max(0, (form.bpm||0) - 1))}>−</button>
               <span style={{ fontSize: 16, fontFamily: "monospace", color: C.amber, fontWeight: 700, width: 44, textAlign: "center" }}>{form.bpm > 0 ? form.bpm : "OFF"}</span>
-              <button style={{ width: 28, height: 28, borderRadius: "50%", background: "#222", border: "1px solid #333", color: C.cream, fontSize: 16, cursor: "pointer" }} onClick={() => setF("bpm", Math.min(200, Math.max(10, (form.bpm||0) === 0 ? 60 : (form.bpm||0) + 5)))}>+</button>
+              <button style={{ width: 28, height: 28, borderRadius: "50%", background: "#222", border: "1px solid #333", color: C.cream, fontSize: 16, cursor: "pointer" }} onClick={() => setF("bpm", Math.min(200, Math.max(10, (form.bpm||0) === 0 ? 60 : (form.bpm||0) + 1)))}>+</button>
             </div>
             {form.bpm > 0 && (
               <input type="range" min="10" max="200" step="1" value={form.bpm} onChange={e => setF("bpm", parseInt(e.target.value))}
@@ -2995,24 +3028,36 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBac
         </div>
         <button style={base.pillBtn(true)} onClick={save}>{isNew ? T("addExercise") : T("saveChanges")}</button>
         {!isNew && (
-          <button style={{ ...base.pillBtn(false), color: "#F87171", border: "1px solid #3A1A1A", textAlign: "center" }} onClick={del}>
+          <button style={{ ...base.pillBtn(false), color: "#F87171", border: "1px solid #3A1A1A", textAlign: "center" }} onClick={() => setConfirmDelete(true)}>
             {T("deleteExercise")}
           </button>
         )}
       </div>
     </div>
+    {confirmDelete && (
+      <ConfirmDeleteModal
+        title={T("deleteExerciseConfirmTitle")}
+        message={T("deleteExerciseConfirmMsg", form.name)}
+        confirmLabel={T("deleteExercise")}
+        onConfirm={del}
+        onCancel={() => setConfirmDelete(false)}
+      />
+    )}
+    </>
   );
 }
 
 // ── CATEGORY EDITOR (standalone component so hooks are never conditional) ──
-function CategoryEditor({ editCat, setExercises, setCategories, onBack, onRequestBack, guardRef }) {
+function CategoryEditor({ editCat, exercises, setExercises, setCategories, onBack, onRequestBack, guardRef }) {
   const T = useT();
   const lang = useLang();
   const isNew = editCat === "new";
   const [form, setForm] = useState(isNew ? { name: "", color: COLOR_PALETTE[0] } : { ...editCat, name: categoryName(editCat, lang) });
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const initialSnapshotRef = useRef(JSON.stringify(form));
   const dirty = JSON.stringify(form) !== initialSnapshotRef.current;
+  const catExerciseCount = isNew ? 0 : (exercises || []).filter(e => e.categoryId === form.id).length;
 
   const save = () => {
     if (!form.name.trim()) return;
@@ -3044,6 +3089,7 @@ function CategoryEditor({ editCat, setExercises, setCategories, onBack, onReques
   useEffect(() => () => { if (guardRef) guardRef.current = null; }, []);
 
   return (
+    <>
     <div className="pp-narrow" style={base.scrollArea(24)}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
         <button style={base.backBtn} onClick={onRequestBack || onBack}>←</button>
@@ -3068,12 +3114,22 @@ function CategoryEditor({ editCat, setExercises, setCategories, onBack, onReques
         </div>
         <button style={base.pillBtn(true)} onClick={save}>{isNew ? T("addCategory") : T("saveChanges")}</button>
         {!isNew && (
-          <button style={{ ...base.pillBtn(false), color: "#F87171", border: "1px solid #3A1A1A", textAlign: "center" }} onClick={del}>
+          <button style={{ ...base.pillBtn(false), color: "#F87171", border: "1px solid #3A1A1A", textAlign: "center" }} onClick={() => setConfirmDelete(true)}>
             {T("deleteCategoryMsg")}
           </button>
         )}
       </div>
     </div>
+    {confirmDelete && (
+      <ConfirmDeleteModal
+        title={T("deleteCategoryConfirmTitle")}
+        message={T("deleteCategoryConfirmMsg", form.name, catExerciseCount)}
+        confirmLabel={T("deleteCategoryMsg")}
+        onConfirm={del}
+        onCancel={() => setConfirmDelete(false)}
+      />
+    )}
+    </>
   );
 }
 
@@ -3205,7 +3261,7 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
   }, [editEx, editCat, section, debugSubSection]);
 
   if (editEx)  return <ExerciseEditor  editEx={editEx}   categories={categories} setExercises={setExercises} onBack={() => setEditEx(null)} onRequestBack={requestCloseEditor} guardRef={editorGuardRef} />;
-  if (editCat) return <CategoryEditor  editCat={editCat} setExercises={setExercises} setCategories={setCategories} onBack={() => setEditCat(null)} onRequestBack={requestCloseEditor} guardRef={editorGuardRef} />;
+  if (editCat) return <CategoryEditor  editCat={editCat} exercises={exercises} setExercises={setExercises} setCategories={setCategories} onBack={() => setEditCat(null)} onRequestBack={requestCloseEditor} guardRef={editorGuardRef} />;
 
   // ── SETTINGS MAIN ──
   return (
