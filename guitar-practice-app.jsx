@@ -77,6 +77,7 @@ const STRINGS = {
     headerLevel: "Level", levelShort: (n) => `Lvl ${n}`,
     levelUnlockedTitle: "Level up!", levelReachedLabel: (n) => `Level ${n}`,
     levelIntro: "Every minute you practice fills your experience gauge — level up as you go.",
+    levelTreeExplainer: "This tree represents your progress — it grows taller and fuller the more you practice.",
     timeToNext: (h, m) => h > 0 ? `${h}h ${m}m until level ` : `${m}m until level `,
     xpGained: (n) => `+${n} min`,
     noodleBtn: "🛝 Recess",
@@ -210,6 +211,7 @@ const STRINGS = {
     headerLevel: "Niveau", levelShort: (n) => `Niv. ${n}`,
     levelUnlockedTitle: "Niveau supérieur !", levelReachedLabel: (n) => `Niveau ${n}`,
     levelIntro: "Chaque minute de pratique remplit votre jauge d'expérience — montez de niveau au fil du temps.",
+    levelTreeExplainer: "Cet arbre représente votre progression — il grandit et s'étoffe à mesure que vous pratiquez.",
     timeToNext: (h, m) => h > 0 ? `${h} h ${m} min avant le niveau ` : `${m} min avant le niveau `,
     xpGained: (n) => `+${n} min`,
     noodleBtn: "🛝 Récré",
@@ -1553,7 +1555,7 @@ function LevelPill({ level, onClick }) {
       background: "linear-gradient(135deg,#2A1D08,#1A1208)", border: `1px solid ${C.amber}88`,
       color: C.amber, fontSize: 14, fontWeight: 800, cursor: "pointer", flexShrink: 0, letterSpacing: "0.02em",
     }}>
-      <span style={{ fontSize: 16 }}>🎸</span>{T("levelShort", level)}
+      <span style={{ fontSize: 16 }}>🌳</span>{T("levelShort", level)}
     </button>
   );
 }
@@ -1666,11 +1668,14 @@ function LevelUpCelebration({ level, onDone }) {
 // perpendicular circle leaves — no randomisation or sky bias) since this is
 // a status display, not a playground. `targetLevel` maps 1:1 onto the
 // player's actual level, clamped to the tree's 0-100 range (a level-100+
-// player just sees the fully-grown tree). Replays its 0 → targetLevel
+// player just sees the fully-grown tree). `branchCount` is driven by the
+// user's own category count (see LevelScreen) so each main branch stands
+// for one of their practice categories, capped at 10 so a very long custom
+// category list doesn't overcrowd the tree. Replays its 0 → targetLevel
 // growth every time this component mounts, which happens on every visit to
 // this screen since ProgressionScreen only renders it while that sub-tab is
 // selected — see the `subTab === "level" && <LevelScreen .../>` render.
-function LevelGrowthTree({ targetLevel }) {
+function LevelGrowthTree({ targetLevel, branchCount }) {
   const [level, setLevel] = useState(0);
   useEffect(() => {
     const cancel = animateTreeGrowth(setLevel, targetLevel, 2, null);
@@ -1680,7 +1685,7 @@ function LevelGrowthTree({ targetLevel }) {
   const { params, totalLeaves } = treeParamsForLevel(level, { curveAmount: 0, maxLeaves: 900 });
   return (
     <GrowthTree
-      trunkPct={params.trunkPct} branchCount={params.branchCount} totalLeaves={totalLeaves}
+      trunkPct={params.trunkPct} branchCount={branchCount} totalLeaves={totalLeaves}
       firstBranchPct={params.firstBranchPct} leafSizePct={params.leafSizePct}
       subDepth={params.subDepth} subCount={params.subCount} subLenPct={params.subLenPct}
       subBiasPct={params.subBiasPct} originSpreadPct={params.originSpreadPct} skyBiasPct={params.skyBiasPct}
@@ -1689,12 +1694,13 @@ function LevelGrowthTree({ targetLevel }) {
   );
 }
 
-function LevelScreen({ stats, noodleSec }) {
+function LevelScreen({ stats, noodleSec, categories }) {
   const T = useT();
   const totalMin = effectiveXpMinutes(stats, noodleSec);
   const info = levelInfo(totalMin);
   const remH = Math.floor(info.remainingMin / 60);
   const remM = Math.round(info.remainingMin % 60);
+  const treeBranchCount = Math.min(10, Math.max(1, (categories || []).length));
 
   return (
     <div style={{ ...base.staticArea(24), alignItems: "center" }}>
@@ -1702,7 +1708,10 @@ function LevelScreen({ stats, noodleSec }) {
         <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.6 }}>{T("levelIntro")}</div>
       </div>
       <div style={{ width: "100%", maxWidth: 280 }}>
-        <LevelGrowthTree targetLevel={Math.min(100, Math.max(0, info.level))} />
+        <LevelGrowthTree targetLevel={Math.min(100, Math.max(0, info.level))} branchCount={treeBranchCount} />
+      </div>
+      <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.5, textAlign: "center", maxWidth: 260, fontStyle: "italic", marginTop: -4 }}>
+        {T("levelTreeExplainer")}
       </div>
       <div style={{ fontSize: 26, fontWeight: 800, color: C.cream, marginTop: 6 }}>{T("levelReachedLabel", info.level)}</div>
       <div style={{ width: "100%", maxWidth: 320, marginTop: 14 }}>
@@ -1719,7 +1728,7 @@ function LevelScreen({ stats, noodleSec }) {
 
 // ─── PROGRESSION SCREEN (Niveau / Stats / Badges, merged under sub-tabs) ──────
 
-function ProgressionScreen({ stats, exercises, onClearStats, badges, subProgress, practiceDays, noodleSec, dailyStats, dailyNoodleSec, subTab, setSubTab }) {
+function ProgressionScreen({ stats, exercises, categories, onClearStats, badges, subProgress, practiceDays, noodleSec, dailyStats, dailyNoodleSec, subTab, setSubTab }) {
   const T = useT();
   const TABS = [
     { id: "level",  label: T("progressTabLevel") },
@@ -1747,7 +1756,7 @@ function ProgressionScreen({ stats, exercises, onClearStats, badges, subProgress
         ))}
       </div>
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
-        {subTab === "level"  && <LevelScreen stats={stats} noodleSec={noodleSec} />}
+        {subTab === "level"  && <LevelScreen stats={stats} noodleSec={noodleSec} categories={categories} />}
         {subTab === "stats"  && <StatsScreen stats={stats} exercises={exercises} onClear={onClearStats} noodleSec={noodleSec} dailyStats={dailyStats} dailyNoodleSec={dailyNoodleSec} />}
         {subTab === "badges" && <BadgesScreen badges={badges} stats={stats} subProgress={subProgress} exercises={exercises} practiceDays={practiceDays} />}
       </div>
@@ -4881,7 +4890,7 @@ export default function App() {
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {tab === "library"  && <LibraryScreen exercises={exercises} categories={categories} tasks={tasks} onAdd={addExerciseWithFlight} onRemove={removeExerciseFromSession} stats={stats} subProgress={subProgress} onGoToExerciseSettings={goToExerciseSettings} />}
       {tab === "session"  && <SessionScreen tasks={tasks} setTasks={setTasks} onStart={startSession} sessionInProgress={sessionInProgress} onReturnToSession={returnToSession} presets={presets} setPresets={setPresets} />}
-      {tab === "progress" && <ProgressionScreen stats={stats} exercises={exercises} onClearStats={() => { setStats({}); setDailyStats({}); setDailyNoodleSec({}); }} badges={badges} subProgress={subProgress} practiceDays={practiceDays} noodleSec={noodleSec} dailyStats={dailyStats} dailyNoodleSec={dailyNoodleSec} subTab={progressSubTab} setSubTab={setProgressSubTab} />}
+      {tab === "progress" && <ProgressionScreen stats={stats} exercises={exercises} categories={categories} onClearStats={() => { setStats({}); setDailyStats({}); setDailyNoodleSec({}); }} badges={badges} subProgress={subProgress} practiceDays={practiceDays} noodleSec={noodleSec} dailyStats={dailyStats} dailyNoodleSec={dailyNoodleSec} subTab={progressSubTab} setSubTab={setProgressSubTab} />}
       {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} editorGuardRef={editorGuardRef} guardedRun={guardedRun} showChangelogOnUpdate={showChangelogOnUpdate} onShowChangelogOnUpdateChange={setShowChangelogOnUpdate} autoOpen={settingsAutoOpen} onAutoOpenConsumed={() => setSettingsAutoOpen(null)} />}
       {tab === "active"   && <ActiveSessionScreen
         tasks={tasks} setTasks={setTasks} onFinish={endSession} onBackToMenu={backToMenu}
