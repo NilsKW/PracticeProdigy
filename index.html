@@ -3813,17 +3813,36 @@ function LibraryScreen({
   }, /*#__PURE__*/React.createElement("button", {
     onClick: onGoToExerciseSettings,
     style: {
-      background: "none",
-      border: "none",
-      padding: "2px 0 4px",
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      width: "100%",
+      background: "#4FC3F714",
+      border: "1px solid #4FC3F755",
+      borderRadius: 10,
+      padding: "11px 14px",
       margin: 0,
       textAlign: "left",
-      cursor: "pointer",
-      fontSize: 12,
+      cursor: "pointer"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 17,
+      flexShrink: 0
+    }
+  }, "⚙️"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      flex: 1,
+      fontSize: 13,
       fontWeight: 700,
       color: "#4FC3F7"
     }
-  }, T("libraryCustomizeLine")), (() => {
+  }, T("libraryCustomizeLine")), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#4FC3F7",
+      fontSize: 14
+    }
+  }, "›")), (() => {
     if (filtered.length === 0) return /*#__PURE__*/React.createElement("div", {
       style: {
         textAlign: "center",

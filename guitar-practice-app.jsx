@@ -1779,9 +1779,11 @@ function LibraryScreen({ exercises, categories, tasks, onAdd, onRemove, stats, s
         ))}
       </div>
       <div style={base.scrollArea(24)}>
-        {/* Single line, in place of the moved-to-bottom suggestions box — points to Réglages > Exercices rather than opening a form inline */}
-        <button onClick={onGoToExerciseSettings} style={{ background: "none", border: "none", padding: "2px 0 4px", margin: 0, textAlign: "left", cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#4FC3F7" }}>
-          {T("libraryCustomizeLine")}
+        {/* Single row in a card, in place of the moved-to-bottom suggestions box — points to Réglages > Exercices rather than opening a form inline */}
+        <button onClick={onGoToExerciseSettings} style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", background: "#4FC3F714", border: "1px solid #4FC3F755", borderRadius: 10, padding: "11px 14px", margin: 0, textAlign: "left", cursor: "pointer" }}>
+          <span style={{ fontSize: 17, flexShrink: 0 }}>⚙️</span>
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: "#4FC3F7" }}>{T("libraryCustomizeLine")}</span>
+          <span style={{ color: "#4FC3F7", fontSize: 14 }}>›</span>
         </button>
         {(() => {
           if (filtered.length === 0) return (
