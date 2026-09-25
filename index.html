@@ -1817,19 +1817,26 @@ const base = {
     marginBottom: 5,
     display: "block"
   },
+  // flexShrink:0 on both: without it, a card sitting in a flex column that's
+  // shorter than its content (scrollArea running out of vertical room) would
+  // shrink down to fit instead of overflowing — and since the card itself
+  // has overflow:hidden, that shrinking silently clips rows out of view
+  // rather than triggering the scrollArea's own overflowY:auto scrollbar.
   sectionTitle: {
     fontSize: 11,
     letterSpacing: "0.15em",
     textTransform: "uppercase",
     color: C.muted,
     padding: "16px 16px 6px",
-    borderTop: `1px solid ${C.faint}`
+    borderTop: `1px solid ${C.faint}`,
+    flexShrink: 0
   },
   card: {
     background: C.surface,
     border: `1px solid ${C.border}`,
     borderRadius: 10,
-    overflow: "hidden"
+    overflow: "hidden",
+    flexShrink: 0
   },
   row: {
     display: "flex",

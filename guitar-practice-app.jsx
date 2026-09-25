@@ -1045,8 +1045,13 @@ const base = {
   pillBtn: (primary) => ({ padding: primary ? "13px" : "10px 16px", borderRadius: 10, border: primary ? "none" : `1px solid #2A2A2A`, background: primary ? `linear-gradient(135deg,${C.amber},#A86020)` : C.surface, color: primary ? "#0F0F0F" : "#AEB0C0", fontSize: primary ? 14 : 12, fontWeight: primary ? 800 : 500, cursor: "pointer", letterSpacing: "0.06em", width: primary ? "100%" : "auto" }),
   input: { background: "#1A1A1A", border: `1px solid #2A2A2A`, borderRadius: 8, padding: "9px 12px", color: C.cream, fontSize: 13, width: "100%", boxSizing: "border-box", outline: "none", fontFamily: "inherit" },
   label: { fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: C.muted, marginBottom: 5, display: "block" },
-  sectionTitle: { fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: C.muted, padding: "16px 16px 6px", borderTop: `1px solid ${C.faint}` },
-  card: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" },
+  // flexShrink:0 on both: without it, a card sitting in a flex column that's
+  // shorter than its content (scrollArea running out of vertical room) would
+  // shrink down to fit instead of overflowing — and since the card itself
+  // has overflow:hidden, that shrinking silently clips rows out of view
+  // rather than triggering the scrollArea's own overflowY:auto scrollbar.
+  sectionTitle: { fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: C.muted, padding: "16px 16px 6px", borderTop: `1px solid ${C.faint}`, flexShrink: 0 },
+  card: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden", flexShrink: 0 },
   row: { display: "flex", alignItems: "center", gap: 8, padding: "11px 14px", borderBottom: `1px solid ${C.faint}` },
 };
 
