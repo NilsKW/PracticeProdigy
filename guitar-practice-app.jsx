@@ -1661,11 +1661,38 @@ function LevelUpCelebration({ level, onDone }) {
 
 // ─── LEVEL SCREEN ─────────────────────────────────────────────────────────────
 
+// The growth tree standing in for the old instrument icon on Progression >
+// Niveau: fixed settings (900 max leaves, linear growth curve, plain
+// perpendicular circle leaves — no randomisation or sky bias) since this is
+// a status display, not a playground. `targetLevel` maps 1:1 onto the
+// player's actual level, clamped to the tree's 0-100 range (a level-100+
+// player just sees the fully-grown tree). Replays its 0 → targetLevel
+// growth every time this component mounts, which happens on every visit to
+// this screen since ProgressionScreen only renders it while that sub-tab is
+// selected — see the `subTab === "level" && <LevelScreen .../>` render.
+function LevelGrowthTree({ targetLevel }) {
+  const [level, setLevel] = useState(0);
+  useEffect(() => {
+    const cancel = animateTreeGrowth(setLevel, targetLevel, 2, null);
+    return cancel;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const { params, totalLeaves } = treeParamsForLevel(level, { curveAmount: 0, maxLeaves: 900 });
+  return (
+    <GrowthTree
+      trunkPct={params.trunkPct} branchCount={params.branchCount} totalLeaves={totalLeaves}
+      firstBranchPct={params.firstBranchPct} leafSizePct={params.leafSizePct}
+      subDepth={params.subDepth} subCount={params.subCount} subLenPct={params.subLenPct}
+      subBiasPct={params.subBiasPct} originSpreadPct={params.originSpreadPct} skyBiasPct={params.skyBiasPct}
+      leafOrientRandomPct={0} leafSkyBiasPct={0} leafShape="circle"
+    />
+  );
+}
+
 function LevelScreen({ stats, noodleSec }) {
   const T = useT();
   const totalMin = effectiveXpMinutes(stats, noodleSec);
   const info = levelInfo(totalMin);
-  const Icon = INSTRUMENT_ICONS[instrumentForLevel(info.level)];
   const remH = Math.floor(info.remainingMin / 60);
   const remM = Math.round(info.remainingMin % 60);
 
@@ -1674,7 +1701,9 @@ function LevelScreen({ stats, noodleSec }) {
       <div style={{ textAlign: "center", padding: "4px 8px 4px" }}>
         <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.6 }}>{T("levelIntro")}</div>
       </div>
-      <Icon size={168} />
+      <div style={{ width: "100%", maxWidth: 280 }}>
+        <LevelGrowthTree targetLevel={Math.min(100, Math.max(0, info.level))} />
+      </div>
       <div style={{ fontSize: 26, fontWeight: 800, color: C.cream, marginTop: 6 }}>{T("levelReachedLabel", info.level)}</div>
       <div style={{ width: "100%", maxWidth: 320, marginTop: 14 }}>
         <div style={{ height: 10, background: C.faint, borderRadius: 5, overflow: "hidden" }}>
@@ -4236,6 +4265,39 @@ function curveProgress(t, curveAmount) {
   return Math.log(1 + t * (K - 1)) / Math.log(K);
 }
 
+// Shared by the Debug "Arbre animé" preview and the Progression > Niveau
+// tree: turns a 0-100 level (plus the curve/max-leaves settings) into the
+// GrowthTree props for that level, so both places compute it identically.
+function treeParamsForLevel(level, opts = {}) {
+  const { curveAmount = 0, maxLeaves = 900 } = opts;
+  const progress = curveProgress(clamp01(level / 100), curveAmount);
+  const params = {};
+  for (const k in TREE_ANIM_START) params[k] = lerp(TREE_ANIM_START[k], TREE_ANIM_END[k], progress);
+  // Same anchor as before: exactly 2 leaves at level 1, maxLeaves at level 100.
+  const leafProgress = curveProgress(clamp01((level - 1) / 99), curveAmount);
+  const totalLeaves = Math.round(lerp(TREE_ANIM_MIN_LEAVES, maxLeaves, leafProgress));
+  return { params, totalLeaves };
+}
+
+// Animates `setLevel` from 0 up to `targetLevel` over `durationSec` seconds
+// via requestAnimationFrame. Returns a cancel function (call on unmount, or
+// before starting a new run, to avoid two animations fighting over the same
+// state). Guards against a zero/negative duration (defensive — the Debug
+// slider that drives this never actually reaches 0) and a target of 0
+// (nothing to animate — settles at 0 immediately instead of dividing by it).
+function animateTreeGrowth(setLevel, targetLevel, durationSec, onDone) {
+  if (targetLevel <= 0) { setLevel(0); if (onDone) onDone(); return () => {}; }
+  const durationMs = Math.max(0.05, durationSec) * 1000;
+  const start = performance.now();
+  let raf = requestAnimationFrame(function step(now) {
+    const t = Math.min(1, (now - start) / durationMs);
+    setLevel(targetLevel * t);
+    if (t < 1) raf = requestAnimationFrame(step);
+    else if (onDone) onDone();
+  });
+  return () => cancelAnimationFrame(raf);
+}
+
 // "Arbre animé": a single "niveau" slider (0-100) drives every parameter's
 // position between that start and end set directly and instantly — no
 // timer, no play button. At 0 it's the very first session's tree (a single
@@ -4249,17 +4311,21 @@ function GrowthTreeAnimatedPreview() {
   const [leafOrientRandomPct, setLeafOrientRandomPct] = useState(35);
   const [leafSkyBiasPct, setLeafSkyBiasPct] = useState(0);
   const [leafShape, setLeafShape] = useState("circle");
-  const progress = curveProgress(level / 100, curveAmount);
+  const [animDurationSec, setAnimDurationSec] = useState(2);
+  const growthCancelRef = useRef(null);
+  useEffect(() => () => { if (growthCancelRef.current) growthCancelRef.current(); }, []);
 
-  const params = {};
-  for (const k in TREE_ANIM_START) params[k] = lerp(TREE_ANIM_START[k], TREE_ANIM_END[k], progress);
-  // Leaf count is anchored to land on exactly 2 at level 1 and exactly
-  // maxLeaves at level 100 (not level 0), so the very first level already
-  // shows a couple of leaves instead of starting from a fraction of one.
-  // The same curve is applied here so leaf growth front-loads together
-  // with the rest of the tree instead of staying linear on its own.
-  const leafProgress = curveProgress(clamp01((level - 1) / 99), curveAmount);
-  const totalLeaves = Math.round(lerp(TREE_ANIM_MIN_LEAVES, maxLeaves, leafProgress));
+  // Replays the growth from level 0 up to whatever the Niveau slider is
+  // currently set to — that value is captured before it gets overwritten by
+  // the animation itself (setLevel is called every frame while it plays).
+  const playGrowthAnimation = () => {
+    if (growthCancelRef.current) growthCancelRef.current();
+    const target = level;
+    setLevel(0);
+    growthCancelRef.current = animateTreeGrowth(setLevel, target, animDurationSec, () => { growthCancelRef.current = null; });
+  };
+
+  const { params, totalLeaves } = treeParamsForLevel(level, { curveAmount, maxLeaves });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -4279,6 +4345,17 @@ function GrowthTreeAnimatedPreview() {
             <input type="range" min="0" max="100" step="1" value={level} onChange={e => setLevel(parseInt(e.target.value))} style={{ flex: 1, accentColor: C.amber, height: 4, cursor: "pointer" }} />
             <span style={{ fontSize: 13, fontFamily: "monospace", color: C.amber, fontWeight: 700, width: 34, textAlign: "right" }}>{level}</span>
           </div>
+        </div>
+      </div>
+      <div style={base.card}>
+        <div style={{ padding: "14px 16px" }}>
+          <label style={{ ...base.label, margin: 0 }}>Durée de l'animation de croissance</label>
+          <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>Temps que met l'arbre à passer du niveau 0 au niveau défini ci-dessus.</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+            <input type="range" min="0.5" max="5" step="0.1" value={animDurationSec} onChange={e => setAnimDurationSec(parseFloat(e.target.value))} style={{ flex: 1, accentColor: "#F5C97A", height: 4, cursor: "pointer" }} />
+            <span style={{ fontSize: 13, fontFamily: "monospace", color: "#F5C97A", fontWeight: 700, width: 40, textAlign: "right" }}>{animDurationSec.toFixed(1)}s</span>
+          </div>
+          <button onClick={playGrowthAnimation} style={{ ...base.pillBtn(true), marginTop: 12, textAlign: "center" }}>▶️ Lancer l'animation</button>
         </div>
       </div>
       <div style={base.card}>
