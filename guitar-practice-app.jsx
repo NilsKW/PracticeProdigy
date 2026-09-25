@@ -4245,8 +4245,8 @@ function GrowthTreeDebugPreview() {
 // Total leaf count (across the whole tree) is driven separately from this
 // table: it goes from 2 leaves at the very first level up to a user-set
 // maximum at level 100, via leavesDistributed — see GrowthTreeAnimatedPreview.
-const TREE_ANIM_START = { subDepth: 1, subCount: 1, subLenPct: 44, subBiasPct: 100, originSpreadPct: 20, leafSizePct: 60, trunkPct: 25, branchCount: 4, firstBranchPct: 45, skyBiasPct: 20 };
-const TREE_ANIM_END   = { subDepth: 3, subCount: 5, subLenPct: 75, subBiasPct: 66,  originSpreadPct: 60, leafSizePct: 16, trunkPct: 77, branchCount: 4, firstBranchPct: 74, skyBiasPct: 30 };
+const TREE_ANIM_START = { subDepth: 1, subCount: 1, subLenPct: 44, subBiasPct: 100, originSpreadPct: 20, leafSizePct: 12, trunkPct: 25, branchCount: 4, firstBranchPct: 45, skyBiasPct: 20 };
+const TREE_ANIM_END   = { subDepth: 3, subCount: 5, subLenPct: 75, subBiasPct: 66,  originSpreadPct: 60, leafSizePct: 12, trunkPct: 77, branchCount: 4, firstBranchPct: 74, skyBiasPct: 30 };
 const TREE_ANIM_MIN_LEAVES = 2;
 
 function lerp(a, b, t) { return a + (b - a) * t; }
