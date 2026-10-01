@@ -5153,7 +5153,17 @@ function SessionScreen({
         zIndex: isDragged ? 2 : 1,
         boxShadow: isDragged ? "0 10px 28px #000a" : "none",
         transform: `translateY(${isDragged ? dragOffsetY : previewShift}px)`,
-        transition: isDragged ? "none" : "transform 150ms ease-out, border-color 0.15s"
+        // Sibling rows only transition while a drag is actually in
+        // progress (so their preview shift animates smoothly as the
+        // target slot changes). The instant a drag ends, this drops
+        // to "none": the array has just reordered in this same
+        // render, so each row's preview shift and its real layout
+        // position change by the same amount at the same time —
+        // with no transition, they cancel out and nothing visibly
+        // moves. Keeping the transition active here too would
+        // instead animate the shift back to 0 on top of the (not
+        // animated) reorder, producing a redundant, unwanted jump.
+        transition: isDragged ? "none" : draggingId ? "transform 150ms ease-out, border-color 0.15s" : "border-color 0.15s"
       }
     }, /*#__PURE__*/React.createElement("div", {
       onPointerDown: e => handleDragStart(e, task.id),
