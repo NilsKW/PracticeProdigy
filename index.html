@@ -6492,6 +6492,14 @@ function ExerciseEditor({
   const [iconPicker, setIconPicker] = useState(false);
   const [iconTab, setIconTab] = useState(ICON_CATEGORIES[0].id);
   const [advancedMetroOpen, setAdvancedMetroOpen] = useState(false);
+  // Remembers the last non-zero BPM so toggling the metronome off and back
+  // on restores the previous tempo instead of resetting to a default —
+  // bpm itself still doubles as the on/off flag (0 = off) everywhere else
+  // (task copying, session screen, exports), so nothing else needs to change.
+  const lastBpmRef = useRef(form.bpm > 0 ? form.bpm : 90);
+  useEffect(() => {
+    if (form.bpm > 0) lastBpmRef.current = form.bpm;
+  }, [form.bpm]);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const setF = (k, v) => setForm(f => ({
@@ -6805,9 +6813,30 @@ function ExerciseEditor({
   }, T("filesHint")))), /*#__PURE__*/React.createElement(EditorSection, {
     icon: "🥁",
     title: T("sectionMetronomeTitle")
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setF("bpm", form.bpm > 0 ? 0 : lastBpmRef.current),
+    style: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      width: "100%",
+      padding: "11px 16px",
+      borderRadius: 10,
+      border: `1px solid ${form.bpm > 0 ? "#34D399" : "#3A1A1A"}`,
+      background: form.bpm > 0 ? "#34D39922" : "#2A141488",
+      color: form.bpm > 0 ? "#34D399" : "#F87171",
+      fontSize: 14,
+      fontWeight: 700,
+      cursor: "pointer"
+    }
+  }, form.bpm > 0 ? T("metronomeOn") : T("metronomeOff")), form.bpm > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 14
+    }
+  }, /*#__PURE__*/React.createElement("label", {
     style: base.label
-  }, T("metronomeLabel"), " ", T("bpmHint")), /*#__PURE__*/React.createElement("div", {
+  }, T("bpmLabel")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       alignItems: "center",
@@ -6831,7 +6860,7 @@ function ExerciseEditor({
       fontSize: 16,
       cursor: "pointer"
     },
-    onClick: () => setF("bpm", Math.max(0, (form.bpm || 0) - 1))
+    onClick: () => setF("bpm", Math.max(10, (form.bpm || 0) - 1))
   }, "−"), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 16,
@@ -6841,7 +6870,7 @@ function ExerciseEditor({
       width: 44,
       textAlign: "center"
     }
-  }, form.bpm > 0 ? form.bpm : "OFF"), /*#__PURE__*/React.createElement("button", {
+  }, form.bpm), /*#__PURE__*/React.createElement("button", {
     style: {
       width: 28,
       height: 28,
@@ -6852,8 +6881,8 @@ function ExerciseEditor({
       fontSize: 16,
       cursor: "pointer"
     },
-    onClick: () => setF("bpm", Math.min(200, Math.max(10, (form.bpm || 0) === 0 ? 60 : (form.bpm || 0) + 1)))
-  }, "+")), form.bpm > 0 && /*#__PURE__*/React.createElement("input", {
+    onClick: () => setF("bpm", Math.min(200, (form.bpm || 0) + 1))
+  }, "+")), /*#__PURE__*/React.createElement("input", {
     type: "range",
     min: "10",
     max: "200",
@@ -6865,18 +6894,7 @@ function ExerciseEditor({
       accentColor: C.amber,
       minWidth: 80
     }
-  }), form.bpm > 0 && /*#__PURE__*/React.createElement("button", {
-    onClick: () => setF("bpm", 0),
-    style: {
-      fontSize: 10,
-      background: "#1A1A1A",
-      border: "1px solid #2A2A2A",
-      borderRadius: 6,
-      color: C.muted,
-      padding: "4px 8px",
-      cursor: "pointer"
-    }
-  }, "OFF")), form.bpm > 0 && /*#__PURE__*/React.createElement("div", {
+  }))), form.bpm > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 10
     }

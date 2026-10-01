@@ -3107,6 +3107,12 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBac
   const [iconPicker, setIconPicker] = useState(false);
   const [iconTab, setIconTab] = useState(ICON_CATEGORIES[0].id);
   const [advancedMetroOpen, setAdvancedMetroOpen] = useState(false);
+  // Remembers the last non-zero BPM so toggling the metronome off and back
+  // on restores the previous tempo instead of resetting to a default —
+  // bpm itself still doubles as the on/off flag (0 = off) everywhere else
+  // (task copying, session screen, exports), so nothing else needs to change.
+  const lastBpmRef = useRef(form.bpm > 0 ? form.bpm : 90);
+  useEffect(() => { if (form.bpm > 0) lastBpmRef.current = form.bpm; }, [form.bpm]);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -3264,21 +3270,28 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBac
         </EditorSection>
         <EditorSection icon="🥁" title={T("sectionMetronomeTitle")}>
         <div>
-          <label style={base.label}>{T("metronomeLabel")} {T("bpmHint")}</label>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <button style={{ width: 28, height: 28, borderRadius: "50%", background: "#222", border: "1px solid #333", color: C.cream, fontSize: 16, cursor: "pointer" }} onClick={() => setF("bpm", Math.max(0, (form.bpm||0) - 1))}>−</button>
-              <span style={{ fontSize: 16, fontFamily: "monospace", color: C.amber, fontWeight: 700, width: 44, textAlign: "center" }}>{form.bpm > 0 ? form.bpm : "OFF"}</span>
-              <button style={{ width: 28, height: 28, borderRadius: "50%", background: "#222", border: "1px solid #333", color: C.cream, fontSize: 16, cursor: "pointer" }} onClick={() => setF("bpm", Math.min(200, Math.max(10, (form.bpm||0) === 0 ? 60 : (form.bpm||0) + 1)))}>+</button>
+          <button
+            onClick={() => setF("bpm", form.bpm > 0 ? 0 : lastBpmRef.current)}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", padding: "11px 16px",
+              borderRadius: 10, border: `1px solid ${form.bpm > 0 ? "#34D399" : "#3A1A1A"}`,
+              background: form.bpm > 0 ? "#34D39922" : "#2A141488", color: form.bpm > 0 ? "#34D399" : "#F87171",
+              fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+            {form.bpm > 0 ? T("metronomeOn") : T("metronomeOff")}
+          </button>
+          {form.bpm > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <label style={base.label}>{T("bpmLabel")}</label>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <button style={{ width: 28, height: 28, borderRadius: "50%", background: "#222", border: "1px solid #333", color: C.cream, fontSize: 16, cursor: "pointer" }} onClick={() => setF("bpm", Math.max(10, (form.bpm||0) - 1))}>−</button>
+                  <span style={{ fontSize: 16, fontFamily: "monospace", color: C.amber, fontWeight: 700, width: 44, textAlign: "center" }}>{form.bpm}</span>
+                  <button style={{ width: 28, height: 28, borderRadius: "50%", background: "#222", border: "1px solid #333", color: C.cream, fontSize: 16, cursor: "pointer" }} onClick={() => setF("bpm", Math.min(200, (form.bpm||0) + 1))}>+</button>
+                </div>
+                <input type="range" min="10" max="200" step="1" value={form.bpm} onChange={e => setF("bpm", parseInt(e.target.value))}
+                  style={{ flex: 1, accentColor: C.amber, minWidth: 80 }} />
+              </div>
             </div>
-            {form.bpm > 0 && (
-              <input type="range" min="10" max="200" step="1" value={form.bpm} onChange={e => setF("bpm", parseInt(e.target.value))}
-                style={{ flex: 1, accentColor: C.amber, minWidth: 80 }} />
-            )}
-            {form.bpm > 0 && (
-              <button onClick={() => setF("bpm", 0)} style={{ fontSize: 10, background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 6, color: C.muted, padding: "4px 8px", cursor: "pointer" }}>OFF</button>
-            )}
-          </div>
+          )}
           {form.bpm > 0 && (
             <div style={{ marginTop: 10 }}>
               <label style={{ ...base.label, marginBottom: 6 }}>{T("timeSigLabel")} {T("beatsPerBarHint")}</label>
