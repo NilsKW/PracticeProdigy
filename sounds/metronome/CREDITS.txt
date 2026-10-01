@@ -1,0 +1,14 @@
+Metronome sound samples — provenance
+
+All files in this folder come from Kenney (https://kenney.nl), released under
+CC0 1.0 (public domain, no attribution required):
+
+  click.ogg              from "Interface Sounds" (kenney_interface-sounds.zip), Audio/click_001.ogg
+  tick.ogg                from "Interface Sounds" (kenney_interface-sounds.zip), Audio/tick_001.ogg
+  impact-wood-heavy.ogg   from "Impact Sounds"    (kenney_impact-sounds.zip),    Audio/impactWood_medium_002.ogg
+  impact-wood-light.ogg   from "Impact Sounds"    (kenney_impact-sounds.zip),    Audio/impactWood_light_000.ogg
+  impact-bell.ogg         from "Impact Sounds"    (kenney_impact-sounds.zip),    Audio/impactBell_heavy_002.ogg
+
+Pack pages:
+  https://kenney.nl/assets/interface-sounds
+  https://kenney.nl/assets/impact-sounds

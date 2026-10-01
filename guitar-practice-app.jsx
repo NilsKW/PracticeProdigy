@@ -58,6 +58,16 @@ const STRINGS = {
     langLabel: "Language", langDesc: "Choose the app display language.",
     metronomeLabel: "Metronome", bpmLabel: "BPM", timeSigLabel: "Time signature",
     metronomeOn: "🟢 Metro ON", metronomeOff: "🔴 Metro OFF",
+    metroKitClick: "Click", metroKitSoft: "Soft click", metroKitDrum: "Drums", metroKitMech: "Mechanical", metroKitBell: "Bell", metroKitClickReal: "Click (sample)",
+    metroKitUseDefault: "Default (settings)",
+    metroSoundLabel: "Metronome sound",
+    metroAdvancedToggle: "Advanced: mute some beats",
+    metroActiveBeatsHint: "Tap a beat to silence it (e.g. keep only 2 & 4 on).",
+    metroBeatDotsHint: "Tap a dot to mute/unmute that beat",
+    metroBeatToggleAria: (n) => `Beat ${n}`,
+    metroDefaultKitLabel: "Default metronome sound",
+    metroDefaultKitDesc: "Used by any exercise that doesn't set its own metronome sound.",
+    metroDefaultKitHint: "Each exercise can override this in its own settings.",
     exercisesCount: (n) => n === 1 ? "1 exercise" : `${n} exercises`,
     sessionsCount: (n) => n === 1 ? "1 session" : `${n} sessions`,
     noExercisesInCategory: "No exercises in this category yet.", unknownCategory: "Unknown",
@@ -192,6 +202,16 @@ const STRINGS = {
     langLabel: "Langue", langDesc: "Choisis la langue d'affichage de l'application.",
     metronomeLabel: "Métronome", bpmLabel: "BPM", timeSigLabel: "Mesure",
     metronomeOn: "🟢 Métro ON", metronomeOff: "🔴 Métro OFF",
+    metroKitClick: "Clic", metroKitSoft: "Clic doux", metroKitDrum: "Batterie", metroKitMech: "Mécanique", metroKitBell: "Cloche", metroKitClickReal: "Clic (échantillon)",
+    metroKitUseDefault: "Par défaut (réglages)",
+    metroSoundLabel: "Son du métronome",
+    metroAdvancedToggle: "Avancé : couper certains temps",
+    metroActiveBeatsHint: "Touche un temps pour le rendre silencieux (ex. ne garder que 2 et 4).",
+    metroBeatDotsHint: "Touche un rond pour couper/réactiver ce temps",
+    metroBeatToggleAria: (n) => `Temps ${n}`,
+    metroDefaultKitLabel: "Son du métronome par défaut",
+    metroDefaultKitDesc: "Utilisé par tout exercice qui n'a pas son propre son de métronome.",
+    metroDefaultKitHint: "Chaque exercice peut redéfinir ce réglage dans sa propre configuration.",
     exercisesCount: (n) => n === 1 ? "1 exercice" : `${n} exercices`,
     sessionsCount: (n) => n === 1 ? "1 séance" : `${n} séances`,
     noExercisesInCategory: "Aucun exercice dans cette catégorie pour l'instant.", unknownCategory: "Inconnue",
@@ -646,41 +666,163 @@ function playSessionDone(ctx, extMaster) {
 
 
 // ─── METRONOME ────────────────────────────────────────────────────────────────
-// Schedules click sounds using Web Audio API lookahead scheduling.
-// First beat of each bar = high click (1200 Hz), others = low click (600 Hz).
-// Returns a stop() function.
+// Schedules metronome sounds using Web Audio API lookahead scheduling.
+// A "kit" pairs a sound for the first beat of the bar with a sound for every
+// other beat; each sound is either synthesized on the fly (zero asset
+// weight — used by the original click plus a few new timbres) or a short
+// CC0 sample (Kenney.nl "Interface Sounds" / "Impact Sounds" packs, see
+// sounds/metronome/CREDITS.txt), decoded once and cached.
+const METRONOME_SAMPLE_BASE = "sounds/metronome/";
+const _metronomeBufferCache = new Map(); // file -> Promise<AudioBuffer|null>
+function loadMetronomeSample(ctx, file) {
+  if (!_metronomeBufferCache.has(file)) {
+    _metronomeBufferCache.set(file, fetch(METRONOME_SAMPLE_BASE + file)
+      .then(r => r.arrayBuffer())
+      .then(buf => ctx.decodeAudioData(buf))
+      .catch(() => null));
+  }
+  return _metronomeBufferCache.get(file);
+}
+// Kicks off decoding for every sample-based sound as soon as an AudioContext
+// exists (tiny total payload, well under 50 KB combined) so buffers are
+// ready well before a user can reach a session and press play —
+// scheduleMetronomeSound() below just skips a sample that isn't loaded yet
+// rather than blocking the scheduler on a cold cache.
+function preloadMetronomeSamples(ctx) {
+  if (!ctx) return;
+  Object.values(METRONOME_SOUNDS).forEach(s => { if (s.type === "sample") loadMetronomeSample(ctx, s.file); });
+}
 
-function startMetronome(ctx, masterGain, bpm, beatsPerBar, onBeat) {
+const METRONOME_SOUNDS = {
+  clickHigh:   { type: "synth", synth: "square", freq: 1200, gain: 0.5,  dur: 0.03 },
+  clickLow:    { type: "synth", synth: "square", freq: 600,  gain: 0.3,  dur: 0.03 },
+  softHigh:    { type: "synth", synth: "sine",   freq: 1000, gain: 0.45, dur: 0.05 },
+  softLow:     { type: "synth", synth: "sine",   freq: 500,  gain: 0.3,  dur: 0.05 },
+  kick:        { type: "synth", synth: "kick" },
+  hihat:       { type: "synth", synth: "hihat" },
+  woodHeavy:   { type: "sample", file: "impact-wood-heavy.ogg", gain: 0.9 },
+  woodLight:   { type: "sample", file: "impact-wood-light.ogg", gain: 0.7 },
+  bell:        { type: "sample", file: "impact-bell.ogg", gain: 0.8 },
+  clickSample: { type: "sample", file: "click.ogg", gain: 0.8 },
+  tickSample:  { type: "sample", file: "tick.ogg", gain: 0.6 },
+};
+
+// Each built-in kit — the *only* thing an exercise/the global setting stores
+// is the kit id, so adding/renaming a kit later never breaks saved data.
+const METRONOME_KITS = [
+  { id: "click",     labelKey: "metroKitClick",     beat1: "clickHigh",   other: "clickLow" },
+  { id: "soft",      labelKey: "metroKitSoft",      beat1: "softHigh",    other: "softLow" },
+  { id: "drum",      labelKey: "metroKitDrum",      beat1: "kick",        other: "hihat" },
+  { id: "mech",      labelKey: "metroKitMech",      beat1: "woodHeavy",   other: "woodLight" },
+  { id: "bell",      labelKey: "metroKitBell",      beat1: "bell",        other: "tickSample" },
+  { id: "clickReal", labelKey: "metroKitClickReal", beat1: "clickSample", other: "tickSample" },
+];
+const METRONOME_KITS_BY_ID = {};
+METRONOME_KITS.forEach(k => { METRONOME_KITS_BY_ID[k.id] = k; });
+const METRONOME_DEFAULT_KIT = "click"; // == the original hardcoded sound, for installs with no saved preference
+
+function resolveMetronomeSounds(kitId) {
+  const kit = METRONOME_KITS_BY_ID[kitId] || METRONOME_KITS_BY_ID[METRONOME_DEFAULT_KIT];
+  return { beat1: METRONOME_SOUNDS[kit.beat1], other: METRONOME_SOUNDS[kit.other] };
+}
+
+// Keeps "which beats are on" valid across time-signature changes: pads with
+// "on"/truncates rather than resetting, so switching from 4/4 to 3/4 and
+// back doesn't discard mute choices on beats that still exist. No saved
+// value (the normal case for every exercise made before this feature, and
+// any exercise that never touched it) means every beat plays, unchanged
+// from before this feature existed.
+function normalizeActiveBeats(activeBeats, beatsPerBar) {
+  if (!Array.isArray(activeBeats)) return Array(beatsPerBar).fill(true);
+  const out = activeBeats.slice(0, beatsPerBar);
+  while (out.length < beatsPerBar) out.push(true);
+  return out;
+}
+
+function playMetronomeSynth(ctx, dest, time, spec) {
+  if (spec.synth === "kick") {
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(150, time);
+    osc.frequency.exponentialRampToValueAtTime(45, time + 0.09);
+    gain.gain.setValueAtTime(0.9, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
+    osc.connect(gain); gain.connect(dest);
+    osc.start(time); osc.stop(time + 0.13);
+    return;
+  }
+  if (spec.synth === "hihat") {
+    const bufSize = Math.max(1, Math.floor(ctx.sampleRate * 0.05));
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufSize);
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 6000;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.35, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+    src.connect(hp); hp.connect(gain); gain.connect(dest);
+    src.start(time); src.stop(time + 0.05);
+    return;
+  }
+  // Plain tone — "square" (clickHigh/clickLow) or "sine" (softHigh/softLow)
+  const osc = ctx.createOscillator(), gain = ctx.createGain();
+  osc.type = spec.synth;
+  osc.frequency.setValueAtTime(spec.freq, time);
+  gain.gain.setValueAtTime(spec.gain, time);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + spec.dur);
+  osc.connect(gain); gain.connect(dest);
+  osc.start(time); osc.stop(time + spec.dur + 0.01);
+}
+
+function scheduleMetronomeSound(ctx, dest, time, spec) {
+  if (!spec) return;
+  if (spec.type === "synth") { playMetronomeSynth(ctx, dest, time, spec); return; }
+  const cached = _metronomeBufferCache.get(spec.file);
+  if (!cached) { loadMetronomeSample(ctx, spec.file); return; } // cold cache: skip this one beat silently
+  cached.then(buffer => {
+    if (!buffer) return;
+    // Web Audio schedules by `time`, not by when this callback actually
+    // runs, so staying sample-accurate only needs `time` to still be in the
+    // future when start() is called — true in practice since this promise
+    // was already resolved (preloaded well ahead) by the time playback starts.
+    const src = ctx.createBufferSource(); src.buffer = buffer;
+    const gain = ctx.createGain(); gain.gain.value = spec.gain != null ? spec.gain : 0.8;
+    src.connect(gain); gain.connect(dest);
+    src.start(time);
+  });
+}
+
+// `opts`: { kitId, activeBeats, onBeat }. onBeat(beatIndex, isOn) fires
+// right as each beat sounds (scheduled via its own setTimeout so it lands
+// in sync with the audio rather than ~100-200ms early, when the scheduler
+// actually queued it) — drives the live beat-indicator dots.
+// Returns a stop() function.
+function startMetronome(ctx, masterGain, bpm, beatsPerBar, opts) {
   if (!ctx) return () => {};
+  const { kitId, activeBeats, onBeat } = opts || {};
   const dest       = masterGain || ctx.destination;
   const interval   = 60 / bpm;       // seconds per beat
   const lookahead  = 0.1;            // schedule this far ahead (seconds)
   const scheduleAhead = 0.2;         // schedule window size (seconds)
+  const sounds = resolveMetronomeSounds(kitId);
+  const active = normalizeActiveBeats(activeBeats, beatsPerBar);
 
   let nextBeatTime = ctx.currentTime + 0.05;
   let beat         = 0;
   let stopped      = false;
-
-  function scheduleClick(time, isFirst) {
-    const freq    = isFirst ? 1200 : 600;
-    const gainVal = isFirst ? 0.5  : 0.3;
-    const dur     = 0.03;
-
-    const osc  = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "square";
-    osc.frequency.setValueAtTime(freq, time);
-    gain.gain.setValueAtTime(gainVal, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
-    osc.connect(gain); gain.connect(dest);
-    osc.start(time); osc.stop(time + dur + 0.01);
-  }
+  const pendingTimeouts = [];
 
   function scheduler() {
     if (stopped) return;
     while (nextBeatTime < ctx.currentTime + scheduleAhead) {
-      scheduleClick(nextBeatTime, beat % beatsPerBar === 0);
-      if (onBeat) onBeat(beat % beatsPerBar);
+      const idx  = beat % beatsPerBar;
+      const isOn = active[idx] !== false;
+      if (isOn) scheduleMetronomeSound(ctx, dest, nextBeatTime, idx === 0 ? sounds.beat1 : sounds.other);
+      if (onBeat) {
+        const delayMs = Math.max(0, (nextBeatTime - ctx.currentTime) * 1000);
+        pendingTimeouts.push(setTimeout(() => { if (!stopped) onBeat(idx, isOn); }, delayMs));
+      }
       beat++;
       nextBeatTime += interval;
     }
@@ -688,7 +830,7 @@ function startMetronome(ctx, masterGain, bpm, beatsPerBar, onBeat) {
   }
 
   scheduler();
-  return () => { stopped = true; };
+  return () => { stopped = true; pendingTimeouts.forEach(clearTimeout); };
 }
 
 // ─── DEFAULT DATA ─────────────────────────────────────────────────────────────
@@ -2359,7 +2501,7 @@ function SessionProgressGauge({ pct, current, total }) {
 function ActiveSessionScreen({
   tasks, setTasks, onFinish, onBackToMenu, audioCtx, masterGainRef, onCommitStats, isVisible,
   onCommitNoodle, sessionNoodleSec,
-  subProgress, setSubProgress,
+  subProgress, setSubProgress, defaultMetronomeKit,
   // lifted state
   current, setCurrent, secondsLeft, setSecondsLeft,
   running, setRunning, hasStarted, setHasStarted,
@@ -2376,6 +2518,12 @@ function ActiveSessionScreen({
   const [metroOn, setMetroOn] = useState(false);
   const [liveBpm, setLiveBpm] = useState(90);
   const [liveBeatsPerBar, setLiveBeatsPerBar] = useState(4);
+  const [liveKit, setLiveKit] = useState(null); // null = exercise's own kit (or the global default)
+  const [liveActiveBeats, setLiveActiveBeats] = useState(null); // null = exercise's own (or all-on)
+  // Which beat is currently sounding, for the pulsing indicator dots —
+  // bumped by startMetronome's onBeat callback, timed to land in sync with
+  // the audio rather than whenever the scheduler happened to queue it.
+  const [pulseBeat, setPulseBeat] = useState(null); // { idx, key } | null
 
   // ── Noodling: free playing during a session, outside the planned
   // exercises. Pauses the current exercise's timer, tracks its own elapsed
@@ -2415,6 +2563,8 @@ function ActiveSessionScreen({
     setMetroOn(false);
     setLiveBpm(task?.bpm > 0 ? task.bpm : 90);
     setLiveBeatsPerBar(task?.beatsPerBar || 4);
+    setLiveKit(task?.metronomeKit || null);
+    setLiveActiveBeats(task?.metronomeActiveBeats || null);
   }, [current]);
 
   // ── Screen Wake Lock: keep screen on during active session ────────────────
@@ -2438,14 +2588,20 @@ function ActiveSessionScreen({
     };
   }, []);
 
-  // ── Metronome: start/stop when metroOn, running, or the live BPM/time signature changes ──
+  // ── Metronome: start/stop when metroOn, running, or the live BPM/time signature/kit/mutes change ──
   useEffect(() => {
     if (metronomeStopRef.current) { metronomeStopRef.current(); metronomeStopRef.current = null; }
     if (metroOn && running && liveBpm > 0) {
-      metronomeStopRef.current = startMetronome(audioCtx.current, masterGainRef?.current, liveBpm, liveBeatsPerBar);
+      metronomeStopRef.current = startMetronome(audioCtx.current, masterGainRef?.current, liveBpm, liveBeatsPerBar, {
+        kitId: liveKit || defaultMetronomeKit || METRONOME_DEFAULT_KIT,
+        activeBeats: liveActiveBeats,
+        onBeat: (idx, isOn) => setPulseBeat({ idx, isOn, key: Date.now() + Math.random() }),
+      });
+    } else {
+      setPulseBeat(null);
     }
     return () => { if (metronomeStopRef.current) { metronomeStopRef.current(); metronomeStopRef.current = null; } };
-  }, [metroOn, running, liveBpm, liveBeatsPerBar]);
+  }, [metroOn, running, liveBpm, liveBeatsPerBar, liveKit, liveActiveBeats, defaultMetronomeKit]);
 
   // Auto-pause when user navigates away; resume is manual
   useEffect(() => {
@@ -2581,6 +2737,8 @@ function ActiveSessionScreen({
     setMetroOn((currentTask?.bpm || 0) > 0);
     setLiveBpm(currentTask?.bpm || 90);
     setLiveBeatsPerBar(currentTask?.beatsPerBar || 4);
+    setLiveKit(currentTask?.metronomeKit || null);
+    setLiveActiveBeats(currentTask?.metronomeActiveBeats || null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTask?.id]);
 
@@ -2652,6 +2810,7 @@ function ActiveSessionScreen({
         @keyframes urgentPulse{0%,100%{color:#C8873A}50%{color:#F87171;text-shadow:0 0 16px #F8717188}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
         @keyframes gaugeBump{0%{box-shadow:0 0 0 #C8873A00}40%{box-shadow:0 0 14px 4px #C8873Aaa}100%{box-shadow:0 0 0 #C8873A00}}
+        @keyframes beatPulse{0%{transform:scale(1)}35%{transform:scale(1.55)}100%{transform:scale(1)}}
       `}</style>
       <FlashOverlay show={flash} color="#4FC3F7" />
       <div style={{ flex: 1, minHeight: 0, padding: "14px 16px 24px", display: "flex", justifyContent: "center", overflow: "hidden" }}>
@@ -2741,6 +2900,66 @@ function ActiveSessionScreen({
                 </div>
               </div>
             )}
+            {metroOn && (() => {
+              const effectiveKit = liveKit || defaultMetronomeKit || METRONOME_DEFAULT_KIT;
+              const effectiveActive = normalizeActiveBeats(liveActiveBeats, liveBeatsPerBar);
+              const toggleLiveBeat = (idx) => {
+                setLiveActiveBeats(prev => {
+                  const next = normalizeActiveBeats(prev, liveBeatsPerBar).slice();
+                  next[idx] = !next[idx];
+                  return next;
+                });
+              };
+              return (
+                <>
+                  {/* Beat indicator — also doubles as the mute toggle for
+                      this feature's "advanced" ask: tap a dot to silence
+                      that beat (e.g. keep only 2 & 4 on a 4/4 bar). The
+                      filled dot for the currently-sounding beat briefly
+                      scales up via beatPulse, timed by startMetronome's
+                      onBeat callback. */}
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }} title={T("metroBeatDotsHint")}>
+                    {Array.from({ length: liveBeatsPerBar }).map((_, i) => {
+                      const on = effectiveActive[i] !== false;
+                      const pulsing = pulseBeat && pulseBeat.idx === i && pulseBeat.isOn;
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => toggleLiveBeat(i)}
+                          aria-label={T("metroBeatToggleAria", i + 1)}
+                          style={{ width: 20, height: 20, borderRadius: "50%", padding: 0, cursor: "pointer",
+                            border: `1px solid ${i === 0 ? C.amber : (on ? "#4FC3F7" : "#2A2A2A")}`,
+                            background: "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <span
+                            key={pulsing ? pulseBeat.key : "idle"}
+                            style={{
+                              display: "block", width: 12, height: 12, borderRadius: "50%",
+                              background: on ? (i === 0 ? C.amber : "#4FC3F7") : "#3A3A3A",
+                              opacity: on ? 1 : 0.5,
+                              animation: pulsing ? "beatPulse 0.18s ease-out" : "none",
+                            }}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {/* Kit picker — the exercise/global default is pre-selected;
+                      changing it here is a live-only override for this session,
+                      same pattern as the BPM/time-signature controls above. */}
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center", maxWidth: 280 }}>
+                    {METRONOME_KITS.map(kit => (
+                      <button key={kit.id} onClick={() => setLiveKit(kit.id)}
+                        style={{ padding: "4px 9px", borderRadius: 20, border: `1px solid ${effectiveKit === kit.id ? C.amber : "#2A2A2A"}`,
+                          background: effectiveKit === kit.id ? "#C8873A22" : "#1A1A1A",
+                          color: effectiveKit === kit.id ? C.amber : C.muted, fontSize: 10.5, fontWeight: 600, cursor: "pointer" }}>
+                        {T(kit.labelKey)}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
 
@@ -2835,12 +3054,13 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBac
   // kept, so translations keep working after switching languages again.
   const [form, setForm] = useState(
     isNew
-      ? { name: "", description: "", defaultMin: 10, icon: "🎸", categoryId: categories[0]?.id || "", youtubeUrl: "", bpm: 0, beatsPerBar: 4, subExercises: [], files: [], recreEnabled: true }
+      ? { name: "", description: "", defaultMin: 10, icon: "🎸", categoryId: categories[0]?.id || "", youtubeUrl: "", bpm: 0, beatsPerBar: 4, metronomeKit: null, metronomeActiveBeats: null, subExercises: [], files: [], recreEnabled: true }
       : {
           ...editEx,
           name: exerciseName(editEx, lang),
           description: exerciseDesc(editEx, lang) || "",
           youtubeUrl: editEx.youtubeUrl || "", bpm: editEx.bpm || 0, beatsPerBar: editEx.beatsPerBar || 4,
+          metronomeKit: editEx.metronomeKit || null, metronomeActiveBeats: editEx.metronomeActiveBeats || null,
           subExercises: (editEx.subExercises || []).map(s => ({ id: s.id, label: subExerciseLabel(s, lang), _origLabel: s.label })),
           files: editEx.files || [],
           // Exercises created before this toggle existed don't have the
@@ -2850,6 +3070,7 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBac
         }
   );
   const [iconPicker, setIconPicker] = useState(false);
+  const [advancedMetroOpen, setAdvancedMetroOpen] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -3013,6 +3234,58 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBac
               <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>{form.beatsPerBar}/4 · {form.bpm} BPM</div>
             </div>
           )}
+          {form.bpm > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <label style={{ ...base.label, marginBottom: 6 }}>{T("metroSoundLabel")}</label>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <button onClick={() => setF("metronomeKit", null)}
+                  style={{ padding: "6px 11px", borderRadius: 20, border: `1px solid ${!form.metronomeKit ? C.amber : "#2A2A2A"}`,
+                    background: !form.metronomeKit ? "#C8873A22" : "#1A1A1A",
+                    color: !form.metronomeKit ? C.amber : C.muted, fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>
+                  {T("metroKitUseDefault")}
+                </button>
+                {METRONOME_KITS.map(kit => (
+                  <button key={kit.id} onClick={() => setF("metronomeKit", kit.id)}
+                    style={{ padding: "6px 11px", borderRadius: 20, border: `1px solid ${form.metronomeKit === kit.id ? C.amber : "#2A2A2A"}`,
+                      background: form.metronomeKit === kit.id ? "#C8873A22" : "#1A1A1A",
+                      color: form.metronomeKit === kit.id ? C.amber : C.muted, fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>
+                    {T(kit.labelKey)}
+                  </button>
+                ))}
+              </div>
+              <div
+                onClick={() => setAdvancedMetroOpen(o => !o)}
+                style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 12, cursor: "pointer", userSelect: "none" }}
+              >
+                <span style={{ display: "inline-block", fontSize: 10, color: C.muted, transition: "transform 0.15s ease-out", transform: advancedMetroOpen ? "rotate(90deg)" : "rotate(0deg)" }}>▶</span>
+                <span style={{ fontSize: 11, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>{T("metroAdvancedToggle")}</span>
+              </div>
+              {advancedMetroOpen && (() => {
+                const activeBeats = normalizeActiveBeats(form.metronomeActiveBeats, form.beatsPerBar);
+                const toggleBeat = (idx) => {
+                  const next = activeBeats.slice();
+                  next[idx] = !next[idx];
+                  setF("metronomeActiveBeats", next);
+                };
+                return (
+                  <div style={{ marginTop: 10, padding: 10, background: "#1A1A1A", borderRadius: 10, border: "1px solid #2A2A2A" }}>
+                    <div style={{ fontSize: 10.5, color: C.muted, marginBottom: 8 }}>{T("metroActiveBeatsHint")}</div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {activeBeats.map((on, i) => (
+                        <button key={i} onClick={() => toggleBeat(i)}
+                          style={{ width: 30, height: 30, borderRadius: 8, cursor: "pointer",
+                            border: `1px solid ${on ? (i === 0 ? C.amber : "#4FC3F7") : "#2A2A2A"}`,
+                            background: on ? (i === 0 ? "#C8873A22" : "#4FC3F722") : "#141414",
+                            color: on ? (i === 0 ? C.amber : "#4FC3F7") : C.muted, fontSize: 12, fontWeight: 700 }}>
+                          {i + 1}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
         </div>
         <div>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: C.cream, cursor: "pointer" }}>
@@ -3168,7 +3441,7 @@ function CategoryEditor({ editCat, exercises, setExercises, setCategories, onBac
   );
 }
 
-function SettingsScreen({ exercises, setExercises, categories, setCategories, volume, onVolumeChange, lang, onLangChange, displaySize, onDisplaySizeChange, onResetBadges, editorGuardRef, guardedRun, showChangelogOnUpdate, onShowChangelogOnUpdateChange, autoOpen, onAutoOpenConsumed }) {
+function SettingsScreen({ exercises, setExercises, categories, setCategories, volume, onVolumeChange, defaultMetronomeKit, onDefaultMetronomeKitChange, lang, onLangChange, displaySize, onDisplaySizeChange, onResetBadges, editorGuardRef, guardedRun, showChangelogOnUpdate, onShowChangelogOnUpdateChange, autoOpen, onAutoOpenConsumed }) {
   const T = useT();
   // null = top-level Réglages menu (a vertical list of categories, Android-
   // Settings style); a category id = drilled into that section, with a
@@ -3416,6 +3689,23 @@ function SettingsScreen({ exercises, setExercises, categories, setCategories, vo
                 <span style={{ fontSize: 14, color: C.muted }}>🔊</span>
               </div>
               <div style={{ fontSize: 11, color: C.muted, marginTop: 8 }}>{T("volumeDesc")}</div>
+            </div>
+          </div>
+          <div style={base.card}>
+            <div style={{ padding: "14px 16px" }}>
+              <label style={{ ...base.label, margin: 0 }}>{T("metroDefaultKitLabel")}</label>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 4, marginBottom: 10 }}>{T("metroDefaultKitDesc")}</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {METRONOME_KITS.map(kit => (
+                  <button key={kit.id} onClick={() => onDefaultMetronomeKitChange(kit.id)}
+                    style={{ padding: "7px 12px", borderRadius: 20, border: `1px solid ${defaultMetronomeKit === kit.id ? C.amber : "#2A2A2A"}`,
+                      background: defaultMetronomeKit === kit.id ? "#C8873A22" : "#1A1A1A",
+                      color: defaultMetronomeKit === kit.id ? C.amber : C.muted, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                    {T(kit.labelKey)}
+                  </button>
+                ))}
+              </div>
+              <div style={{ fontSize: 10, color: C.muted, marginTop: 10 }}>{T("metroDefaultKitHint")}</div>
             </div>
           </div>
         </div>
@@ -4495,6 +4785,11 @@ export default function App() {
   const audioCtx      = useRef(null);
   const masterGainRef = useRef(null);
   const [volume, setVolume, volLoaded] = usePersisted("volume", 0.8);
+  // Global default metronome sound kit, used by any exercise that doesn't
+  // set its own override. Defaults to "click" — the original hardcoded
+  // sound — so every install that existed before this setting sounds
+  // exactly as it did before, with nothing to migrate.
+  const [defaultMetronomeKit, setDefaultMetronomeKit] = usePersisted("defaultMetronomeKit", METRONOME_DEFAULT_KIT);
   // Points out the four bottom-nav destinations. Shown again on every
   // launch by default (like a reminder) — `onboardingDone` only becomes
   // permanently true if the user ticks "don't show again"; otherwise
@@ -4714,6 +5009,7 @@ export default function App() {
         masterGainRef.current = audioCtx.current.createGain();
         masterGainRef.current.gain.setValueAtTime(volume, audioCtx.current.currentTime);
         masterGainRef.current.connect(audioCtx.current.destination);
+        preloadMetronomeSamples(audioCtx.current);
       }
     }
     if (audioCtx.current?.state === "suspended") audioCtx.current.resume();
@@ -4728,7 +5024,7 @@ export default function App() {
 
   const addExercise = (ex) => {
     ensureAudio();
-    setTasks(prev => [...prev, { id: uid(), exerciseId: ex.id, name: ex.name, icon: ex.icon, description: ex.description || "", minutes: ex.defaultMin, categoryId: ex.categoryId, youtubeUrl: ex.youtubeUrl || "", bpm: ex.bpm || 0, beatsPerBar: ex.beatsPerBar || 4, subExercises: ex.subExercises || [], files: ex.files || [], recreEnabled: ex.recreEnabled !== false }]);
+    setTasks(prev => [...prev, { id: uid(), exerciseId: ex.id, name: ex.name, icon: ex.icon, description: ex.description || "", minutes: ex.defaultMin, categoryId: ex.categoryId, youtubeUrl: ex.youtubeUrl || "", bpm: ex.bpm || 0, beatsPerBar: ex.beatsPerBar || 4, metronomeKit: ex.metronomeKit || null, metronomeActiveBeats: ex.metronomeActiveBeats || null, subExercises: ex.subExercises || [], files: ex.files || [], recreEnabled: ex.recreEnabled !== false }]);
   };
 
   const removeExerciseFromSession = (exerciseId) => {
@@ -4896,13 +5192,13 @@ export default function App() {
       {tab === "library"  && <LibraryScreen exercises={exercises} categories={categories} tasks={tasks} onAdd={addExerciseWithFlight} onRemove={removeExerciseFromSession} stats={stats} subProgress={subProgress} onGoToExerciseSettings={goToExerciseSettings} />}
       {tab === "session"  && <SessionScreen tasks={tasks} setTasks={setTasks} onStart={startSession} sessionInProgress={sessionInProgress} onReturnToSession={returnToSession} presets={presets} setPresets={setPresets} />}
       {tab === "progress" && <ProgressionScreen stats={stats} exercises={exercises} categories={categories} onClearStats={() => { setStats({}); setDailyStats({}); setDailyNoodleSec({}); }} badges={badges} subProgress={subProgress} practiceDays={practiceDays} noodleSec={noodleSec} dailyStats={dailyStats} dailyNoodleSec={dailyNoodleSec} subTab={progressSubTab} setSubTab={setProgressSubTab} />}
-      {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} editorGuardRef={editorGuardRef} guardedRun={guardedRun} showChangelogOnUpdate={showChangelogOnUpdate} onShowChangelogOnUpdateChange={setShowChangelogOnUpdate} autoOpen={settingsAutoOpen} onAutoOpenConsumed={() => setSettingsAutoOpen(null)} />}
+      {tab === "settings" && <SettingsScreen exercises={exercises} setExercises={setExercises} categories={categories} setCategories={setCategories} volume={volume} onVolumeChange={setVolume} defaultMetronomeKit={defaultMetronomeKit} onDefaultMetronomeKitChange={setDefaultMetronomeKit} lang={lang} onLangChange={setLang} displaySize={displaySize} onDisplaySizeChange={setDisplaySize} onResetBadges={() => setBadges({})} editorGuardRef={editorGuardRef} guardedRun={guardedRun} showChangelogOnUpdate={showChangelogOnUpdate} onShowChangelogOnUpdateChange={setShowChangelogOnUpdate} autoOpen={settingsAutoOpen} onAutoOpenConsumed={() => setSettingsAutoOpen(null)} />}
       {tab === "active"   && <ActiveSessionScreen
         tasks={tasks} setTasks={setTasks} onFinish={endSession} onBackToMenu={backToMenu}
         audioCtx={audioCtx} masterGainRef={masterGainRef} onCommitStats={commitStats}
         onCommitNoodle={commitNoodleTime} sessionNoodleSec={sessionNoodleSec}
         isVisible={tab === "active"}
-        subProgress={subProgress} setSubProgress={setSubProgress}
+        subProgress={subProgress} setSubProgress={setSubProgress} defaultMetronomeKit={defaultMetronomeKit}
         current={sessionCurrent} setCurrent={setSessionCurrent}
         secondsLeft={sessionSecondsLeft} setSecondsLeft={setSessionSecondsLeft}
         running={sessionRunning} setRunning={setSessionRunning}
