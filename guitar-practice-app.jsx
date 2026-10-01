@@ -43,6 +43,7 @@ const STRINGS = {
     iconLabel: "Icon", nameLabel: "Name", descLabel: "Description", youtubeLabel: "YouTube Reference Video (optional)",
     iconTabPractice: "Practice", iconTabInstruments: "Instruments", iconTabColors: "Colors", iconTabBody: "Body", iconTabFaces: "Faces", iconTabOther: "Other",
     sectionInfoTitle: "General information", sectionResourcesTitle: "Resources", sectionMetronomeTitle: "Metronome", sectionSubExercisesTitle: "Sub-exercises", sectionOtherTitle: "Other",
+    metroEnabledLabel: "Metronome Enabled", metroDisabledLabel: "Metronome Disabled",
     youtubePlaceholder: "https://youtube.com/watch?v=...", youtubeError: "⚠ URL not recognised — try a standard youtube.com or youtu.be link",
     youtubeOk: "✓ Video ID: ", durationLabel: "Default Duration (minutes)", categoryLabel: "Category",
     recreEnabledLabel: "Allow Recess during this exercise", recreEnabledHint: "When off, the 🛝 Recess button won't be offered during a session while this exercise is active.",
@@ -189,6 +190,7 @@ const STRINGS = {
     iconLabel: "Icône", nameLabel: "Nom", descLabel: "Description", youtubeLabel: "Vidéo YouTube de référence (optionnel)",
     iconTabPractice: "Pratique", iconTabInstruments: "Instruments", iconTabColors: "Couleurs", iconTabBody: "Corps", iconTabFaces: "Visages", iconTabOther: "Autres",
     sectionInfoTitle: "Informations générales", sectionResourcesTitle: "Ressources", sectionMetronomeTitle: "Métronome", sectionSubExercisesTitle: "Sous-exercices", sectionOtherTitle: "Autres",
+    metroEnabledLabel: "Métronome Activé", metroDisabledLabel: "Métronome Désactivé",
     youtubePlaceholder: "https://youtube.com/watch?v=...", youtubeError: "⚠ URL non reconnue — essayez un lien youtube.com ou youtu.be standard",
     youtubeOk: "✓ ID vidéo : ", durationLabel: "Durée par défaut (minutes)", categoryLabel: "Catégorie",
     recreEnabledLabel: "Autoriser la récré pendant cet exercice", recreEnabledHint: "Si désactivé, le bouton 🛝 Récré ne sera pas proposé en séance tant que cet exercice est en cours.",
@@ -2181,43 +2183,80 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
 
   // ── Drag-and-drop reordering of the session queue ──────────────────────────
   // Pointer Events (not HTML5 DnD) so this works with touch as well as mouse.
-  // setPointerCapture on the handle keeps routing move/up events to it even
-  // once the finger/cursor leaves the element, so no window listeners needed.
+  // setPointerCapture on the drag zone keeps routing move/up events to it
+  // even once the finger/cursor leaves the element, so no window listeners
+  // needed. The dragged row visually tracks the pointer 1:1 (translateY by
+  // the raw pointer delta, no threshold/snapping) so it feels "stuck under
+  // the finger" instead of only visibly moving once a whole row-swap has
+  // happened. The actual array isn't reordered until drop — only a target
+  // index is tracked — so hit-testing stays against each row's original
+  // (pre-drag) position rather than chasing a layout that's shifting under
+  // it mid-gesture; the other rows between the start and target slots get an
+  // animated (CSS-transitioned) shift to preview where the drop will land.
   const rowRefs = useRef({});
-  const dragInfo = useRef(null); // { id, pointerId }
+  const dragInfo = useRef(null); // { id, pointerId, startIndex, startY, draggedHeight, originalRects }
   const [draggingId, setDraggingId] = useState(null);
+  const [dragOffsetY, setDragOffsetY] = useState(0);
+  const [dragTargetIndex, setDragTargetIndex] = useState(null);
+  const ROW_GAP = 8; // matches the task-queue column's own `gap: 8`
 
   const handleDragStart = (e, id) => {
     e.currentTarget.setPointerCapture(e.pointerId);
-    dragInfo.current = { id, pointerId: e.pointerId };
+    const startIndex = tasks.findIndex(t => t.id === id);
+    if (startIndex === -1) return;
+    const originalRects = tasks.map(t => {
+      const rect = rowRefs.current[t.id]?.getBoundingClientRect();
+      return { id: t.id, top: rect?.top ?? 0, height: rect?.height ?? 0 };
+    });
+    dragInfo.current = { id, pointerId: e.pointerId, startIndex, startY: e.clientY, draggedHeight: originalRects[startIndex].height, originalRects };
     setDraggingId(id);
+    setDragOffsetY(0);
+    setDragTargetIndex(startIndex);
   };
   const handleDragMove = (e) => {
-    if (!dragInfo.current) return;
-    const draggedId = dragInfo.current.id;
-    const y = e.clientY;
-    let overIdx = null;
-    for (let i = 0; i < tasks.length; i++) {
-      const node = rowRefs.current[tasks[i].id];
-      if (!node) continue;
-      const rect = node.getBoundingClientRect();
-      if (y >= rect.top && y <= rect.bottom) { overIdx = i; break; }
+    const info = dragInfo.current;
+    if (!info) return;
+    setDragOffsetY(e.clientY - info.startY);
+    const rects = info.originalRects;
+    let overIdx = info.startIndex;
+    if (e.clientY < rects[0].top) overIdx = 0;
+    else if (e.clientY > rects[rects.length - 1].top + rects[rects.length - 1].height) overIdx = rects.length - 1;
+    else {
+      for (let i = 0; i < rects.length; i++) {
+        if (e.clientY >= rects[i].top && e.clientY <= rects[i].top + rects[i].height) { overIdx = i; break; }
+      }
     }
-    if (overIdx === null) return;
-    const draggedIdx = tasks.findIndex(t => t.id === draggedId);
-    if (draggedIdx === -1 || draggedIdx === overIdx) return;
-    setTasks(prev => {
-      const fromIdx = prev.findIndex(t => t.id === draggedId);
-      if (fromIdx === -1) return prev;
-      const next = [...prev];
-      const [moved] = next.splice(fromIdx, 1);
-      next.splice(overIdx, 0, moved);
-      return next;
-    });
+    setDragTargetIndex(overIdx);
   };
   const handleDragEnd = () => {
+    const info = dragInfo.current;
+    if (info && dragTargetIndex !== null && dragTargetIndex !== info.startIndex) {
+      const targetIndex = dragTargetIndex;
+      setTasks(prev => {
+        const fromIdx = prev.findIndex(t => t.id === info.id);
+        if (fromIdx === -1) return prev;
+        const next = [...prev];
+        const [moved] = next.splice(fromIdx, 1);
+        next.splice(targetIndex, 0, moved);
+        return next;
+      });
+    }
     dragInfo.current = null;
     setDraggingId(null);
+    setDragOffsetY(0);
+    setDragTargetIndex(null);
+  };
+  // Preview transform for a non-dragged row at (pre-drag) index `i`: shifted
+  // out of the way by exactly one dragged-row-height when it sits between
+  // the drag's start and current target slot, in the direction that opens a
+  // gap for the dragged row to land in.
+  const dragPreviewShift = (i) => {
+    const info = dragInfo.current;
+    if (!info || dragTargetIndex === null || i === info.startIndex) return 0;
+    const shiftAmount = info.draggedHeight + ROW_GAP;
+    if (dragTargetIndex > info.startIndex && i > info.startIndex && i <= dragTargetIndex) return -shiftAmount;
+    if (dragTargetIndex < info.startIndex && i < info.startIndex && i >= dragTargetIndex) return shiftAmount;
+    return 0;
   };
 
   const savePreset = () => {
@@ -2336,45 +2375,58 @@ function SessionScreen({ tasks, setTasks, onStart, sessionInProgress, onReturnTo
             </div>
           </div>
         ) : (
-          tasks.map((task, i) => (
+          tasks.map((task, i) => {
+            const isDragged = draggingId === task.id;
+            const previewShift = dragPreviewShift(i);
+            return (
             <div
               key={task.id}
               ref={node => { if (node) rowRefs.current[task.id] = node; else delete rowRefs.current[task.id]; }}
-              style={{ background: C.surface, border: `1px solid ${draggingId === task.id ? C.amber : C.border}`, borderRadius: 10, display: "flex", alignItems: "stretch", flexShrink: 0, opacity: draggingId === task.id ? 0.6 : 1, transition: "opacity 0.15s, border-color 0.15s", overflow: "hidden" }}
+              style={{
+                background: isDragged ? "#1E1A10" : C.surface, border: `1px solid ${isDragged ? C.amber : C.border}`,
+                borderRadius: 10, display: "flex", alignItems: "stretch", flexShrink: 0, overflow: "hidden",
+                position: "relative", zIndex: isDragged ? 2 : 1,
+                boxShadow: isDragged ? "0 10px 28px #000a" : "none",
+                transform: `translateY(${isDragged ? dragOffsetY : previewShift}px)`,
+                transition: isDragged ? "none" : "transform 150ms ease-out, border-color 0.15s",
+              }}
             >
-              <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 9, padding: "11px 13px" }}>
-                <span
-                  onPointerDown={e => handleDragStart(e, task.id)}
-                  onPointerMove={handleDragMove}
-                  onPointerUp={handleDragEnd}
-                  onPointerCancel={handleDragEnd}
-                  style={{ fontSize: 15, flexShrink: 0, color: C.muted, cursor: "grab", touchAction: "none", padding: "4px 2px", lineHeight: 1 }}
-                  aria-label="drag to reorder"
-                >☰</span>
+              {/* Draggable zone — handle, position badge, icon, and name are
+                  all valid grab points (not just the ☰ handle), so there's
+                  more room to start a drag than a single thin icon. */}
+              <div
+                onPointerDown={e => handleDragStart(e, task.id)}
+                onPointerMove={handleDragMove}
+                onPointerUp={handleDragEnd}
+                onPointerCancel={handleDragEnd}
+                style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 9, padding: "11px 13px", cursor: isDragged ? "grabbing" : "grab", touchAction: "none", userSelect: "none" }}
+              >
+                <span style={{ fontSize: 15, flexShrink: 0, color: C.muted, lineHeight: 1 }} aria-label="drag to reorder">☰</span>
                 <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#2A2A2A", color: "#C9A876", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</div>
                 <span style={{ fontSize: 15, flexShrink: 0 }}>{task.icon}</span>
                 <div style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600 }}>{exerciseName(task, lang)}</div>
-                <div style={{ display: "flex", alignItems: "stretch", flexShrink: 0, border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
-                  <button style={{ width: 34, background: "none", border: "none", color: C.cream, fontSize: 21, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, lineHeight: 1 }} onClick={() => { upd(task.id, -1); bumpMinutes(task.id); }}>−</button>
-                  <span
-                    key={`min-${task.id}-${minuteBump[task.id] || 0}`}
-                    style={{
-                      fontSize: 13, fontFamily: "monospace", color: C.amber, width: 38, textAlign: "center", fontWeight: 700,
-                      display: "flex", alignItems: "center", justifyContent: "center", position: "relative", zIndex: minuteBump[task.id] ? 1 : 0,
-                      borderLeft: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`,
-                      "--bump-scale": 1 + MINUTE_BUMP_PCT / 100,
-                      animation: minuteBump[task.id] ? `minuteBump ${MINUTE_BUMP_MS}ms ease-out` : "none",
-                    }}
-                  >{task.minutes}m</span>
-                  <button style={{ width: 34, background: "none", border: "none", color: C.cream, fontSize: 21, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, lineHeight: 1 }} onClick={() => { upd(task.id, 1); bumpMinutes(task.id); }}>+</button>
-                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "stretch", flexShrink: 0, border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden", margin: "11px 0" }}>
+                <button style={{ width: 34, background: "none", border: "none", color: C.cream, fontSize: 21, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, lineHeight: 1 }} onClick={() => { upd(task.id, -1); bumpMinutes(task.id); }}>−</button>
+                <span
+                  key={`min-${task.id}-${minuteBump[task.id] || 0}`}
+                  style={{
+                    fontSize: 13, fontFamily: "monospace", color: C.amber, width: 38, textAlign: "center", fontWeight: 700,
+                    display: "flex", alignItems: "center", justifyContent: "center", zIndex: minuteBump[task.id] ? 1 : 0,
+                    borderLeft: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`,
+                    "--bump-scale": 1 + MINUTE_BUMP_PCT / 100,
+                    animation: minuteBump[task.id] ? `minuteBump ${MINUTE_BUMP_MS}ms ease-out` : "none",
+                  }}
+                >{task.minutes}m</span>
+                <button style={{ width: 34, background: "none", border: "none", color: C.cream, fontSize: 21, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, lineHeight: 1 }} onClick={() => { upd(task.id, 1); bumpMinutes(task.id); }}>+</button>
               </div>
               <button
                 onClick={() => rm(task.id)}
                 style={{ width: 46, flexShrink: 0, alignSelf: "stretch", background: "none", border: "none", borderLeft: `1px solid ${C.border}`, color: "#F87171", fontSize: 26, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, lineHeight: 1 }}
               >×</button>
             </div>
-          ))
+          );
+          })
         )}
       </div>
 
@@ -3276,7 +3328,7 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBac
               borderRadius: 10, border: `1px solid ${form.bpm > 0 ? "#34D399" : "#3A1A1A"}`,
               background: form.bpm > 0 ? "#34D39922" : "#2A141488", color: form.bpm > 0 ? "#34D399" : "#F87171",
               fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
-            {form.bpm > 0 ? T("metronomeOn") : T("metronomeOff")}
+            {form.bpm > 0 ? `🟢 ${T("metroEnabledLabel")}` : `🔴 ${T("metroDisabledLabel")}`}
           </button>
           {form.bpm > 0 && (
             <div style={{ marginTop: 14 }}>
