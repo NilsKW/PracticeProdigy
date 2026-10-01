@@ -180,6 +180,12 @@ const STRINGS = {
     nameLabel: "Name",
     descLabel: "Description",
     youtubeLabel: "YouTube Reference Video (optional)",
+    iconTabPractice: "Practice",
+    iconTabInstruments: "Instruments",
+    iconTabColors: "Colors",
+    iconTabBody: "Body",
+    iconTabFaces: "Faces",
+    iconTabOther: "Other",
     youtubePlaceholder: "https://youtube.com/watch?v=...",
     youtubeError: "⚠ URL not recognised — try a standard youtube.com or youtu.be link",
     youtubeOk: "✓ Video ID: ",
@@ -442,6 +448,12 @@ const STRINGS = {
     nameLabel: "Nom",
     descLabel: "Description",
     youtubeLabel: "Vidéo YouTube de référence (optionnel)",
+    iconTabPractice: "Pratique",
+    iconTabInstruments: "Instruments",
+    iconTabColors: "Couleurs",
+    iconTabBody: "Corps",
+    iconTabFaces: "Visages",
+    iconTabOther: "Autres",
     youtubePlaceholder: "https://youtube.com/watch?v=...",
     youtubeError: "⚠ URL non reconnue — essayez un lien youtube.com ou youtu.be standard",
     youtubeOk: "✓ ID vidéo : ",
@@ -1591,7 +1603,37 @@ function subExerciseLabel(sub, lang) {
   if (def && sub.label === def.label && def[`label_${lang}`]) return def[`label_${lang}`];
   return sub.label;
 }
-const ICONS = ["🎸", "🎵", "🎶", "🎤", "🎷", "🎺", "🥁", "🎹", "⚡", "🔥", "🌟", "💥", "🤘", "✋", "🕷️", "🐛", "🔨", "〰️", "🤚", "🔵", "📝", "▶️", "👂", "🏆", "🎯", "⚙️", "🧠", "💡", "🎯", "🎼"];
+const ICONS = ["🎸", "🎵", "🎶", "🎤", "🎷", "🎺", "🥁", "🎹", "⚡", "🔥", "🌟", "💥", "🤘", "✋", "🕷️", "🐛", "🔨", "〰️", "🤚", "🔵", "📝", "▶️", "👂", "🏆", "🎯", "⚙️", "🧠", "💡", "🎼"];
+
+// Exercise icon picker, organized into tabs instead of one long grid — a
+// curated selection per theme (not every emoji that exists), so the picker
+// stays quick to scan. The first tab is the original flat list unchanged,
+// so every exercise's already-picked icon still shows up in the same place.
+const ICON_CATEGORIES = [{
+  id: "practice",
+  labelKey: "iconTabPractice",
+  icons: ICONS
+}, {
+  id: "instruments",
+  labelKey: "iconTabInstruments",
+  icons: ["🎸", "🎹", "🎺", "🎷", "🥁", "🎻", "🪕", "🪘", "🪗", "🎙️", "🎤", "🪈", "🎼", "🎵", "🎶"]
+}, {
+  id: "colors",
+  labelKey: "iconTabColors",
+  icons: ["🔴", "🟠", "🟡", "🟢", "🔵", "🟣", "🟤", "⚫", "⚪", "🟥", "🟧", "🟨", "🟩", "🟦", "🟪", "⬛", "⬜"]
+}, {
+  id: "body",
+  labelKey: "iconTabBody",
+  icons: ["✋", "🤚", "🖐️", "👋", "🤙", "☝️", "👂", "👁️", "👄", "🦵", "🦶", "💪", "🧠", "🫀", "🦴"]
+}, {
+  id: "faces",
+  labelKey: "iconTabFaces",
+  icons: ["😀", "😃", "😁", "😊", "🙂", "😌", "😴", "🥵", "🥶", "😤", "😅", "🤯", "🥳", "🤔", "😎"]
+}, {
+  id: "other",
+  labelKey: "iconTabOther",
+  icons: ["🌟", "⭐", "✨", "🔥", "💧", "🌊", "🌙", "☀️", "🌈", "❄️", "🏆", "🥇", "⏱️", "🔔", "📌", "✅", "❌", "❗", "💡"]
+}];
 
 // ─── BADGES ───────────────────────────────────────────────────────────────────
 // Badge text/icons come from Rewards/badges-data.js (loaded via a <script> tag
@@ -6402,6 +6444,7 @@ function ExerciseEditor({
     recreEnabled: editEx.recreEnabled !== false
   });
   const [iconPicker, setIconPicker] = useState(false);
+  const [iconTab, setIconTab] = useState(ICON_CATEGORIES[0].id);
   const [advancedMetroOpen, setAdvancedMetroOpen] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -6513,16 +6556,39 @@ function ExerciseEditor({
     onClick: () => setIconPicker(p => !p)
   }, form.icon), iconPicker && /*#__PURE__*/React.createElement("div", {
     style: {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: 6,
       marginTop: 8,
       padding: 10,
       background: "#1A1A1A",
       borderRadius: 10,
       border: `1px solid #2A2A2A`
     }
-  }, ICONS.map(ic => /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 5,
+      flexWrap: "wrap",
+      marginBottom: 9
+    }
+  }, ICON_CATEGORIES.map(cat => /*#__PURE__*/React.createElement("button", {
+    key: cat.id,
+    onClick: () => setIconTab(cat.id),
+    style: {
+      padding: "4px 9px",
+      borderRadius: 20,
+      border: `1px solid ${iconTab === cat.id ? C.amber : "#2A2A2A"}`,
+      background: iconTab === cat.id ? "#C8873A22" : "#141414",
+      color: iconTab === cat.id ? C.amber : C.muted,
+      fontSize: 10.5,
+      fontWeight: 600,
+      cursor: "pointer"
+    }
+  }, T(cat.labelKey)))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: 6
+    }
+  }, (ICON_CATEGORIES.find(c => c.id === iconTab) || ICON_CATEGORIES[0]).icons.map(ic => /*#__PURE__*/React.createElement("button", {
     key: ic,
     style: {
       fontSize: 20,
@@ -6536,7 +6602,7 @@ function ExerciseEditor({
       setF("icon", ic);
       setIconPicker(false);
     }
-  }, ic)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }, ic))))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     style: base.label
   }, T("nameLabel")), /*#__PURE__*/React.createElement("input", {
     style: base.input,

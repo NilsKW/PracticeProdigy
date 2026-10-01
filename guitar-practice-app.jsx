@@ -41,6 +41,7 @@ const STRINGS = {
     settingsExercises: "exercises", settingsCategories: "categories", settingsSound: "sound", settingsLanguage: "language", settingsDisplay: "display", settingsBadges: "badges",
     newExercise: "+ New Exercise", editExercise: "Edit Exercise", newExerciseTitle: "New Exercise",
     iconLabel: "Icon", nameLabel: "Name", descLabel: "Description", youtubeLabel: "YouTube Reference Video (optional)",
+    iconTabPractice: "Practice", iconTabInstruments: "Instruments", iconTabColors: "Colors", iconTabBody: "Body", iconTabFaces: "Faces", iconTabOther: "Other",
     youtubePlaceholder: "https://youtube.com/watch?v=...", youtubeError: "⚠ URL not recognised — try a standard youtube.com or youtu.be link",
     youtubeOk: "✓ Video ID: ", durationLabel: "Default Duration (minutes)", categoryLabel: "Category",
     recreEnabledLabel: "Allow Recess during this exercise", recreEnabledHint: "When off, the 🛝 Recess button won't be offered during a session while this exercise is active.",
@@ -185,6 +186,7 @@ const STRINGS = {
     settingsExercises: "exercices", settingsCategories: "catégories", settingsSound: "son", settingsLanguage: "langue", settingsDisplay: "affichage", settingsBadges: "badges",
     newExercise: "+ Nouvel exercice", editExercise: "Modifier l'exercice", newExerciseTitle: "Nouvel exercice",
     iconLabel: "Icône", nameLabel: "Nom", descLabel: "Description", youtubeLabel: "Vidéo YouTube de référence (optionnel)",
+    iconTabPractice: "Pratique", iconTabInstruments: "Instruments", iconTabColors: "Couleurs", iconTabBody: "Corps", iconTabFaces: "Visages", iconTabOther: "Autres",
     youtubePlaceholder: "https://youtube.com/watch?v=...", youtubeError: "⚠ URL non reconnue — essayez un lien youtube.com ou youtu.be standard",
     youtubeOk: "✓ ID vidéo : ", durationLabel: "Durée par défaut (minutes)", categoryLabel: "Catégorie",
     recreEnabledLabel: "Autoriser la récré pendant cet exercice", recreEnabledHint: "Si désactivé, le bouton 🛝 Récré ne sera pas proposé en séance tant que cet exercice est en cours.",
@@ -887,7 +889,20 @@ function subExerciseLabel(sub, lang) {
   return sub.label;
 }
 
-const ICONS =["🎸","🎵","🎶","🎤","🎷","🎺","🥁","🎹","⚡","🔥","🌟","💥","🤘","✋","🕷️","🐛","🔨","〰️","🤚","🔵","📝","▶️","👂","🏆","🎯","⚙️","🧠","💡","🎯","🎼"];
+const ICONS =["🎸","🎵","🎶","🎤","🎷","🎺","🥁","🎹","⚡","🔥","🌟","💥","🤘","✋","🕷️","🐛","🔨","〰️","🤚","🔵","📝","▶️","👂","🏆","🎯","⚙️","🧠","💡","🎼"];
+
+// Exercise icon picker, organized into tabs instead of one long grid — a
+// curated selection per theme (not every emoji that exists), so the picker
+// stays quick to scan. The first tab is the original flat list unchanged,
+// so every exercise's already-picked icon still shows up in the same place.
+const ICON_CATEGORIES = [
+  { id: "practice",    labelKey: "iconTabPractice",    icons: ICONS },
+  { id: "instruments", labelKey: "iconTabInstruments", icons: ["🎸","🎹","🎺","🎷","🥁","🎻","🪕","🪘","🪗","🎙️","🎤","🪈","🎼","🎵","🎶"] },
+  { id: "colors",      labelKey: "iconTabColors",      icons: ["🔴","🟠","🟡","🟢","🔵","🟣","🟤","⚫","⚪","🟥","🟧","🟨","🟩","🟦","🟪","⬛","⬜"] },
+  { id: "body",        labelKey: "iconTabBody",        icons: ["✋","🤚","🖐️","👋","🤙","☝️","👂","👁️","👄","🦵","🦶","💪","🧠","🫀","🦴"] },
+  { id: "faces",       labelKey: "iconTabFaces",       icons: ["😀","😃","😁","😊","🙂","😌","😴","🥵","🥶","😤","😅","🤯","🥳","🤔","😎"] },
+  { id: "other",       labelKey: "iconTabOther",       icons: ["🌟","⭐","✨","🔥","💧","🌊","🌙","☀️","🌈","❄️","🏆","🥇","⏱️","🔔","📌","✅","❌","❗","💡"] },
+];
 
 // ─── BADGES ───────────────────────────────────────────────────────────────────
 // Badge text/icons come from Rewards/badges-data.js (loaded via a <script> tag
@@ -3070,6 +3085,7 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBac
         }
   );
   const [iconPicker, setIconPicker] = useState(false);
+  const [iconTab, setIconTab] = useState(ICON_CATEGORIES[0].id);
   const [advancedMetroOpen, setAdvancedMetroOpen] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -3128,11 +3144,23 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBac
             {form.icon}
           </button>
           {iconPicker && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8, padding: 10, background: "#1A1A1A", borderRadius: 10, border: `1px solid #2A2A2A` }}>
-              {ICONS.map(ic => (
-                <button key={ic} style={{ fontSize: 20, background: form.icon === ic ? "#C8873A33" : "none", border: form.icon === ic ? `1px solid ${C.amber}` : "1px solid transparent", borderRadius: 6, padding: 4, cursor: "pointer" }}
-                  onClick={() => { setF("icon", ic); setIconPicker(false); }}>{ic}</button>
-              ))}
+            <div style={{ marginTop: 8, padding: 10, background: "#1A1A1A", borderRadius: 10, border: `1px solid #2A2A2A` }}>
+              <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 9 }}>
+                {ICON_CATEGORIES.map(cat => (
+                  <button key={cat.id} onClick={() => setIconTab(cat.id)}
+                    style={{ padding: "4px 9px", borderRadius: 20, border: `1px solid ${iconTab === cat.id ? C.amber : "#2A2A2A"}`,
+                      background: iconTab === cat.id ? "#C8873A22" : "#141414",
+                      color: iconTab === cat.id ? C.amber : C.muted, fontSize: 10.5, fontWeight: 600, cursor: "pointer" }}>
+                    {T(cat.labelKey)}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {(ICON_CATEGORIES.find(c => c.id === iconTab) || ICON_CATEGORIES[0]).icons.map(ic => (
+                  <button key={ic} style={{ fontSize: 20, background: form.icon === ic ? "#C8873A33" : "none", border: form.icon === ic ? `1px solid ${C.amber}` : "1px solid transparent", borderRadius: 6, padding: 4, cursor: "pointer" }}
+                    onClick={() => { setF("icon", ic); setIconPicker(false); }}>{ic}</button>
+                ))}
+              </div>
             </div>
           )}
         </div>
