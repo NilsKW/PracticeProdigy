@@ -42,6 +42,7 @@ const STRINGS = {
     newExercise: "+ New Exercise", editExercise: "Edit Exercise", newExerciseTitle: "New Exercise",
     iconLabel: "Icon", nameLabel: "Name", descLabel: "Description", youtubeLabel: "YouTube Reference Video (optional)",
     iconTabPractice: "Practice", iconTabInstruments: "Instruments", iconTabColors: "Colors", iconTabBody: "Body", iconTabFaces: "Faces", iconTabOther: "Other",
+    sectionInfoTitle: "General information", sectionResourcesTitle: "Resources", sectionMetronomeTitle: "Metronome", sectionSubExercisesTitle: "Sub-exercises", sectionOtherTitle: "Other",
     youtubePlaceholder: "https://youtube.com/watch?v=...", youtubeError: "⚠ URL not recognised — try a standard youtube.com or youtu.be link",
     youtubeOk: "✓ Video ID: ", durationLabel: "Default Duration (minutes)", categoryLabel: "Category",
     recreEnabledLabel: "Allow Recess during this exercise", recreEnabledHint: "When off, the 🛝 Recess button won't be offered during a session while this exercise is active.",
@@ -187,6 +188,7 @@ const STRINGS = {
     newExercise: "+ Nouvel exercice", editExercise: "Modifier l'exercice", newExerciseTitle: "Nouvel exercice",
     iconLabel: "Icône", nameLabel: "Nom", descLabel: "Description", youtubeLabel: "Vidéo YouTube de référence (optionnel)",
     iconTabPractice: "Pratique", iconTabInstruments: "Instruments", iconTabColors: "Couleurs", iconTabBody: "Corps", iconTabFaces: "Visages", iconTabOther: "Autres",
+    sectionInfoTitle: "Informations générales", sectionResourcesTitle: "Ressources", sectionMetronomeTitle: "Métronome", sectionSubExercisesTitle: "Sous-exercices", sectionOtherTitle: "Autres",
     youtubePlaceholder: "https://youtube.com/watch?v=...", youtubeError: "⚠ URL non reconnue — essayez un lien youtube.com ou youtu.be standard",
     youtubeOk: "✓ ID vidéo : ", durationLabel: "Durée par défaut (minutes)", categoryLabel: "Catégorie",
     recreEnabledLabel: "Autoriser la récré pendant cet exercice", recreEnabledHint: "Si désactivé, le bouton 🛝 Récré ne sera pas proposé en séance tant que cet exercice est en cours.",
@@ -3057,6 +3059,24 @@ function ActiveSessionScreen({
 const COLOR_PALETTE = ["#C8873A","#4FC3F7","#A78BFA","#F87171","#34D399","#FBBF24","#FB923C","#F472B6","#60A5FA","#A3E635","#E879F9","#2DD4BF"];
 
 // ── EXERCISE EDITOR (standalone component so hooks are never conditional) ──
+// Groups a handful of fields under a small uppercase label + a bordered
+// rounded card — same neutral surface color for every section (color is
+// already meaningful elsewhere in this app: category identity, amber as the
+// primary accent, red for destructive actions), so sections are told apart
+// by their icon/label and the card boundary rather than by hue.
+function EditorSection({ icon, title, children }) {
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "0 2px 8px", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: C.muted }}>
+        <span style={{ fontSize: 13 }}>{icon}</span>{title}
+      </div>
+      <div style={{ ...base.card, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 14 }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBack, guardRef }) {
   const T = useT();
   const lang = useLang();
@@ -3137,7 +3157,8 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBac
         <button style={base.backBtn} onClick={onRequestBack || onBack}>←</button>
         <span style={base.backTitle}>{isNew ? T("newExerciseTitle") : T("editExercise")}</span>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <EditorSection icon="📝" title={T("sectionInfoTitle")}>
         <div>
           <label style={base.label}>{T("iconLabel")}</label>
           <button style={{ fontSize: 28, background: "#1A1A1A", border: `1px solid #2A2A2A`, borderRadius: 10, padding: "8px 16px", cursor: "pointer" }} onClick={() => setIconPicker(p => !p)}>
@@ -3172,6 +3193,16 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBac
           <label style={base.label}>{T("descLabel")}</label>
           <textarea style={{ ...base.input, height: 72, resize: "none" }} value={form.description || ""} onChange={e => setF("description", e.target.value)} placeholder={T("exerciseDescPlaceholder")} />
         </div>
+        <div>
+          <label style={base.label}>{T("categoryLabel")}</label>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+            {categories.map(c => (
+              <button key={c.id} style={base.catChip(form.categoryId === c.id, c.color)} onClick={() => setF("categoryId", c.id)}>{categoryName(c, lang)}</button>
+            ))}
+          </div>
+        </div>
+        </EditorSection>
+        <EditorSection icon="📎" title={T("sectionResourcesTitle")}>
         <div>
           <label style={base.label}>{T("youtubeLabel")}</label>
           <input
@@ -3230,6 +3261,8 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBac
           </label>
           <div style={{ fontSize: 10, color: C.muted, marginTop: 6 }}>{T("filesHint")}</div>
         </div>
+        </EditorSection>
+        <EditorSection icon="🥁" title={T("sectionMetronomeTitle")}>
         <div>
           <label style={base.label}>{T("metronomeLabel")} {T("bpmHint")}</label>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -3315,31 +3348,9 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBac
             </div>
           )}
         </div>
+        </EditorSection>
+        <EditorSection icon="☑️" title={T("sectionSubExercisesTitle")}>
         <div>
-          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: C.cream, cursor: "pointer" }}>
-            <input type="checkbox" checked={form.recreEnabled !== false} onChange={e => setF("recreEnabled", e.target.checked)} />
-            {T("recreEnabledLabel")}
-          </label>
-          <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>{T("recreEnabledHint")}</div>
-        </div>
-        <div>
-          <label style={base.label}>{T("durationLabel")}</label>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <button style={{ width: 32, height: 32, borderRadius: "50%", background: "#222", border: `1px solid #333`, color: C.cream, fontSize: 18, cursor: "pointer" }} onClick={() => setF("defaultMin", Math.max(1, form.defaultMin - 1))}>−</button>
-            <span style={{ fontSize: 18, fontFamily: "monospace", color: C.amber, fontWeight: 700, width: 40, textAlign: "center" }}>{form.defaultMin}</span>
-            <button style={{ width: 32, height: 32, borderRadius: "50%", background: "#222", border: `1px solid #333`, color: C.cream, fontSize: 18, cursor: "pointer" }} onClick={() => setF("defaultMin", form.defaultMin + 1)}>+</button>
-          </div>
-        </div>
-        <div>
-          <label style={base.label}>{T("categoryLabel")}</label>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-            {categories.map(c => (
-              <button key={c.id} style={base.catChip(form.categoryId === c.id, c.color)} onClick={() => setF("categoryId", c.id)}>{categoryName(c, lang)}</button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <label style={base.label}>{T("subExercisesLabel")}</label>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {(form.subExercises || []).map((sub, idx) => (
               <div key={sub.id} style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -3362,6 +3373,24 @@ function ExerciseEditor({ editEx, categories, setExercises, onBack, onRequestBac
             style={{ ...base.pillBtn(false), marginTop: 8, textAlign: "center", fontSize: 12 }}
           >{T("addSubExercise")}</button>
         </div>
+        </EditorSection>
+        <EditorSection icon="⚙️" title={T("sectionOtherTitle")}>
+        <div>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: C.cream, cursor: "pointer" }}>
+            <input type="checkbox" checked={form.recreEnabled !== false} onChange={e => setF("recreEnabled", e.target.checked)} />
+            {T("recreEnabledLabel")}
+          </label>
+          <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>{T("recreEnabledHint")}</div>
+        </div>
+        <div>
+          <label style={base.label}>{T("durationLabel")}</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button style={{ width: 32, height: 32, borderRadius: "50%", background: "#222", border: `1px solid #333`, color: C.cream, fontSize: 18, cursor: "pointer" }} onClick={() => setF("defaultMin", Math.max(1, form.defaultMin - 1))}>−</button>
+            <span style={{ fontSize: 18, fontFamily: "monospace", color: C.amber, fontWeight: 700, width: 40, textAlign: "center" }}>{form.defaultMin}</span>
+            <button style={{ width: 32, height: 32, borderRadius: "50%", background: "#222", border: `1px solid #333`, color: C.cream, fontSize: 18, cursor: "pointer" }} onClick={() => setF("defaultMin", form.defaultMin + 1)}>+</button>
+          </div>
+        </div>
+        </EditorSection>
         <button style={base.pillBtn(true)} onClick={save}>{isNew ? T("addExercise") : T("saveChanges")}</button>
         {!isNew && (
           <button style={{ ...base.pillBtn(false), color: "#F87171", border: "1px solid #3A1A1A", textAlign: "center" }} onClick={() => setConfirmDelete(true)}>

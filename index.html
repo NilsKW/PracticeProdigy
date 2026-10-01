@@ -186,6 +186,11 @@ const STRINGS = {
     iconTabBody: "Body",
     iconTabFaces: "Faces",
     iconTabOther: "Other",
+    sectionInfoTitle: "General information",
+    sectionResourcesTitle: "Resources",
+    sectionMetronomeTitle: "Metronome",
+    sectionSubExercisesTitle: "Sub-exercises",
+    sectionOtherTitle: "Other",
     youtubePlaceholder: "https://youtube.com/watch?v=...",
     youtubeError: "⚠ URL not recognised — try a standard youtube.com or youtu.be link",
     youtubeOk: "✓ Video ID: ",
@@ -454,6 +459,11 @@ const STRINGS = {
     iconTabBody: "Corps",
     iconTabFaces: "Visages",
     iconTabOther: "Autres",
+    sectionInfoTitle: "Informations générales",
+    sectionResourcesTitle: "Ressources",
+    sectionMetronomeTitle: "Métronome",
+    sectionSubExercisesTitle: "Sous-exercices",
+    sectionOtherTitle: "Autres",
     youtubePlaceholder: "https://youtube.com/watch?v=...",
     youtubeError: "⚠ URL non reconnue — essayez un lien youtube.com ou youtu.be standard",
     youtubeOk: "✓ ID vidéo : ",
@@ -6392,6 +6402,42 @@ function ActiveSessionScreen({
 const COLOR_PALETTE = ["#C8873A", "#4FC3F7", "#A78BFA", "#F87171", "#34D399", "#FBBF24", "#FB923C", "#F472B6", "#60A5FA", "#A3E635", "#E879F9", "#2DD4BF"];
 
 // ── EXERCISE EDITOR (standalone component so hooks are never conditional) ──
+// Groups a handful of fields under a small uppercase label + a bordered
+// rounded card — same neutral surface color for every section (color is
+// already meaningful elsewhere in this app: category identity, amber as the
+// primary accent, red for destructive actions), so sections are told apart
+// by their icon/label and the card boundary rather than by hue.
+function EditorSection({
+  icon,
+  title,
+  children
+}) {
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 7,
+      padding: "0 2px 8px",
+      fontSize: 11,
+      fontWeight: 700,
+      letterSpacing: "0.08em",
+      textTransform: "uppercase",
+      color: C.muted
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13
+    }
+  }, icon), title), /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...base.card,
+      padding: "14px 16px",
+      display: "flex",
+      flexDirection: "column",
+      gap: 14
+    }
+  }, children));
+}
 function ExerciseEditor({
   editEx,
   categories,
@@ -6540,8 +6586,11 @@ function ExerciseEditor({
     style: {
       display: "flex",
       flexDirection: "column",
-      gap: 14
+      gap: 20
     }
+  }, /*#__PURE__*/React.createElement(EditorSection, {
+    icon: "📝",
+    title: T("sectionInfoTitle")
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     style: base.label
   }, T("iconLabel")), /*#__PURE__*/React.createElement("button", {
@@ -6624,6 +6673,21 @@ function ExerciseEditor({
     onChange: e => setF("description", e.target.value),
     placeholder: T("exerciseDescPlaceholder")
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: base.label
+  }, T("categoryLabel")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: 7
+    }
+  }, categories.map(c => /*#__PURE__*/React.createElement("button", {
+    key: c.id,
+    style: base.catChip(form.categoryId === c.id, c.color),
+    onClick: () => setF("categoryId", c.id)
+  }, categoryName(c, lang)))))), /*#__PURE__*/React.createElement(EditorSection, {
+    icon: "📎",
+    title: T("sectionResourcesTitle")
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     style: base.label
   }, T("youtubeLabel")), /*#__PURE__*/React.createElement("input", {
     style: base.input,
@@ -6738,7 +6802,10 @@ function ExerciseEditor({
       color: C.muted,
       marginTop: 6
     }
-  }, T("filesHint"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  }, T("filesHint")))), /*#__PURE__*/React.createElement(EditorSection, {
+    icon: "🥁",
+    title: T("sectionMetronomeTitle")
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     style: base.label
   }, T("metronomeLabel"), " ", T("bpmHint")), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -6952,7 +7019,64 @@ function ExerciseEditor({
         fontWeight: 700
       }
     }, i + 1))));
-  })())), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+  })()))), /*#__PURE__*/React.createElement(EditorSection, {
+    icon: "☑️",
+    title: T("sectionSubExercisesTitle")
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 6
+    }
+  }, (form.subExercises || []).map((sub, idx) => /*#__PURE__*/React.createElement("div", {
+    key: sub.id,
+    style: {
+      display: "flex",
+      gap: 6,
+      alignItems: "center"
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    style: {
+      ...base.input,
+      flex: 1
+    },
+    value: sub.label,
+    onChange: e => setF("subExercises", form.subExercises.map((s, i) => i === idx ? {
+      ...s,
+      label: e.target.value
+    } : s)),
+    placeholder: T("subExercisePlaceholder"),
+    autoComplete: "off",
+    autoCorrect: "off",
+    spellCheck: false
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setF("subExercises", form.subExercises.filter((_, i) => i !== idx)),
+    style: {
+      width: 30,
+      height: 30,
+      borderRadius: 7,
+      background: "none",
+      border: "1px solid #2A2A2A",
+      color: C.muted,
+      fontSize: 14,
+      cursor: "pointer",
+      flexShrink: 0
+    }
+  }, "×")))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setF("subExercises", [...(form.subExercises || []), {
+      id: uid(),
+      label: ""
+    }]),
+    style: {
+      ...base.pillBtn(false),
+      marginTop: 8,
+      textAlign: "center",
+      fontSize: 12
+    }
+  }, T("addSubExercise")))), /*#__PURE__*/React.createElement(EditorSection, {
+    icon: "⚙️",
+    title: T("sectionOtherTitle")
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     style: {
       display: "flex",
       alignItems: "center",
@@ -7012,72 +7136,7 @@ function ExerciseEditor({
       cursor: "pointer"
     },
     onClick: () => setF("defaultMin", form.defaultMin + 1)
-  }, "+"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    style: base.label
-  }, T("categoryLabel")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: 7
-    }
-  }, categories.map(c => /*#__PURE__*/React.createElement("button", {
-    key: c.id,
-    style: base.catChip(form.categoryId === c.id, c.color),
-    onClick: () => setF("categoryId", c.id)
-  }, categoryName(c, lang))))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    style: base.label
-  }, T("subExercisesLabel")), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: "flex",
-      flexDirection: "column",
-      gap: 6
-    }
-  }, (form.subExercises || []).map((sub, idx) => /*#__PURE__*/React.createElement("div", {
-    key: sub.id,
-    style: {
-      display: "flex",
-      gap: 6,
-      alignItems: "center"
-    }
-  }, /*#__PURE__*/React.createElement("input", {
-    style: {
-      ...base.input,
-      flex: 1
-    },
-    value: sub.label,
-    onChange: e => setF("subExercises", form.subExercises.map((s, i) => i === idx ? {
-      ...s,
-      label: e.target.value
-    } : s)),
-    placeholder: T("subExercisePlaceholder"),
-    autoComplete: "off",
-    autoCorrect: "off",
-    spellCheck: false
-  }), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setF("subExercises", form.subExercises.filter((_, i) => i !== idx)),
-    style: {
-      width: 30,
-      height: 30,
-      borderRadius: 7,
-      background: "none",
-      border: "1px solid #2A2A2A",
-      color: C.muted,
-      fontSize: 14,
-      cursor: "pointer",
-      flexShrink: 0
-    }
-  }, "×")))), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setF("subExercises", [...(form.subExercises || []), {
-      id: uid(),
-      label: ""
-    }]),
-    style: {
-      ...base.pillBtn(false),
-      marginTop: 8,
-      textAlign: "center",
-      fontSize: 12
-    }
-  }, T("addSubExercise"))), /*#__PURE__*/React.createElement("button", {
+  }, "+")))), /*#__PURE__*/React.createElement("button", {
     style: base.pillBtn(true),
     onClick: save
   }, isNew ? T("addExercise") : T("saveChanges")), !isNew && /*#__PURE__*/React.createElement("button", {
